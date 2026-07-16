@@ -11,16 +11,25 @@ import {
     Student,
 } from '@/types/models';
 
+interface CourseShowPermissions {
+    manageEnrollments: boolean;
+    manageCourse: boolean;
+    deleteCourse: boolean;
+    manageEvaluations: boolean;
+}
+
 export default function Show({
     course,
     enrollments,
     evaluations,
     availableStudents,
+    can,
 }: {
     course: Course;
     enrollments: Enrollment[];
     evaluations: Evaluation[];
     availableStudents: Pick<Student, 'id' | 'first_name' | 'last_name'>[];
+    can: CourseShowPermissions;
 }) {
     const enrollForm = useForm({ student_id: availableStudents[0]?.id ?? '' });
 
@@ -38,12 +47,30 @@ export default function Show({
                     <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
                         {course.name} — {course.subject?.name}
                     </h2>
-                    <Link
-                        href={route('courses.index')}
-                        className="text-sm text-gray-600 hover:underline dark:text-gray-400"
-                    >
-                        Volver a cursos
-                    </Link>
+                    <div className="flex items-center gap-4 text-sm">
+                        {can.manageCourse && (
+                            <Link
+                                href={route('courses.asistencias.index', course.id)}
+                                className="text-blue-600 hover:underline dark:text-blue-400"
+                            >
+                                Tomar asistencia
+                            </Link>
+                        )}
+                        {can.manageCourse && (
+                            <Link
+                                href={route('courses.edit', course.id)}
+                                className="text-blue-600 hover:underline dark:text-blue-400"
+                            >
+                                Editar curso
+                            </Link>
+                        )}
+                        <Link
+                            href={route('courses.index')}
+                            className="text-gray-600 hover:underline dark:text-gray-400"
+                        >
+                            Volver a cursos
+                        </Link>
+                    </div>
                 </div>
             }
         >
@@ -96,13 +123,13 @@ export default function Show({
                                 </h3>
                             </div>
 
-                            {availableStudents.length > 0 && (
+                            {can.manageEnrollments && availableStudents.length > 0 && (
                                 <form
                                     onSubmit={submitEnroll}
                                     className="mb-4 flex gap-2"
                                 >
                                     <select
-                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                                         value={enrollForm.data.student_id}
                                         onChange={(e) =>
                                             enrollForm.setData(
@@ -149,23 +176,25 @@ export default function Show({
                                                 }
                                             </div>
                                         </div>
-                                        <Link
-                                            as="button"
-                                            method="delete"
-                                            href={route(
-                                                'courses.enrollments.destroy',
-                                                [course.id, enrollment.id],
-                                            )}
-                                            onBefore={() =>
-                                                confirm(
-                                                    '¿Quitar esta matrícula del curso?',
-                                                )
-                                            }
-                                            preserveScroll
-                                            className="text-sm text-red-600 hover:underline dark:text-red-400"
-                                        >
-                                            Quitar
-                                        </Link>
+                                        {can.manageEnrollments && (
+                                            <Link
+                                                as="button"
+                                                method="delete"
+                                                href={route(
+                                                    'courses.enrollments.destroy',
+                                                    [course.id, enrollment.id],
+                                                )}
+                                                onBefore={() =>
+                                                    confirm(
+                                                        '¿Quitar esta matrícula del curso?',
+                                                    )
+                                                }
+                                                preserveScroll
+                                                className="text-sm text-red-600 hover:underline dark:text-red-400"
+                                            >
+                                                Quitar
+                                            </Link>
+                                        )}
                                     </li>
                                 ))}
                                 {enrollments.length === 0 && (
@@ -181,16 +210,18 @@ export default function Show({
                                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                                     Evaluaciones
                                 </h3>
-                                <Link
-                                    href={route(
-                                        'courses.evaluations.create',
-                                        course.id,
-                                    )}
-                                >
-                                    <PrimaryButton>
-                                        Nueva evaluación
-                                    </PrimaryButton>
-                                </Link>
+                                {can.manageEvaluations && (
+                                    <Link
+                                        href={route(
+                                            'courses.evaluations.create',
+                                            course.id,
+                                        )}
+                                    >
+                                        <PrimaryButton>
+                                            Nueva evaluación
+                                        </PrimaryButton>
+                                    </Link>
+                                )}
                             </div>
 
                             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -215,26 +246,28 @@ export default function Show({
                                                 notas registradas
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 text-sm">
-                                            <Link
-                                                href={route(
-                                                    'evaluations.grades.edit',
-                                                    evaluation.id,
-                                                )}
-                                                className="text-indigo-600 hover:underline dark:text-indigo-400"
-                                            >
-                                                Calificar
-                                            </Link>
-                                            <Link
-                                                href={route(
-                                                    'evaluations.edit',
-                                                    evaluation.id,
-                                                )}
-                                                className="text-gray-600 hover:underline dark:text-gray-400"
-                                            >
-                                                Editar
-                                            </Link>
-                                        </div>
+                                        {can.manageEvaluations && (
+                                            <div className="flex items-center gap-3 text-sm">
+                                                <Link
+                                                    href={route(
+                                                        'evaluations.grades.edit',
+                                                        evaluation.id,
+                                                    )}
+                                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                                >
+                                                    Calificar
+                                                </Link>
+                                                <Link
+                                                    href={route(
+                                                        'evaluations.edit',
+                                                        evaluation.id,
+                                                    )}
+                                                    className="text-gray-600 hover:underline dark:text-gray-400"
+                                                >
+                                                    Editar
+                                                </Link>
+                                            </div>
+                                        )}
                                     </li>
                                 ))}
                                 {evaluations.length === 0 && (

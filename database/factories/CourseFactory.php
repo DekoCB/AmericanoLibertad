@@ -27,6 +27,7 @@ class CourseFactory extends Factory
             'schedule' => fake()->randomElement([
                 'Lun-Mié 08:00-09:30', 'Mar-Jue 10:00-11:30', 'Vie 13:00-16:00',
             ]),
+            'turno' => fake()->randomElement(['mañana', 'tarde', 'noche']),
             'capacity' => fake()->numberBetween(20, 40),
         ];
     }

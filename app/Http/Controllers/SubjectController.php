@@ -13,6 +13,8 @@ class SubjectController extends Controller
 {
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', Subject::class);
+
         $subjects = Subject::query()
             ->when($request->string('search')->toString(), function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
@@ -26,16 +28,25 @@ class SubjectController extends Controller
         return Inertia::render('Subjects/Index', [
             'subjects' => $subjects,
             'filters' => $request->only('search'),
+            'can' => [
+                'create' => $request->user()->can('create', Subject::class),
+                'update' => $request->user()->can('update', new Subject()),
+                'delete' => $request->user()->can('delete', new Subject()),
+            ],
         ]);
     }
 
     public function create(): Response
     {
+        $this->authorize('create', Subject::class);
+
         return Inertia::render('Subjects/Create');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Subject::class);
+
         Subject::create($this->validateSubject($request));
 
         return redirect()->route('subjects.index')->with('success', 'Materia creada correctamente.');
@@ -43,6 +54,8 @@ class SubjectController extends Controller
 
     public function edit(Subject $subject): Response
     {
+        $this->authorize('update', $subject);
+
         return Inertia::render('Subjects/Edit', [
             'subject' => $subject,
         ]);
@@ -50,6 +63,8 @@ class SubjectController extends Controller
 
     public function update(Request $request, Subject $subject): RedirectResponse
     {
+        $this->authorize('update', $subject);
+
         $subject->update($this->validateSubject($request, $subject));
 
         return redirect()->route('subjects.index')->with('success', 'Materia actualizada correctamente.');
@@ -57,6 +72,8 @@ class SubjectController extends Controller
 
     public function destroy(Subject $subject): RedirectResponse
     {
+        $this->authorize('delete', $subject);
+
         $subject->delete();
 
         return redirect()->route('subjects.index')->with('success', 'Materia eliminada correctamente.');

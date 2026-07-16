@@ -25,6 +25,7 @@ class TeacherFactory extends Factory
             'specialty' => fake()->randomElement([
                 'Matemáticas', 'Ciencias', 'Humanidades', 'Idiomas', 'Tecnología', 'Artes',
             ]),
+            'tarifa_hora' => fake()->randomElement([18, 20, 22, 25, 30]),
         ];
     }
 }

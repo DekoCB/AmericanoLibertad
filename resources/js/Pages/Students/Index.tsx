@@ -10,9 +10,11 @@ import { Paginated, Student, studentStatusLabels } from '@/types/models';
 export default function Index({
     students,
     filters,
+    can,
 }: {
     students: Paginated<Student>;
     filters: { search?: string };
+    can: { create: boolean; update: boolean; delete: boolean };
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [confirmingDelete, setConfirmingDelete] = useState<Student | null>(
@@ -64,9 +66,11 @@ export default function Index({
                             </PrimaryButton>
                         </form>
 
-                        <Link href={route('students.create')}>
-                            <PrimaryButton>Nuevo estudiante</PrimaryButton>
-                        </Link>
+                        {can.create && (
+                            <Link href={route('students.create')}>
+                                <PrimaryButton>Nuevo estudiante</PrimaryButton>
+                            </Link>
+                        )}
                     </div>
 
                     <div className="overflow-hidden overflow-x-auto bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
@@ -117,25 +121,29 @@ export default function Index({
                                             </span>
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                                            <Link
-                                                href={route(
-                                                    'students.edit',
-                                                    student.id,
-                                                )}
-                                                className="text-indigo-600 hover:underline dark:text-indigo-400"
-                                            >
-                                                Editar
-                                            </Link>
-                                            <button
-                                                onClick={() =>
-                                                    setConfirmingDelete(
-                                                        student,
-                                                    )
-                                                }
-                                                className="ms-4 text-red-600 hover:underline dark:text-red-400"
-                                            >
-                                                Eliminar
-                                            </button>
+                                            {can.update && (
+                                                <Link
+                                                    href={route(
+                                                        'students.edit',
+                                                        student.id,
+                                                    )}
+                                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                                >
+                                                    Editar
+                                                </Link>
+                                            )}
+                                            {can.delete && (
+                                                <button
+                                                    onClick={() =>
+                                                        setConfirmingDelete(
+                                                            student,
+                                                        )
+                                                    }
+                                                    className="ms-4 text-red-600 hover:underline dark:text-red-400"
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

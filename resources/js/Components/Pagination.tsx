@@ -16,7 +16,7 @@ export default function Pagination({ links }: { links: PaginationLink[] }) {
                     preserveScroll
                     className={`rounded-md px-3 py-1 text-sm ${
                         link.active
-                            ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800'
+                            ? 'bg-blue-800 text-white dark:bg-blue-200 dark:text-blue-900'
                             : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                     } ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
                 />

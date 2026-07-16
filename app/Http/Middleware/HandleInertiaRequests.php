@@ -2,6 +2,16 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserRole;
+use App\Models\Carrera;
+use App\Models\Course;
+use App\Models\Egreso;
+use App\Models\Matricula;
+use App\Models\PermisoDocente;
+use App\Models\RegistroHoras;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -29,10 +39,27 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'nav' => $user ? [
+                    'students' => $user->can('viewAny', Student::class),
+                    'teachers' => $user->can('viewAny', Teacher::class),
+                    'subjects' => $user->can('viewAny', Subject::class),
+                    'courses' => $user->can('viewAny', Course::class),
+                    'carreras' => $user->can('viewAny', Carrera::class),
+                    'matriculas' => $user->can('viewAny', Matricula::class),
+                    'caja' => $user->can('viewAny', Egreso::class),
+                    'horarios' => $user->can('viewAny', Course::class),
+                    'asistencias' => $user->can('viewAny', Course::class),
+                    'aulaVirtual' => true,
+                    'registrosHoras' => $user->can('viewAny', RegistroHoras::class),
+                    'permisos' => $user->can('viewAny', PermisoDocente::class),
+                    'users' => $user->role === UserRole::Gerencia,
+                ] : null,
             ],
         ];
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Carrera;
 use App\Models\Student;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,10 @@ class StudentController extends Controller
 {
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', Student::class);
+
         $students = Student::query()
+            ->with('carrera')
             ->when($request->string('search')->toString(), function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('first_name', 'like', "%{$search}%")
@@ -30,16 +34,27 @@ class StudentController extends Controller
         return Inertia::render('Students/Index', [
             'students' => $students,
             'filters' => $request->only('search'),
+            'can' => [
+                'create' => $request->user()->can('create', Student::class),
+                'update' => $request->user()->can('update', new Student()),
+                'delete' => $request->user()->can('delete', new Student()),
+            ],
         ]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('Students/Create');
+        $this->authorize('create', Student::class);
+
+        return Inertia::render('Students/Create', [
+            'carreras' => Carrera::orderBy('name')->get(['id', 'name', 'total_ciclos']),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Student::class);
+
         Student::create($this->validateStudent($request));
 
         return redirect()->route('students.index')->with('success', 'Estudiante creado correctamente.');
@@ -47,13 +62,18 @@ class StudentController extends Controller
 
     public function edit(Student $student): Response
     {
+        $this->authorize('update', $student);
+
         return Inertia::render('Students/Edit', [
             'student' => $student,
+            'carreras' => Carrera::orderBy('name')->get(['id', 'name', 'total_ciclos']),
         ]);
     }
 
     public function update(Request $request, Student $student): RedirectResponse
     {
+        $this->authorize('update', $student);
+
         $student->update($this->validateStudent($request, $student));
 
         return redirect()->route('students.index')->with('success', 'Estudiante actualizado correctamente.');
@@ -61,6 +81,8 @@ class StudentController extends Controller
 
     public function destroy(Student $student): RedirectResponse
     {
+        $this->authorize('delete', $student);
+
         $student->delete();
 
         return redirect()->route('students.index')->with('success', 'Estudiante eliminado correctamente.');
@@ -77,6 +99,9 @@ class StudentController extends Controller
             'birth_date' => ['nullable', 'date'],
             'address' => ['nullable', 'string', 'max:255'],
             'status' => ['required', Rule::in(['active', 'inactive', 'graduated'])],
+            'carrera_id' => ['nullable', 'exists:carreras,id'],
+            'ciclo' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'turno' => ['nullable', Rule::in(['mañana', 'tarde', 'noche'])],
         ]);
     }
 }

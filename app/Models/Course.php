@@ -18,6 +18,7 @@ class Course extends Model
         'name',
         'period',
         'schedule',
+        'turno',
         'capacity',
     ];
 
@@ -39,5 +40,20 @@ class Course extends Model
     public function evaluations(): HasMany
     {
         return $this->hasMany(Evaluation::class);
+    }
+
+    public function horarios(): HasMany
+    {
+        return $this->hasMany(Horario::class);
+    }
+
+    public function asistencias(): HasMany
+    {
+        return $this->hasMany(Asistencia::class);
+    }
+
+    public function recursosAula(): HasMany
+    {
+        return $this->hasMany(RecursoAula::class);
     }
 }

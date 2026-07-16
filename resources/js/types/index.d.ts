@@ -1,8 +1,35 @@
+export type UserRole =
+    | 'gerencia'
+    | 'administrativo'
+    | 'coordinador'
+    | 'academico'
+    | 'docente'
+    | 'estudiante';
+
 export interface User {
     id: number;
     name: string;
     email: string;
     email_verified_at?: string;
+    role: UserRole;
+    teacher_id: number | null;
+    student_id: number | null;
+}
+
+export interface NavPermissions {
+    students: boolean;
+    teachers: boolean;
+    subjects: boolean;
+    courses: boolean;
+    carreras: boolean;
+    matriculas: boolean;
+    caja: boolean;
+    horarios: boolean;
+    asistencias: boolean;
+    aulaVirtual: boolean;
+    registrosHoras: boolean;
+    permisos: boolean;
+    users: boolean;
 }
 
 export type PageProps<
@@ -10,5 +37,6 @@ export type PageProps<
 > = T & {
     auth: {
         user: User;
+        nav: NavPermissions | null;
     };
 };

@@ -13,6 +13,8 @@ class EvaluationController extends Controller
 {
     public function create(Course $course): Response
     {
+        $this->authorize('create', [Evaluation::class, $course]);
+
         return Inertia::render('Evaluations/Create', [
             'course' => $course->load('subject'),
         ]);
@@ -20,6 +22,8 @@ class EvaluationController extends Controller
 
     public function store(Request $request, Course $course): RedirectResponse
     {
+        $this->authorize('create', [Evaluation::class, $course]);
+
         $course->evaluations()->create($this->validateEvaluation($request));
 
         return redirect()->route('courses.show', $course)->with('success', 'Evaluación creada correctamente.');
@@ -27,6 +31,8 @@ class EvaluationController extends Controller
 
     public function edit(Evaluation $evaluation): Response
     {
+        $this->authorize('update', $evaluation);
+
         return Inertia::render('Evaluations/Edit', [
             'evaluation' => $evaluation,
             'course' => $evaluation->course->load('subject'),
@@ -35,6 +41,8 @@ class EvaluationController extends Controller
 
     public function update(Request $request, Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('update', $evaluation);
+
         $evaluation->update($this->validateEvaluation($request));
 
         return redirect()->route('courses.show', $evaluation->course_id)->with('success', 'Evaluación actualizada correctamente.');
@@ -42,6 +50,8 @@ class EvaluationController extends Controller
 
     public function destroy(Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('delete', $evaluation);
+
         $courseId = $evaluation->course_id;
 
         $evaluation->delete();

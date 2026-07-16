@@ -12,6 +12,8 @@ class GradeController extends Controller
 {
     public function edit(Evaluation $evaluation): Response
     {
+        $this->authorize('update', $evaluation);
+
         $evaluation->load(['course.subject']);
 
         $students = $evaluation->course
@@ -37,6 +39,8 @@ class GradeController extends Controller
 
     public function update(Request $request, Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('update', $evaluation);
+
         $validated = $request->validate([
             'grades' => ['required', 'array'],
             'grades.*.student_id' => ['required', 'exists:students,id'],

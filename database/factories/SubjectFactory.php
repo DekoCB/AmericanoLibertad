@@ -18,7 +18,7 @@ class SubjectFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->unique()->randomElement([
+            'name' => fake()->randomElement([
                 'Matemáticas', 'Lengua y Literatura', 'Ciencias Naturales', 'Historia',
                 'Geografía', 'Inglés', 'Educación Física', 'Arte', 'Física', 'Química',
                 'Biología', 'Programación', 'Filosofía',

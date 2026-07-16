@@ -13,6 +13,8 @@ class TeacherController extends Controller
 {
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', Teacher::class);
+
         $teachers = Teacher::query()
             ->when($request->string('search')->toString(), function ($query, $search) {
                 $query->where(function ($query) use ($search) {
@@ -29,16 +31,25 @@ class TeacherController extends Controller
         return Inertia::render('Teachers/Index', [
             'teachers' => $teachers,
             'filters' => $request->only('search'),
+            'can' => [
+                'create' => $request->user()->can('create', Teacher::class),
+                'update' => $request->user()->can('update', new Teacher()),
+                'delete' => $request->user()->can('delete', new Teacher()),
+            ],
         ]);
     }
 
     public function create(): Response
     {
+        $this->authorize('create', Teacher::class);
+
         return Inertia::render('Teachers/Create');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Teacher::class);
+
         Teacher::create($this->validateTeacher($request));
 
         return redirect()->route('teachers.index')->with('success', 'Profesor creado correctamente.');
@@ -46,6 +57,8 @@ class TeacherController extends Controller
 
     public function edit(Teacher $teacher): Response
     {
+        $this->authorize('update', $teacher);
+
         return Inertia::render('Teachers/Edit', [
             'teacher' => $teacher,
         ]);
@@ -53,6 +66,8 @@ class TeacherController extends Controller
 
     public function update(Request $request, Teacher $teacher): RedirectResponse
     {
+        $this->authorize('update', $teacher);
+
         $teacher->update($this->validateTeacher($request, $teacher));
 
         return redirect()->route('teachers.index')->with('success', 'Profesor actualizado correctamente.');
@@ -60,6 +75,8 @@ class TeacherController extends Controller
 
     public function destroy(Teacher $teacher): RedirectResponse
     {
+        $this->authorize('delete', $teacher);
+
         $teacher->delete();
 
         return redirect()->route('teachers.index')->with('success', 'Profesor eliminado correctamente.');

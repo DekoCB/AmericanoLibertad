@@ -5,8 +5,9 @@ import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
+import { Carrera } from '@/types/models';
 
-export default function Create() {
+export default function Create({ carreras }: { carreras: Carrera[] }) {
     const { data, setData, post, processing, errors } = useForm({
         document_number: '',
         first_name: '',
@@ -16,6 +17,9 @@ export default function Create() {
         birth_date: '',
         address: '',
         status: 'active',
+        carrera_id: '',
+        ciclo: '',
+        turno: '',
     });
 
     const submit = (e: FormEvent) => {
@@ -67,7 +71,7 @@ export default function Create() {
                                     />
                                     <select
                                         id="status"
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                                         value={data.status}
                                         onChange={(e) =>
                                             setData('status', e.target.value)
@@ -208,6 +212,84 @@ export default function Create() {
                                     />
                                     <InputError
                                         message={errors.address}
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <InputLabel
+                                        htmlFor="carrera_id"
+                                        value="Carrera"
+                                    />
+                                    <select
+                                        id="carrera_id"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        value={data.carrera_id}
+                                        onChange={(e) =>
+                                            setData(
+                                                'carrera_id',
+                                                e.target.value,
+                                            )
+                                        }
+                                    >
+                                        <option value="">Sin asignar</option>
+                                        {carreras.map((carrera) => (
+                                            <option
+                                                key={carrera.id}
+                                                value={carrera.id}
+                                            >
+                                                {carrera.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError
+                                        message={errors.carrera_id}
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <InputLabel
+                                        htmlFor="ciclo"
+                                        value="Ciclo"
+                                    />
+                                    <TextInput
+                                        id="ciclo"
+                                        type="number"
+                                        min={1}
+                                        max={20}
+                                        className="mt-1 block w-full"
+                                        value={data.ciclo}
+                                        onChange={(e) =>
+                                            setData('ciclo', e.target.value)
+                                        }
+                                    />
+                                    <InputError
+                                        message={errors.ciclo}
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <InputLabel
+                                        htmlFor="turno"
+                                        value="Turno"
+                                    />
+                                    <select
+                                        id="turno"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        value={data.turno}
+                                        onChange={(e) =>
+                                            setData('turno', e.target.value)
+                                        }
+                                    >
+                                        <option value="">Sin asignar</option>
+                                        <option value="mañana">Mañana</option>
+                                        <option value="tarde">Tarde</option>
+                                        <option value="noche">Noche</option>
+                                    </select>
+                                    <InputError
+                                        message={errors.turno}
                                         className="mt-2"
                                     />
                                 </div>
