@@ -16,18 +16,20 @@ class SubjectController extends Controller
         $this->authorize('viewAny', Subject::class);
 
         $subjects = Subject::query()
-            ->when($request->string('search')->toString(), function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%");
+            ->when($request->string('name')->toString(), function ($query, $name) {
+                $query->where('name', $name);
             })
+            ->with('carrera')
             ->withCount('courses')
             ->orderBy('name')
+            ->orderBy('ciclo')
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Subjects/Index', [
             'subjects' => $subjects,
-            'filters' => $request->only('search'),
+            'nombresMaterias' => Subject::orderBy('name')->distinct()->pluck('name'),
+            'filters' => $request->only('name'),
             'can' => [
                 'create' => $request->user()->can('create', Subject::class),
                 'update' => $request->user()->can('update', new Subject()),

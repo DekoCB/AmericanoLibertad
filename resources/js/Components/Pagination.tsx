@@ -14,10 +14,10 @@ export default function Pagination({ links }: { links: PaginationLink[] }) {
                     href={link.url ?? '#'}
                     dangerouslySetInnerHTML={{ __html: link.label }}
                     preserveScroll
-                    className={`rounded-md px-3 py-1 text-sm ${
+                    className={`rounded-xl px-3 py-1 text-sm ${
                         link.active
-                            ? 'bg-blue-800 text-white dark:bg-blue-200 dark:text-blue-900'
-                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                            ? 'bg-brand-navy text-white'
+                            : 'text-brand-muted hover:bg-brand-cream'
                     } ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
                 />
             ))}

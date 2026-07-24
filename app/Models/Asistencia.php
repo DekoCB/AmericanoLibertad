@@ -42,4 +42,29 @@ class Asistencia extends Model
     {
         return $this->belongsTo(User::class, 'registrado_por');
     }
+
+    public static function marcar(
+        int $courseId,
+        int $studentId,
+        string $fecha,
+        string $estado,
+        ?int $registradoPor,
+    ): self {
+        $asistencia = static::where('course_id', $courseId)
+            ->where('student_id', $studentId)
+            ->whereDate('fecha', $fecha)
+            ->first() ?? new static([
+                'course_id' => $courseId,
+                'student_id' => $studentId,
+                'fecha' => $fecha,
+            ]);
+
+        $asistencia->fill([
+            'estado' => $estado,
+            'hora_registro' => now(),
+            'registrado_por' => $registradoPor,
+        ])->save();
+
+        return $asistencia;
+    }
 }

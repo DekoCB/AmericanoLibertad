@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Subject;
 use App\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,21 +17,29 @@ class TeacherController extends Controller
         $this->authorize('viewAny', Teacher::class);
 
         $teachers = Teacher::query()
-            ->when($request->string('search')->toString(), function ($query, $search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
+            ->with('user')
+            ->when($request->string('teacher_id')->toString(), function ($query, $teacherId) {
+                $query->where('id', $teacherId);
+            })
+            ->when($request->string('specialty')->toString(), function ($query, $specialty) {
+                $query->whereRaw('JSON_CONTAINS(specialty, ?)', [json_encode($specialty)]);
             })
             ->withCount('courses')
             ->orderBy('last_name')
             ->paginate(15)
             ->withQueryString();
 
+        $especialidadesAsignadas = Teacher::whereNotNull('specialty')->pluck('specialty')->flatten()->unique();
+
         return Inertia::render('Teachers/Index', [
             'teachers' => $teachers,
-            'filters' => $request->only('search'),
+            'allTeachers' => Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']),
+            'filters' => $request->only(['teacher_id', 'specialty']),
+            'specialties' => Subject::orderBy('name')->pluck('name')->unique()
+                ->merge($especialidadesAsignadas)
+                ->unique()
+                ->sort()
+                ->values(),
             'can' => [
                 'create' => $request->user()->can('create', Teacher::class),
                 'update' => $request->user()->can('update', new Teacher()),
@@ -43,7 +52,9 @@ class TeacherController extends Controller
     {
         $this->authorize('create', Teacher::class);
 
-        return Inertia::render('Teachers/Create');
+        return Inertia::render('Teachers/Create', [
+            'specialties' => Subject::orderBy('name')->pluck('name')->unique()->values(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -60,7 +71,8 @@ class TeacherController extends Controller
         $this->authorize('update', $teacher);
 
         return Inertia::render('Teachers/Edit', [
-            'teacher' => $teacher,
+            'teacher' => $teacher->load('user'),
+            'specialties' => Subject::orderBy('name')->pluck('name')->unique()->values(),
         ]);
     }
 
@@ -89,7 +101,8 @@ class TeacherController extends Controller
             'last_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', Rule::unique('teachers')->ignore($teacher)],
             'phone' => ['nullable', 'string', 'max:30'],
-            'specialty' => ['nullable', 'string', 'max:100'],
+            'specialty' => ['nullable', 'array'],
+            'specialty.*' => ['string', 'max:100'],
         ]);
     }
 }

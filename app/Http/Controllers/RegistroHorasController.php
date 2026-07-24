@@ -9,6 +9,7 @@ use App\Models\RegistroHoras;
 use App\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -55,6 +56,11 @@ class RegistroHorasController extends Controller
                     'teacher' => $teacher,
                     'horas' => $registros->sum('horas_academicas'),
                     'monto_neto' => $registros->sum(fn (RegistroHoras $r) => $r->montoNeto()),
+                    'registros' => $registros->map(fn (RegistroHoras $r) => [
+                        'fecha' => $r->fecha->format('Y-m-d'),
+                        'horas_academicas' => (float) $r->horas_academicas,
+                        'monto_neto' => $r->montoNeto(),
+                    ])->values(),
                 ];
             })
             ->values();
@@ -64,8 +70,8 @@ class RegistroHorasController extends Controller
             'pendientesPorDocente' => $pendientesPorDocente,
             'teachers' => $user->hasRole(UserRole::Docente) ? [] : Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             'courses' => $user->hasRole(UserRole::Docente)
-                ? Course::where('teacher_id', $user->teacher_id)->get(['id', 'name'])
-                : Course::orderByDesc('period')->get(['id', 'name']),
+                ? Course::where('teacher_id', $user->teacher_id)->orderBy('name')->get(['id', 'name'])
+                : Course::orderBy('name')->get(['id', 'name']),
             'filters' => $request->only('teacher_id'),
             'can' => [
                 'generarPago' => $user->can('generarPago', RegistroHoras::class),
@@ -148,5 +154,46 @@ class RegistroHorasController extends Controller
         ]);
 
         return redirect()->route('registros-horas.index')->with('success', 'Pago generado correctamente por S/ '.number_format($montoNeto, 2).'.');
+    }
+
+    public function comprobante(Request $request, Egreso $egreso): View
+    {
+        abort_unless($egreso->categoria === 'pago_docente', 404);
+
+        $registros = $egreso->registrosHoras()
+            ->with(['teacher', 'course.subject'])
+            ->orderBy('fecha')
+            ->get();
+
+        abort_if($registros->isEmpty(), 404);
+
+        $teacher = $registros->first()->teacher;
+        $user = $request->user();
+
+        $esSuPropioDocente = $user->hasRole(UserRole::Docente) && $user->teacher_id === $teacher->id;
+        $esPersonalAdministrativo = $user->hasRole(UserRole::Gerencia, UserRole::Administrativo, UserRole::Coordinador);
+
+        abort_unless($esSuPropioDocente || $esPersonalAdministrativo, 403);
+
+        $filas = $registros->map(fn (RegistroHoras $r) => [
+            'fecha' => $r->fecha->format('d/m/Y'),
+            'curso' => $r->course?->name,
+            'horas' => (float) $r->horas_academicas,
+            'monto_bruto' => $r->montoBruto(),
+            'descuento_tardanza' => $r->descuentoTardanza(),
+            'monto_neto' => $r->montoNeto(),
+        ]);
+
+        return view('comprobantes.pago-docente', [
+            'egreso' => $egreso,
+            'teacher' => $teacher,
+            'filas' => $filas,
+            'desde' => $registros->min('fecha')->format('d/m/Y'),
+            'hasta' => $registros->max('fecha')->format('d/m/Y'),
+            'totalHoras' => $filas->sum('horas'),
+            'totalBruto' => $filas->sum('monto_bruto'),
+            'totalDescuento' => $filas->sum('descuento_tardanza'),
+            'totalNeto' => $filas->sum('monto_neto'),
+        ]);
     }
 }

@@ -27,6 +27,9 @@ class Pago extends Model
     {
         return [
             'fecha' => 'date',
+            'monto' => 'float',
+            'monto_efectivo' => 'float',
+            'monto_yape' => 'float',
         ];
     }
 

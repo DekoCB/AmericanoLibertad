@@ -12,6 +12,7 @@ export interface Carrera {
 export interface Student {
     id: number;
     document_number: string;
+    qr_token: string;
     first_name: string;
     last_name: string;
     email: string;
@@ -24,6 +25,7 @@ export interface Student {
     turno: Turno | null;
     carrera?: Carrera | null;
     enrollments_count?: number;
+    user?: { avatar_url: string | null } | null;
 }
 
 export interface Teacher {
@@ -32,9 +34,10 @@ export interface Teacher {
     last_name: string;
     email: string;
     phone: string | null;
-    specialty: string | null;
+    specialty: string[] | null;
     tarifa_hora: number;
     courses_count?: number;
+    user?: { avatar_url: string | null } | null;
 }
 
 export interface Subject {
@@ -61,7 +64,6 @@ export interface Course {
     subject?: Subject;
     teacher?: Teacher | null;
     enrollments_count?: number;
-    horarios?: Horario[];
     recursos_aula_count?: number;
 }
 
@@ -71,7 +73,8 @@ export type DiaSemana =
     | 'miercoles'
     | 'jueves'
     | 'viernes'
-    | 'sabado';
+    | 'sabado'
+    | 'domingo';
 
 export const diaSemanaLabels: Record<DiaSemana, string> = {
     lunes: 'Lunes',
@@ -80,6 +83,7 @@ export const diaSemanaLabels: Record<DiaSemana, string> = {
     jueves: 'Jueves',
     viernes: 'Viernes',
     sabado: 'Sábado',
+    domingo: 'Domingo',
 };
 
 export interface Horario {
@@ -109,9 +113,46 @@ export interface Evaluation {
     type: 'exam' | 'quiz' | 'homework' | 'project';
     weight: number;
     date: string;
+    semana: number | null;
     max_score: number;
     course?: Course;
     grades_count?: number;
+    preguntas_count?: number;
+    mi_intento?: QuizIntento | null;
+    mi_entrega?: EntregaEvaluacion | null;
+}
+
+export interface QuizOpcion {
+    id: number;
+    quiz_pregunta_id: number;
+    texto: string;
+    es_correcta: boolean;
+    orden: number;
+}
+
+export interface QuizPregunta {
+    id: number;
+    evaluation_id: number;
+    texto: string;
+    orden: number;
+    opciones?: QuizOpcion[];
+}
+
+export interface QuizIntento {
+    id: number;
+    evaluation_id: number;
+    student_id: number;
+    puntaje: number;
+    enviado_at: string;
+}
+
+export interface EntregaEvaluacion {
+    id: number;
+    evaluation_id: number;
+    student_id: number;
+    archivo: string;
+    nombre_original: string;
+    enviado_at: string;
 }
 
 export interface Grade {
@@ -175,7 +216,7 @@ export interface Pago {
     student_id: number;
     registrado_por: number | null;
     monto: number;
-    medio: 'efectivo' | 'yape' | 'mixto';
+    medio: 'efectivo' | 'yape' | 'plin' | 'tarjeta' | 'mixto';
     monto_efectivo: number;
     monto_yape: number;
     fecha: string;
@@ -195,6 +236,17 @@ export interface Cuota {
     pagos?: Pago[];
 }
 
+export interface HistorialMatricula {
+    id: number;
+    matricula_id: number;
+    user_id: number | null;
+    campo: string;
+    valor_anterior: string | null;
+    valor_nuevo: string | null;
+    created_at: string;
+    user?: { id: number; name: string } | null;
+}
+
 export interface Matricula {
     id: number;
     student_id: number;
@@ -210,6 +262,8 @@ export interface Matricula {
     cuotas?: Cuota[];
     saldo_total?: number;
     pagado_total?: number;
+    materias?: { subject: string; course: string; teacher: string | null }[];
+    historiales?: HistorialMatricula[];
 }
 
 export interface Egreso {
@@ -231,6 +285,8 @@ export const cuotaEstadoLabels: Record<Cuota['estado'], string> = {
 export const medioPagoLabels: Record<Pago['medio'], string> = {
     efectivo: 'Efectivo',
     yape: 'Yape',
+    plin: 'Plin',
+    tarjeta: 'Tarjeta',
     mixto: 'Mixto',
 };
 
@@ -255,6 +311,7 @@ export interface Asistencia {
     hora_registro: string | null;
     registrado_por: number | null;
     student?: Student;
+    course?: Course;
 }
 
 export const asistenciaEstadoLabels: Record<Asistencia['estado'], string> = {
@@ -272,10 +329,16 @@ export interface AsistenciaSheetRow {
 export interface RecursoAula {
     id: number;
     course_id: number;
+    semana: number | null;
     titulo: string;
     tipo: 'enlace' | 'archivo' | 'anuncio';
+    entregable: boolean;
+    fecha_entrega: string | null;
     descripcion: string | null;
     url: string | null;
+    archivo: string | null;
+    archivo_nombre: string | null;
+    archivo_url: string | null;
     creado_por: number | null;
     created_at: string;
 }

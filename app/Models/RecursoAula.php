@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class RecursoAula extends Model
 {
@@ -15,12 +17,34 @@ class RecursoAula extends Model
 
     protected $fillable = [
         'course_id',
+        'semana',
         'titulo',
         'tipo',
+        'entregable',
+        'fecha_entrega',
         'descripcion',
         'url',
+        'archivo',
+        'archivo_nombre',
         'creado_por',
     ];
+
+    protected $appends = ['archivo_url'];
+
+    protected function casts(): array
+    {
+        return [
+            'entregable' => 'boolean',
+            'fecha_entrega' => 'date',
+        ];
+    }
+
+    protected function archivoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->archivo ? Storage::disk('public')->url($this->archivo) : null,
+        );
+    }
 
     public function course(): BelongsTo
     {

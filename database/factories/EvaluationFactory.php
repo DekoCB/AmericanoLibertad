@@ -27,7 +27,7 @@ class EvaluationFactory extends Factory
             'type' => fake()->randomElement(['exam', 'quiz', 'homework', 'project']),
             'weight' => fake()->randomElement([10, 15, 20, 25, 30]),
             'date' => fake()->dateTimeBetween('-4 months', '+1 month'),
-            'max_score' => 100,
+            'max_score' => 20,
         ];
     }
 }

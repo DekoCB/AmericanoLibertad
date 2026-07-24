@@ -27,18 +27,48 @@ class CourseController extends Controller
                 $request->user()->hasRole(UserRole::Docente),
                 fn ($query) => $query->where('teacher_id', $request->user()->teacher_id)
             )
-            ->when($request->string('search')->toString(), function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('subject', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+            ->when($request->string('name')->toString(), function ($query, $name) {
+                $query->where('name', $name);
+            })
+            ->when($request->string('subject_name')->toString(), function ($query, $subjectName) {
+                $query->whereHas('subject', fn ($q) => $q->where('name', $subjectName));
             })
             ->orderByDesc('period')
             ->orderBy('name')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
+
+        $upcomingEvaluations = Evaluation::with('course.subject')
+            ->when(
+                $request->user()->hasRole(UserRole::Docente),
+                fn ($query) => $query->whereHas(
+                    'course',
+                    fn ($q) => $q->where('teacher_id', $request->user()->teacher_id)
+                )
+            )
+            ->whereDate('date', '>=', now())
+            ->orderBy('date')
+            ->limit(6)
+            ->get();
+
+        $nombresSecciones = Course::query()
+            ->when(
+                $request->user()->hasRole(UserRole::Docente),
+                fn ($query) => $query->where('teacher_id', $request->user()->teacher_id)
+            )
+            ->orderBy('name')
+            ->distinct()
+            ->pluck('name');
+
+        $nombresMaterias = Subject::orderBy('name')->distinct()->pluck('name');
 
         return Inertia::render('Courses/Index', [
             'courses' => $courses,
-            'filters' => $request->only('search'),
+            'nombresSecciones' => $nombresSecciones,
+            'nombresMaterias' => $nombresMaterias,
+            'filters' => $request->only('name', 'subject_name'),
+            'subjects' => Subject::orderBy('name')->get(['id', 'name']),
+            'teachers' => Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
+            'upcomingEvaluations' => $upcomingEvaluations,
             'can' => [
                 'create' => $request->user()->can('create', Course::class),
                 'update' => $request->user()->hasRole(UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico, UserRole::Docente),
@@ -93,6 +123,8 @@ class CourseController extends Controller
             'enrollments' => $enrollments,
             'evaluations' => $evaluations,
             'availableStudents' => $availableStudents,
+            'subjects' => Subject::orderBy('name')->get(['id', 'name']),
+            'teachers' => Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             'can' => [
                 'manageEnrollments' => $canManageEnrollments,
                 'manageCourse' => $request->user()->can('update', $course),
@@ -119,7 +151,7 @@ class CourseController extends Controller
 
         $course->update($this->validateCourse($request));
 
-        return redirect()->route('courses.index')->with('success', 'Curso actualizado correctamente.');
+        return redirect()->back()->with('success', 'Curso actualizado correctamente.');
     }
 
     public function destroy(Course $course): RedirectResponse

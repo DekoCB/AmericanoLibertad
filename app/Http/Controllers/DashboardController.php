@@ -7,16 +7,26 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Evaluation;
 use App\Models\Grade;
+use App\Models\Horario;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    /**
+     * Coordenadas de Huaraz, Áncash (sede del instituto).
+     */
+    private const CLIMA_LATITUD = -9.5277;
+
+    private const CLIMA_LONGITUD = -77.5278;
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -32,10 +42,76 @@ class DashboardController extends Controller
         return $this->staffDashboard();
     }
 
+    private function clima(): ?array
+    {
+        return Cache::remember('dashboard-clima', now()->addMinutes(20), function () {
+            try {
+                $response = Http::timeout(4)->get('https://api.open-meteo.com/v1/forecast', [
+                    'latitude' => self::CLIMA_LATITUD,
+                    'longitude' => self::CLIMA_LONGITUD,
+                    'current' => 'temperature_2m,weather_code,is_day',
+                    'timezone' => 'America/Lima',
+                ]);
+
+                if (! $response->successful()) {
+                    return null;
+                }
+
+                $current = $response->json('current');
+
+                if (! $current) {
+                    return null;
+                }
+
+                $codigo = (int) $current['weather_code'];
+
+                return [
+                    'temperatura' => (int) round($current['temperature_2m']),
+                    'descripcion' => $this->descripcionClima($codigo),
+                    'categoria' => $this->categoriaClima($codigo),
+                    'esDeDia' => (bool) $current['is_day'],
+                ];
+            } catch (\Throwable) {
+                return null;
+            }
+        });
+    }
+
+    private function descripcionClima(int $codigo): string
+    {
+        return match (true) {
+            $codigo === 0 => 'Despejado',
+            in_array($codigo, [1, 2], true) => 'Parcialmente nublado',
+            $codigo === 3 => 'Nublado',
+            in_array($codigo, [45, 48], true) => 'Neblina',
+            in_array($codigo, [51, 53, 55, 56, 57], true) => 'Llovizna',
+            in_array($codigo, [61, 63, 66], true) => 'Lluvia ligera',
+            in_array($codigo, [65, 67, 80, 81, 82], true) => 'Lluvia',
+            in_array($codigo, [71, 73, 75, 77, 85, 86], true) => 'Nevada',
+            $codigo === 95 => 'Tormenta eléctrica',
+            in_array($codigo, [96, 99], true) => 'Tormenta con granizo',
+            default => 'Clima variable',
+        };
+    }
+
+    private function categoriaClima(int $codigo): string
+    {
+        return match (true) {
+            $codigo === 0 => 'despejado',
+            in_array($codigo, [1, 2, 3], true) => 'nublado',
+            in_array($codigo, [45, 48], true) => 'neblina',
+            in_array($codigo, [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82], true) => 'lluvia',
+            in_array($codigo, [71, 73, 75, 77, 85, 86], true) => 'nieve',
+            in_array($codigo, [95, 96, 99], true) => 'granizo',
+            default => 'nublado',
+        };
+    }
+
     private function staffDashboard(): Response
     {
         return Inertia::render('Dashboard', [
             'view' => 'staff',
+            'clima' => $this->clima(),
             'stats' => [
                 'students' => Student::count(),
                 'activeStudents' => Student::where('status', 'active')->count(),
@@ -45,7 +121,7 @@ class DashboardController extends Controller
                 'activeEnrollments' => Enrollment::where('status', 'active')->count(),
                 'averageScore' => round((float) Grade::avg('score'), 1),
             ],
-            'recentEnrollments' => Enrollment::with(['student', 'course.subject'])
+            'recentEnrollments' => Enrollment::with(['student.user', 'course.subject'])
                 ->latest('enrolled_at')
                 ->limit(6)
                 ->get(),
@@ -68,8 +144,24 @@ class DashboardController extends Controller
 
         $courseIds = $courses->pluck('id');
 
+        $diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+
+        $topEstudiantes = Grade::whereHas('evaluation', fn ($query) => $query->whereIn('course_id', $courseIds))
+            ->selectRaw('student_id, AVG(score) as promedio')
+            ->groupBy('student_id')
+            ->orderByDesc('promedio')
+            ->limit(6)
+            ->with('student.user')
+            ->get()
+            ->map(fn ($grade) => [
+                'student_id' => $grade->student_id,
+                'promedio' => round((float) $grade->promedio, 2),
+                'student' => $grade->student,
+            ]);
+
         return Inertia::render('Dashboard', [
             'view' => 'docente',
+            'clima' => $this->clima(),
             'stats' => [
                 'courses' => $courses->count(),
                 'students' => Enrollment::whereIn('course_id', $courseIds)
@@ -78,7 +170,12 @@ class DashboardController extends Controller
                     ->count('student_id'),
                 'evaluations' => Evaluation::whereIn('course_id', $courseIds)->count(),
             ],
-            'myCourses' => $courses,
+            'horarioHoy' => Horario::with('course.subject')
+                ->whereIn('course_id', $courseIds)
+                ->where('dia_semana', $diasSemana[now()->dayOfWeek])
+                ->orderBy('hora_inicio')
+                ->get(),
+            'topEstudiantes' => $topEstudiantes,
             'upcomingEvaluations' => Evaluation::with('course.subject')
                 ->whereIn('course_id', $courseIds)
                 ->whereDate('date', '>=', now())
@@ -105,6 +202,7 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             'view' => 'estudiante',
+            'clima' => $this->clima(),
             'stats' => [
                 'courses' => $enrollments->count(),
                 'averageScore' => round((float) Grade::where('student_id', $user->student_id)->avg('score'), 1),

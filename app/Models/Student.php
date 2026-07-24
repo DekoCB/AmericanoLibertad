@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Student extends Model
 {
@@ -15,6 +16,7 @@ class Student extends Model
 
     protected $fillable = [
         'document_number',
+        'qr_token',
         'first_name',
         'last_name',
         'email',
@@ -34,9 +36,23 @@ class Student extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (Student $student) {
+            if (! $student->qr_token) {
+                $student->qr_token = (string) Str::uuid();
+            }
+        });
+    }
+
     public function enrollments(): HasMany
     {
         return $this->hasMany(Enrollment::class);
+    }
+
+    public function asistencias(): HasMany
+    {
+        return $this->hasMany(Asistencia::class);
     }
 
     public function grades(): HasMany

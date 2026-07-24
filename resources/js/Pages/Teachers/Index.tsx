@@ -1,32 +1,54 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
-import TextInput from '@/Components/TextInput';
+import Modal from '@/Components/Modal';
+import SearchableSelect from '@/Components/SearchableSelect';
 import Pagination from '@/Components/Pagination';
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { PencilIcon, TrashIcon } from '@/Components/Icons';
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import { Paginated, Teacher } from '@/types/models';
+import Form from './Form';
 
 export default function Index({
     teachers,
+    allTeachers,
     filters,
+    specialties,
     can,
 }: {
     teachers: Paginated<Teacher>;
-    filters: { search?: string };
+    allTeachers: Pick<Teacher, 'id' | 'first_name' | 'last_name' | 'email'>[];
+    filters: { teacher_id?: string; specialty?: string };
+    specialties: string[];
     can: { create: boolean; update: boolean; delete: boolean };
 }) {
-    const [search, setSearch] = useState(filters.search ?? '');
+    const [teacherId, setTeacherId] = useState(filters.teacher_id ?? '');
+    const [specialty, setSpecialty] = useState(filters.specialty ?? '');
+    const [creating, setCreating] = useState(false);
+    const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(
+        null,
+    );
+    const [editModalOpen, setEditModalOpen] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState<Teacher | null>(
         null,
     );
     const { delete: destroy, processing } = useForm();
 
-    const submitSearch = (e: FormEvent) => {
-        e.preventDefault();
+    const changeTeacher = (nuevoTeacherId: string) => {
+        setTeacherId(nuevoTeacherId);
         router.get(
             route('teachers.index'),
-            { search },
+            { teacher_id: nuevoTeacherId, specialty },
+            { preserveState: true, replace: true },
+        );
+    };
+
+    const changeSpecialty = (nuevaSpecialty: string) => {
+        setSpecialty(nuevaSpecialty);
+        router.get(
+            route('teachers.index'),
+            { teacher_id: teacherId, specialty: nuevaSpecialty },
             { preserveState: true, replace: true },
         );
     };
@@ -41,84 +63,115 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-2xl font-bold text-brand-ink-strong">
                     Profesores
                 </h2>
             }
         >
             <Head title="Profesores" />
 
-            <div className="py-12">
+            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <form
-                            onSubmit={submitSearch}
-                            className="flex w-full max-w-sm gap-2"
-                        >
-                            <TextInput
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Buscar por nombre o email"
-                                className="w-full"
-                            />
-                            <PrimaryButton type="submit">
-                                Buscar
-                            </PrimaryButton>
-                        </form>
+                        <div className="flex w-full flex-col gap-2 sm:flex-row">
+                            <div className="w-full max-w-sm">
+                                <SearchableSelect
+                                    value={teacherId}
+                                    onChange={changeTeacher}
+                                    placeholder="Buscar por nombre o email"
+                                    allLabel="Todos los profesores"
+                                    options={allTeachers.map((teacher) => ({
+                                        value: String(teacher.id),
+                                        label: `${teacher.first_name} ${teacher.last_name}`,
+                                        searchText: `${teacher.first_name} ${teacher.last_name} ${teacher.email}`,
+                                    }))}
+                                />
+                            </div>
+
+                            <div className="w-56">
+                                <SearchableSelect
+                                    value={specialty}
+                                    onChange={changeSpecialty}
+                                    placeholder="Buscar especialidad..."
+                                    allLabel="Todas las especialidades"
+                                    options={specialties.map((item) => ({
+                                        value: item,
+                                        label: item,
+                                    }))}
+                                />
+                            </div>
+                        </div>
 
                         {can.create && (
-                            <Link href={route('teachers.create')}>
-                                <PrimaryButton>Nuevo profesor</PrimaryButton>
-                            </Link>
+                            <PrimaryButton onClick={() => setCreating(true)}>
+                                Nuevo profesor
+                            </PrimaryButton>
                         )}
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-900">
+                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
+                        <table className="min-w-full divide-y divide-brand-border-faint">
+                            <thead className="bg-brand-thead">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Nombre
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Email
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Especialidad
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Cursos
                                     </th>
                                     <th className="px-4 py-3" />
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody className="divide-y divide-brand-border-faint">
                                 {teachers.data.map((teacher) => (
                                     <tr key={teacher.id}>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
                                             {teacher.first_name}{' '}
                                             {teacher.last_name}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
                                             {teacher.email}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                            {teacher.specialty ?? '—'}
+                                        <td className="px-4 py-3 text-sm text-brand-ink">
+                                            {teacher.specialty && teacher.specialty.length > 0 ? (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {teacher.specialty.map((specialty) => (
+                                                        <span
+                                                            key={specialty}
+                                                            className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs text-brand-ink"
+                                                        >
+                                                            {specialty}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                '—'
+                                            )}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
                                             {teacher.courses_count ?? 0}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
                                             {can.update && (
-                                                <Link
-                                                    href={route(
-                                                        'teachers.edit',
-                                                        teacher.id,
-                                                    )}
-                                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingTeacher(
+                                                            teacher,
+                                                        );
+                                                        setEditModalOpen(true);
+                                                    }}
+                                                    className="text-brand-link hover:opacity-70"
+                                                    title="Editar"
+                                                    aria-label="Editar"
                                                 >
-                                                    Editar
-                                                </Link>
+                                                    <PencilIcon className="size-4" />
+                                                </button>
                                             )}
                                             {can.delete && (
                                                 <button
@@ -127,9 +180,11 @@ export default function Index({
                                                             teacher,
                                                         )
                                                     }
-                                                    className="ms-4 text-red-600 hover:underline dark:text-red-400"
+                                                    className="ms-4 text-red-600 hover:opacity-70"
+                                                    title="Eliminar"
+                                                    aria-label="Eliminar"
                                                 >
-                                                    Eliminar
+                                                    <TrashIcon className="size-4" />
                                                 </button>
                                             )}
                                         </td>
@@ -139,7 +194,7 @@ export default function Index({
                                     <tr>
                                         <td
                                             colSpan={5}
-                                            className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+                                            className="px-4 py-6 text-center text-sm text-brand-muted"
                                         >
                                             No se encontraron profesores.
                                         </td>
@@ -153,13 +208,45 @@ export default function Index({
                 </div>
             </div>
 
+            <Modal show={creating} onClose={() => setCreating(false)}>
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Nuevo profesor
+                    </h2>
+                    <Form
+                        specialties={specialties}
+                        onSuccess={() => setCreating(false)}
+                        onCancel={() => setCreating(false)}
+                    />
+                </div>
+            </Modal>
+
+            <Modal
+                show={editModalOpen}
+                onClose={() => setEditModalOpen(false)}
+            >
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Editar profesor
+                    </h2>
+                    {editingTeacher && (
+                        <Form
+                            teacher={editingTeacher}
+                            specialties={specialties}
+                            onSuccess={() => setEditModalOpen(false)}
+                            onCancel={() => setEditModalOpen(false)}
+                        />
+                    )}
+                </div>
+            </Modal>
+
             {confirmingDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-                    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
+                        <h3 className="text-lg font-bold text-brand-ink-strong">
                             ¿Eliminar profesor?
                         </h3>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p className="mt-2 text-sm text-brand-muted">
                             Vas a eliminar a {confirmingDelete.first_name}{' '}
                             {confirmingDelete.last_name}. Los cursos asignados
                             quedarán sin profesor.
@@ -167,7 +254,7 @@ export default function Index({
                         <div className="mt-6 flex justify-end gap-3">
                             <button
                                 onClick={() => setConfirmingDelete(null)}
-                                className="rounded-md px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                                className="rounded-xl px-4 py-2 text-sm text-brand-muted hover:bg-brand-cream"
                             >
                                 Cancelar
                             </button>

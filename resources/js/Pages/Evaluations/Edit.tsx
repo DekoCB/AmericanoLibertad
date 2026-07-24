@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
@@ -20,6 +21,7 @@ export default function Edit({
         type: evaluation.type,
         weight: evaluation.weight,
         date: evaluation.date,
+        semana: evaluation.semana ? String(evaluation.semana) : '',
         max_score: evaluation.max_score,
     });
 
@@ -40,7 +42,7 @@ export default function Edit({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-2xl font-bold text-brand-ink-strong">
                     Editar evaluación — {course.name}
                 </h2>
             }
@@ -49,7 +51,7 @@ export default function Edit({
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                    <div className="bg-white p-6 shadow-sm sm:rounded-lg dark:bg-gray-800">
+                    <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
                         <form onSubmit={submit} className="space-y-6">
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                 <div className="sm:col-span-2">
@@ -72,7 +74,7 @@ export default function Edit({
                                     <InputLabel htmlFor="type" value="Tipo" />
                                     <select
                                         id="type"
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                         value={data.type}
                                         onChange={(e) =>
                                             setData(
@@ -102,17 +104,37 @@ export default function Edit({
                                         htmlFor="date"
                                         value="Fecha"
                                     />
-                                    <TextInput
+                                    <DateInput
                                         id="date"
-                                        type="date"
                                         className="mt-1 block w-full"
                                         value={data.date}
-                                        onChange={(e) =>
-                                            setData('date', e.target.value)
-                                        }
+                                        onChange={(v) => setData('date', v)}
                                     />
                                     <InputError
                                         message={errors.date}
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <InputLabel
+                                        htmlFor="semana"
+                                        value="Semana"
+                                    />
+                                    <TextInput
+                                        id="semana"
+                                        type="number"
+                                        min={1}
+                                        max={16}
+                                        required
+                                        className="mt-1 block w-full"
+                                        value={data.semana}
+                                        onChange={(e) =>
+                                            setData('semana', e.target.value)
+                                        }
+                                    />
+                                    <InputError
+                                        message={errors.semana}
                                         className="mt-2"
                                     />
                                 </div>
@@ -151,7 +173,7 @@ export default function Edit({
                                         id="max_score"
                                         type="number"
                                         min={1}
-                                        max={1000}
+                                        max={20}
                                         className="mt-1 block w-full"
                                         value={data.max_score}
                                         onChange={(e) =>
@@ -178,7 +200,7 @@ export default function Edit({
                                             'courses.show',
                                             course.id,
                                         )}
-                                        className="text-sm text-gray-600 hover:underline dark:text-gray-400"
+                                        className="text-sm text-brand-muted hover:underline"
                                     >
                                         Cancelar
                                     </Link>

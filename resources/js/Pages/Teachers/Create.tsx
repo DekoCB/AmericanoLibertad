@@ -1,29 +1,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import TextInput from '@/Components/TextInput';
-import PrimaryButton from '@/Components/PrimaryButton';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import { Head, router } from '@inertiajs/react';
+import Form from './Form';
 
-export default function Create() {
-    const { data, setData, post, processing, errors } = useForm({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        specialty: '',
-    });
-
-    const submit = (e: FormEvent) => {
-        e.preventDefault();
-        post(route('teachers.store'));
-    };
+export default function Create({ specialties }: { specialties: string[] }) {
+    const goToIndex = () => router.visit(route('teachers.index'));
 
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-2xl font-bold text-brand-ink-strong">
                     Nuevo profesor
                 </h2>
             }
@@ -32,127 +17,12 @@ export default function Create() {
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                    <div className="bg-white p-6 shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <form onSubmit={submit} className="space-y-6">
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                <div>
-                                    <InputLabel
-                                        htmlFor="first_name"
-                                        value="Nombres"
-                                    />
-                                    <TextInput
-                                        id="first_name"
-                                        className="mt-1 block w-full"
-                                        value={data.first_name}
-                                        onChange={(e) =>
-                                            setData(
-                                                'first_name',
-                                                e.target.value,
-                                            )
-                                        }
-                                    />
-                                    <InputError
-                                        message={errors.first_name}
-                                        className="mt-2"
-                                    />
-                                </div>
-
-                                <div>
-                                    <InputLabel
-                                        htmlFor="last_name"
-                                        value="Apellidos"
-                                    />
-                                    <TextInput
-                                        id="last_name"
-                                        className="mt-1 block w-full"
-                                        value={data.last_name}
-                                        onChange={(e) =>
-                                            setData(
-                                                'last_name',
-                                                e.target.value,
-                                            )
-                                        }
-                                    />
-                                    <InputError
-                                        message={errors.last_name}
-                                        className="mt-2"
-                                    />
-                                </div>
-
-                                <div>
-                                    <InputLabel
-                                        htmlFor="email"
-                                        value="Email"
-                                    />
-                                    <TextInput
-                                        id="email"
-                                        type="email"
-                                        className="mt-1 block w-full"
-                                        value={data.email}
-                                        onChange={(e) =>
-                                            setData('email', e.target.value)
-                                        }
-                                    />
-                                    <InputError
-                                        message={errors.email}
-                                        className="mt-2"
-                                    />
-                                </div>
-
-                                <div>
-                                    <InputLabel
-                                        htmlFor="phone"
-                                        value="Teléfono"
-                                    />
-                                    <TextInput
-                                        id="phone"
-                                        className="mt-1 block w-full"
-                                        value={data.phone}
-                                        onChange={(e) =>
-                                            setData('phone', e.target.value)
-                                        }
-                                    />
-                                    <InputError
-                                        message={errors.phone}
-                                        className="mt-2"
-                                    />
-                                </div>
-
-                                <div className="sm:col-span-2">
-                                    <InputLabel
-                                        htmlFor="specialty"
-                                        value="Especialidad"
-                                    />
-                                    <TextInput
-                                        id="specialty"
-                                        className="mt-1 block w-full"
-                                        value={data.specialty}
-                                        onChange={(e) =>
-                                            setData(
-                                                'specialty',
-                                                e.target.value,
-                                            )
-                                        }
-                                    />
-                                    <InputError
-                                        message={errors.specialty}
-                                        className="mt-2"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                <PrimaryButton disabled={processing}>
-                                    Guardar
-                                </PrimaryButton>
-                                <Link
-                                    href={route('teachers.index')}
-                                    className="text-sm text-gray-600 hover:underline dark:text-gray-400"
-                                >
-                                    Cancelar
-                                </Link>
-                            </div>
-                        </form>
+                    <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
+                        <Form
+                            specialties={specialties}
+                            onSuccess={goToIndex}
+                            onCancel={goToIndex}
+                        />
                     </div>
                 </div>
             </div>

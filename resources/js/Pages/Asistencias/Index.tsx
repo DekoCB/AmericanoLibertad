@@ -1,7 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DateInput from '@/Components/DateInput';
 import InputLabel from '@/Components/InputLabel';
+import QrScanner from '@/Components/QrScanner';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
@@ -12,14 +15,14 @@ import {
 
 const estadoBadge: Record<string, string> = {
     presente:
-        'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+        'bg-green-100 text-green-800',
     tardanza:
-        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-    falta: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+        'bg-yellow-100 text-yellow-800',
+    falta: 'bg-red-100 text-red-800',
     justificado:
-        'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+        'bg-blue-100 text-blue-800',
     sin_registro:
-        'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+        'bg-brand-hover text-brand-muted ',
 };
 
 export default function Index({
@@ -33,6 +36,7 @@ export default function Index({
 }) {
     const [dniInput, setDniInput] = useState('');
     const [feedback, setFeedback] = useState<string | null>(null);
+    const [cameraActive, setCameraActive] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const scanForm = useForm({ document_number: '', fecha });
@@ -50,23 +54,34 @@ export default function Index({
         );
     };
 
-    const submitScan = (e: FormEvent) => {
-        e.preventDefault();
-        scanForm.setData('document_number', dniInput);
+    const submitCodigo = (codigo: string) => {
+        scanForm.setData('document_number', codigo);
         scanForm.post(route('courses.asistencias.escanear', course.id), {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
-                setFeedback(`DNI ${dniInput} registrado.`);
+                setFeedback(`Código ${codigo} registrado.`);
                 setDniInput('');
                 inputRef.current?.focus();
             },
             onError: () => {
-                setFeedback(`No se encontró un matriculado con DNI ${dniInput}.`);
+                setFeedback(
+                    `No se encontró un matriculado con el código ${codigo}.`,
+                );
                 setDniInput('');
                 inputRef.current?.focus();
             },
         });
+    };
+
+    const submitScan = (e: FormEvent) => {
+        e.preventDefault();
+        submitCodigo(dniInput);
+    };
+
+    const handleCameraScan = (codigo: string) => {
+        setCameraActive(false);
+        submitCodigo(codigo);
     };
 
     const marcarEstado = (studentId: number, estado: string) => {
@@ -81,30 +96,29 @@ export default function Index({
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                    <h2 className="text-2xl font-bold text-brand-ink-strong">
                         Asistencia — {course.name} ({course.subject?.name})
                     </h2>
                     <Link
-                        href={route('courses.show', course.id)}
-                        className="text-sm text-gray-600 hover:underline dark:text-gray-400"
+                        href={route('asistencias.index')}
+                        className="text-sm text-brand-muted hover:underline"
                     >
-                        Volver al curso
+                        Volver a asistencias
                     </Link>
                 </div>
             }
         >
             <Head title="Tomar asistencia" />
 
-            <div className="py-12">
+            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-4xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
                         <div className="mb-4 flex items-center gap-3">
                             <InputLabel htmlFor="fecha" value="Fecha" />
-                            <TextInput
+                            <DateInput
                                 id="fecha"
-                                type="date"
                                 value={fecha}
-                                onChange={(e) => changeFecha(e.target.value)}
+                                onChange={(v) => changeFecha(v)}
                             />
                         </div>
 
@@ -124,42 +138,56 @@ export default function Index({
                             >
                                 Registrar
                             </PrimaryButton>
+                            <SecondaryButton
+                                type="button"
+                                onClick={() => setCameraActive((v) => !v)}
+                            >
+                                {cameraActive
+                                    ? 'Cerrar cámara'
+                                    : 'Usar cámara'}
+                            </SecondaryButton>
                         </form>
+
+                        <QrScanner
+                            active={cameraActive}
+                            onScan={handleCameraScan}
+                        />
+
                         {feedback && (
-                            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                            <p className="mt-2 text-sm text-brand-muted">
                                 {feedback}
                             </p>
                         )}
-                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        <p className="mt-1 text-xs text-brand-muted-soft">
                             Un lector de código de barras/QR funciona igual que un
                             teclado: escanea el carnet del estudiante y el DNI se
                             escribe automáticamente en el campo.
                         </p>
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto rounded-lg bg-white shadow-sm dark:bg-gray-800">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-900">
+                    <div className="overflow-hidden overflow-x-auto rounded-lg bg-brand-card shadow-sm">
+                        <table className="min-w-full divide-y divide-brand-border-faint">
+                            <thead className="bg-brand-thead">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Estudiante
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         DNI
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Estado
                                     </th>
                                     <th className="px-4 py-3" />
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody className="divide-y divide-brand-border-faint">
                                 {sheet.map((row) => (
                                     <tr key={row.student.id}>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
                                             {row.student.first_name} {row.student.last_name}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
                                             {row.student.document_number}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm">
@@ -177,7 +205,7 @@ export default function Index({
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
                                             <select
-                                                className="rounded-md border-gray-300 text-xs shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                                className="rounded-md border-brand-border bg-brand-card text-xs shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                                 value={row.asistencia?.estado ?? ''}
                                                 onChange={(e) =>
                                                     marcarEstado(
@@ -204,7 +232,7 @@ export default function Index({
                                     <tr>
                                         <td
                                             colSpan={4}
-                                            className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+                                            className="px-4 py-6 text-center text-sm text-brand-muted"
                                         >
                                             Este curso no tiene estudiantes matriculados.
                                         </td>

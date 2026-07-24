@@ -1,45 +1,125 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
-import { Course } from '@/types/models';
+import SearchableSelect from '@/Components/SearchableSelect';
+import { Head, Link, router } from '@inertiajs/react';
+import { useMemo } from 'react';
+import { Course, turnoLabels } from '@/types/models';
 
-export default function Cursos({ courses }: { courses: Course[] }) {
+const SIN_MATERIA = 'Sin materia';
+
+export default function Cursos({
+    courses,
+    can,
+}: {
+    courses: Course[];
+    can: { viewHistorial: boolean };
+}) {
+    const bySubject = useMemo(() => {
+        const groups = new Map<string, Course[]>();
+        courses.forEach((course) => {
+            const key = course.subject?.name ?? SIN_MATERIA;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)!.push(course);
+        });
+
+        return Array.from(groups.entries()).sort(([a], [b]) => {
+            if (a === SIN_MATERIA) return 1;
+            if (b === SIN_MATERIA) return -1;
+            return a.localeCompare(b);
+        });
+    }, [courses]);
+
+    const irAlCurso = (courseId: string) => {
+        if (!courseId) return;
+        router.visit(route('courses.asistencias.index', courseId));
+    };
+
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Asistencia
-                </h2>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold text-brand-ink-strong">
+                            Asistencia
+                        </h2>
+                        <p className="mt-1 text-sm text-brand-muted">
+                            Selecciona un curso para tomar asistencia
+                            escaneando el DNI o código QR de cada estudiante.
+                        </p>
+                    </div>
+                    {can.viewHistorial && (
+                        <Link
+                            href={route('asistencias.historial')}
+                            className="text-sm text-brand-link hover:underline"
+                        >
+                            Ver historial de asistencias
+                        </Link>
+                    )}
+                </div>
             }
         >
             <Head title="Asistencia" />
 
-            <div className="py-12">
+            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-5xl space-y-4 sm:px-6 lg:px-8">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Selecciona un curso para tomar asistencia escaneando el DNI o
-                        código QR de cada estudiante.
-                    </p>
+                    <div className="max-w-sm">
+                        <SearchableSelect
+                            value=""
+                            onChange={irAlCurso}
+                            placeholder="Buscar por curso..."
+                            allLabel="Selecciona un curso"
+                            options={[...courses]
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((course) => {
+                                    const docente = course.teacher
+                                        ? `${course.teacher.first_name} ${course.teacher.last_name}`
+                                        : 'Sin docente';
+                                    const turno = course.turno
+                                        ? turnoLabels[course.turno]
+                                        : '';
+
+                                    return {
+                                        value: String(course.id),
+                                        label: `${course.name} — ${course.subject?.name ?? ''} · ${docente}${turno ? ` · ${turno}` : ''}`,
+                                        searchText: `${course.name} ${course.subject?.name ?? ''} ${docente} ${turno}`,
+                                    };
+                                })}
+                        />
+                    </div>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {courses.map((course) => (
-                            <Link
-                                key={course.id}
-                                href={route('courses.asistencias.index', course.id)}
-                                className="rounded-lg bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-800"
+                        {bySubject.map(([subjectName, subjectCourses]) => (
+                            <div
+                                key={subjectName}
+                                className="rounded-[28px] bg-brand-card p-6 shadow-sm"
                             >
-                                <p className="font-medium text-gray-900 dark:text-gray-100">
-                                    {course.name} — {course.subject?.name}
-                                </p>
-                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    {course.teacher
-                                        ? `${course.teacher.first_name} ${course.teacher.last_name}`
-                                        : 'Sin docente'}{' '}
-                                    · {course.period}
-                                </p>
-                            </Link>
+                                <h3 className="font-medium text-brand-ink-strong">
+                                    {subjectName}
+                                </h3>
+                                <ul className="mt-3 space-y-1">
+                                    {subjectCourses.map((course) => (
+                                        <li key={course.id}>
+                                            <Link
+                                                href={route(
+                                                    'courses.asistencias.index',
+                                                    course.id,
+                                                )}
+                                                className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-brand-ink transition hover:bg-brand-hover hover:text-brand-ink-strong"
+                                            >
+                                                <span>{course.name}</span>
+                                                <span className="text-xs text-brand-muted">
+                                                    {course.teacher
+                                                        ? `${course.teacher.first_name} ${course.teacher.last_name}`
+                                                        : 'Sin docente'}{' '}
+                                                    · {course.period}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         ))}
                         {courses.length === 0 && (
-                            <div className="col-span-full rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow-sm dark:bg-gray-800 dark:text-gray-400">
+                            <div className="col-span-full rounded-[28px] bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
                                 No tienes cursos asignados.
                             </div>
                         )}

@@ -21,4 +21,19 @@ class AsistenciaPolicy
             UserRole::Academico,
         );
     }
+
+    public function viewHistorial(User $user): bool
+    {
+        return $user->hasRole(
+            UserRole::Gerencia,
+            UserRole::Administrativo,
+            UserRole::Coordinador,
+            UserRole::Academico,
+        );
+    }
+
+    public function markOwn(User $user): bool
+    {
+        return $user->hasRole(UserRole::Estudiante) && $user->student_id !== null;
+    }
 }

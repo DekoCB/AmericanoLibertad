@@ -18,6 +18,7 @@ class Evaluation extends Model
         'type',
         'weight',
         'date',
+        'semana',
         'max_score',
     ];
 
@@ -25,6 +26,7 @@ class Evaluation extends Model
     {
         return [
             'date' => 'date',
+            'max_score' => 'integer',
         ];
     }
 
@@ -36,5 +38,20 @@ class Evaluation extends Model
     public function grades(): HasMany
     {
         return $this->hasMany(Grade::class);
+    }
+
+    public function quizPreguntas(): HasMany
+    {
+        return $this->hasMany(QuizPregunta::class)->orderBy('orden');
+    }
+
+    public function quizIntentos(): HasMany
+    {
+        return $this->hasMany(QuizIntento::class);
+    }
+
+    public function entregas(): HasMany
+    {
+        return $this->hasMany(EntregaEvaluacion::class);
     }
 }

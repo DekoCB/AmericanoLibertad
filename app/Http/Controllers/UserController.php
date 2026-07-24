@@ -21,18 +21,31 @@ class UserController extends Controller
         $this->authorize('viewAny', User::class);
 
         $users = User::query()
-            ->when($request->string('search')->toString(), function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+            ->whereNotIn('role', [UserRole::Docente, UserRole::Estudiante])
+            ->when($request->string('user_id')->toString(), function ($query, $userId) {
+                $query->where('id', $userId);
             })
             ->with(['teacher', 'student'])
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();
 
+        $linkedTeacherIds = $users->pluck('teacher_id')->filter()->all();
+        $linkedStudentIds = $users->pluck('student_id')->filter()->all();
+
         return Inertia::render('Users/Index', [
             'users' => $users,
-            'filters' => $request->only('search'),
+            'allUsers' => User::whereNotIn('role', [UserRole::Docente, UserRole::Estudiante])
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']),
+            'filters' => $request->only('user_id'),
+            'roles' => UserRole::values(),
+            'teachers' => Teacher::where(fn ($q) => $q->whereDoesntHave('user')->orWhereIn('id', $linkedTeacherIds))
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name']),
+            'students' => Student::where(fn ($q) => $q->whereDoesntHave('user')->orWhereIn('id', $linkedStudentIds))
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name']),
         ]);
     }
 

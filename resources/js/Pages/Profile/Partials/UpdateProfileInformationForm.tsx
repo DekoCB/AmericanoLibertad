@@ -1,10 +1,12 @@
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
+import UserAvatar from '@/Components/UserAvatar';
 import { Transition } from '@headlessui/react';
-import { Link, useForm, usePage } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
+import { ChangeEvent, FormEventHandler, useRef, useState } from 'react';
 
 export default function UpdateProfileInformation({
     mustVerifyEmail,
@@ -16,12 +18,28 @@ export default function UpdateProfileInformation({
     className?: string;
 }) {
     const user = usePage().props.auth.user;
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [preview, setPreview] = useState<string | null>(null);
 
     const { data, setData, patch, errors, processing, recentlySuccessful } =
-        useForm({
+        useForm<{
+            name: string;
+            email: string;
+        }>({
             name: user.name,
             email: user.email,
         });
+
+    const {
+        data: avatarData,
+        setData: setAvatarData,
+        post: postAvatar,
+        errors: avatarErrors,
+        processing: avatarProcessing,
+        recentlySuccessful: avatarRecentlySuccessful,
+    } = useForm<{ avatar: File | null }>({
+        avatar: null,
+    });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -29,21 +47,109 @@ export default function UpdateProfileInformation({
         patch(route('profile.update'));
     };
 
+    const submitAvatar: FormEventHandler = (e) => {
+        e.preventDefault();
+
+        postAvatar(route('profile.avatar.update'), {
+            forceFormData: true,
+            onSuccess: () => {
+                setAvatarData('avatar', null);
+                setPreview(null);
+            },
+        });
+    };
+
+    const selectFile = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] ?? null;
+        setAvatarData('avatar', file);
+        setPreview(file ? URL.createObjectURL(file) : null);
+    };
+
+    const removeAvatar = () => {
+        if (preview) {
+            setAvatarData('avatar', null);
+            setPreview(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        if (!user.avatar_url) return;
+        if (!confirm('¿Quitar tu foto de perfil?')) return;
+
+        router.delete(route('profile.avatar.destroy'));
+    };
+
     return (
         <section className={className}>
             <header>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    Profile Information
+                <h2 className="text-lg font-bold text-brand-ink-strong">
+                    Información del perfil
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Update your account's profile information and email address.
+                <p className="mt-1 text-sm text-brand-muted">
+                    Actualiza la información de tu perfil y tu correo
+                    electrónico.
                 </p>
             </header>
 
+            <form onSubmit={submitAvatar} className="mt-6">
+                <InputLabel value="Foto de perfil" />
+                <div className="mt-2 flex items-center gap-4">
+                    <UserAvatar
+                        src={preview ?? user.avatar_url}
+                        size="size-16"
+                        iconSize="size-10"
+                    />
+                    <div className="flex items-center gap-4">
+                        <SecondaryButton
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            Cambiar foto
+                        </SecondaryButton>
+                        {avatarData.avatar && (
+                            <PrimaryButton
+                                type="submit"
+                                disabled={avatarProcessing}
+                            >
+                                Guardar
+                            </PrimaryButton>
+                        )}
+                        {(preview || user.avatar_url) && (
+                            <button
+                                type="button"
+                                onClick={removeAvatar}
+                                className="text-sm text-red-600 hover:opacity-70"
+                            >
+                                Quitar foto
+                            </button>
+                        )}
+                    </div>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={selectFile}
+                    />
+                </div>
+                <InputError className="mt-2" message={avatarErrors.avatar} />
+                <Transition
+                    show={avatarRecentlySuccessful}
+                    enter="transition ease-in-out"
+                    enterFrom="opacity-0"
+                    leave="transition ease-in-out"
+                    leaveTo="opacity-0"
+                >
+                    <p className="mt-2 text-sm text-brand-muted">
+                        Foto guardada.
+                    </p>
+                </Transition>
+            </form>
+
             <form onSubmit={submit} className="mt-6 space-y-6">
                 <div>
-                    <InputLabel htmlFor="name" value="Name" />
+                    <InputLabel htmlFor="name" value="Nombre" />
 
                     <TextInput
                         id="name"
@@ -59,7 +165,7 @@ export default function UpdateProfileInformation({
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="email" value="Email" />
+                    <InputLabel htmlFor="email" value="Correo electrónico" />
 
                     <TextInput
                         id="email"
@@ -76,29 +182,32 @@ export default function UpdateProfileInformation({
 
                 {mustVerifyEmail && user.email_verified_at === null && (
                     <div>
-                        <p className="mt-2 text-sm text-gray-800 dark:text-gray-200">
-                            Your email address is unverified.
+                        <p className="mt-2 text-sm text-brand-ink-strong">
+                            Tu correo electrónico no está verificado.
                             <Link
                                 href={route('verification.send')}
                                 method="post"
                                 as="button"
-                                className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
+                                className="rounded-md text-sm text-brand-muted underline hover:text-brand-ink-strong focus:outline-none focus:ring-2 focus:ring-brand-navy focus:ring-offset-2"
                             >
-                                Click here to re-send the verification email.
+                                Haz clic aquí para reenviar el correo de
+                                verificación.
                             </Link>
                         </p>
 
                         {status === 'verification-link-sent' && (
-                            <div className="mt-2 text-sm font-medium text-green-600 dark:text-green-400">
-                                A new verification link has been sent to your
-                                email address.
+                            <div className="mt-2 text-sm font-medium text-green-600">
+                                Se ha enviado un nuevo enlace de verificación a
+                                tu correo electrónico.
                             </div>
                         )}
                     </div>
                 )}
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
+                    <PrimaryButton disabled={processing}>
+                        Guardar
+                    </PrimaryButton>
 
                     <Transition
                         show={recentlySuccessful}
@@ -107,9 +216,7 @@ export default function UpdateProfileInformation({
                         leave="transition ease-in-out"
                         leaveTo="opacity-0"
                     >
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Saved.
-                        </p>
+                        <p className="text-sm text-brand-muted">Guardado.</p>
                     </Transition>
                 </div>
             </form>

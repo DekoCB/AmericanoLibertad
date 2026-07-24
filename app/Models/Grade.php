@@ -18,6 +18,13 @@ class Grade extends Model
         'comments',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'score' => 'integer',
+        ];
+    }
+
     public function evaluation(): BelongsTo
     {
         return $this->belongsTo(Evaluation::class);

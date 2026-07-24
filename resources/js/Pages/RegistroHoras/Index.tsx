@@ -1,25 +1,39 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SearchableSelect from '@/Components/SearchableSelect';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import Pagination from '@/Components/Pagination';
+import { DocumentTextIcon, TrashIcon } from '@/Components/Icons';
+import { Transition } from '@headlessui/react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { Course, Paginated, RegistroHoras, Teacher } from '@/types/models';
+import { formatDate } from '@/utils/date';
+
+interface PendienteRegistro {
+    fecha: string;
+    horas_academicas: number;
+    monto_neto: number;
+}
 
 interface Pendiente {
     teacher: Teacher;
     horas: number;
     monto_neto: number;
+    registros: PendienteRegistro[];
 }
 
 function GenerarPagoForm({
     teacher,
+    registros,
     onDone,
 }: {
     teacher: Teacher;
+    registros: PendienteRegistro[];
     onDone: () => void;
 }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -27,6 +41,14 @@ function GenerarPagoForm({
         desde: new Date(new Date().setDate(1)).toISOString().slice(0, 10),
         hasta: new Date().toISOString().slice(0, 10),
     });
+
+    const enRango = useMemo(
+        () =>
+            registros.filter(
+                (r) => r.fecha >= data.desde && r.fecha <= data.hasta,
+            ),
+        [registros, data.desde, data.hasta],
+    );
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -38,37 +60,48 @@ function GenerarPagoForm({
     return (
         <form
             onSubmit={submit}
-            className="mt-3 flex flex-wrap items-end gap-3 rounded-md border border-gray-200 p-3 dark:border-gray-700"
+            className="mt-3 rounded-md border border-brand-border p-3"
         >
-            <div>
-                <InputLabel htmlFor="desde" value="Desde" />
-                <TextInput
-                    id="desde"
-                    type="date"
-                    className="mt-1 block"
-                    value={data.desde}
-                    onChange={(e) => setData('desde', e.target.value)}
-                />
+            <div className="flex flex-wrap items-end gap-3">
+                <div>
+                    <InputLabel htmlFor="desde" value="Desde" />
+                    <DateInput
+                        id="desde"
+                        className="mt-1 block"
+                        value={data.desde}
+                        onChange={(v) => setData('desde', v)}
+                    />
+                </div>
+                <div>
+                    <InputLabel htmlFor="hasta" value="Hasta" />
+                    <DateInput
+                        id="hasta"
+                        className="mt-1 block"
+                        value={data.hasta}
+                        onChange={(v) => setData('hasta', v)}
+                    />
+                </div>
+                <PrimaryButton disabled={processing || enRango.length === 0}>
+                    Generar pago
+                </PrimaryButton>
+                <SecondaryButton type="button" onClick={onDone}>
+                    Cancelar
+                </SecondaryButton>
+                {errors.teacher_id && (
+                    <p className="w-full text-sm text-red-600">
+                        {errors.teacher_id}
+                    </p>
+                )}
             </div>
-            <div>
-                <InputLabel htmlFor="hasta" value="Hasta" />
-                <TextInput
-                    id="hasta"
-                    type="date"
-                    className="mt-1 block"
-                    value={data.hasta}
-                    onChange={(e) => setData('hasta', e.target.value)}
-                />
-            </div>
-            <PrimaryButton disabled={processing}>Generar pago</PrimaryButton>
-            <SecondaryButton type="button" onClick={onDone}>
-                Cancelar
-            </SecondaryButton>
-            {errors.teacher_id && (
-                <p className="w-full text-sm text-red-600 dark:text-red-400">
-                    {errors.teacher_id}
-                </p>
-            )}
+            <p className="mt-2 text-sm text-brand-muted">
+                En este rango:{' '}
+                {enRango.reduce((sum, r) => sum + r.horas_academicas, 0)}{' '}
+                horas académicas · Neto: S/{' '}
+                {enRango
+                    .reduce((sum, r) => sum + r.monto_neto, 0)
+                    .toFixed(2)}{' '}
+                ({enRango.length} {enRango.length === 1 ? 'registro' : 'registros'})
+            </p>
         </form>
     );
 }
@@ -125,33 +158,34 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-2xl font-bold text-brand-ink-strong">
                     {isDocente ? 'Mis horas y pagos' : 'Horas y pagos docentes'}
                 </h2>
             }
         >
             <Head title="Horas y pagos docentes" />
 
-            <div className="py-12">
+            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-6xl space-y-6 sm:px-6 lg:px-8">
                     {!isDocente && pendientesPorDocente.length > 0 && (
-                        <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                            <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                            <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                                 Pendiente de pago
                             </h3>
                             <div className="space-y-3">
                                 {pendientesPorDocente.map((pendiente) => (
                                     <div
                                         key={pendiente.teacher.id}
-                                        className="rounded-md border border-gray-200 p-4 dark:border-gray-700"
+                                        className="rounded-md border border-brand-border p-4"
                                     >
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <div>
-                                                <p className="font-medium text-gray-900 dark:text-gray-100">
+                                                <p className="font-medium text-brand-ink-strong">
                                                     {pendiente.teacher.first_name}{' '}
                                                     {pendiente.teacher.last_name}
                                                 </p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                <p className="text-sm text-brand-muted">
+                                                    Total pendiente (todas las fechas):{' '}
                                                     {pendiente.horas} horas académicas ·
                                                     Neto: S/ {pendiente.monto_neto.toFixed(2)}
                                                 </p>
@@ -169,20 +203,36 @@ export default function Index({
                                                     </SecondaryButton>
                                                 )}
                                         </div>
-                                        {generandoPagoPara === pendiente.teacher.id && (
+                                        <Transition
+                                            as="div"
+                                            show={
+                                                generandoPagoPara ===
+                                                pendiente.teacher.id
+                                            }
+                                            enter="transition-all duration-300 ease-out"
+                                            enterFrom="opacity-0 max-h-0"
+                                            enterTo="opacity-100 max-h-60"
+                                            leave="transition-all duration-200 ease-in"
+                                            leaveFrom="opacity-100 max-h-60"
+                                            leaveTo="opacity-0 max-h-0"
+                                            className="overflow-hidden"
+                                        >
                                             <GenerarPagoForm
                                                 teacher={pendiente.teacher}
-                                                onDone={() => setGenerandoPagoPara(null)}
+                                                registros={pendiente.registros}
+                                                onDone={() =>
+                                                    setGenerandoPagoPara(null)
+                                                }
                                             />
-                                        )}
+                                        </Transition>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     )}
 
-                    <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                             Registrar horas académicas
                         </h3>
                         <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -191,7 +241,7 @@ export default function Index({
                                     <InputLabel htmlFor="teacher_id" value="Docente" />
                                     <select
                                         id="teacher_id"
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                         value={data.teacher_id}
                                         onChange={(e) => setData('teacher_id', e.target.value)}
                                     >
@@ -209,7 +259,7 @@ export default function Index({
                                 <InputLabel htmlFor="course_id" value="Curso (opcional)" />
                                 <select
                                     id="course_id"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                    className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                     value={data.course_id}
                                     onChange={(e) => setData('course_id', e.target.value)}
                                 >
@@ -223,12 +273,11 @@ export default function Index({
                             </div>
                             <div>
                                 <InputLabel htmlFor="fecha" value="Fecha" />
-                                <TextInput
+                                <DateInput
                                     id="fecha"
-                                    type="date"
                                     className="mt-1 block w-full"
                                     value={data.fecha}
-                                    onChange={(e) => setData('fecha', e.target.value)}
+                                    onChange={(v) => setData('fecha', v)}
                                 />
                                 <InputError message={errors.fecha} className="mt-1" />
                             </div>
@@ -278,31 +327,31 @@ export default function Index({
                         </form>
                     </div>
 
-                    <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
                         <div className="mb-4 flex items-center justify-between gap-3">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                            <h3 className="text-lg font-bold text-brand-ink-strong">
                                 Historial
                             </h3>
                             {!isDocente && (
-                                <select
-                                    className="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                                    value={filters.teacher_id ?? ''}
-                                    onChange={(e) => filterByTeacher(e.target.value)}
-                                >
-                                    <option value="">Todos los docentes</option>
-                                    {teachers.map((teacher) => (
-                                        <option key={teacher.id} value={teacher.id}>
-                                            {teacher.first_name} {teacher.last_name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="w-56">
+                                    <SearchableSelect
+                                        value={filters.teacher_id ?? ''}
+                                        onChange={filterByTeacher}
+                                        placeholder="Buscar docente..."
+                                        allLabel="Todos los docentes"
+                                        options={teachers.map((teacher) => ({
+                                            value: String(teacher.id),
+                                            label: `${teacher.first_name} ${teacher.last_name}`,
+                                        }))}
+                                    />
+                                </div>
                             )}
                         </div>
 
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <table className="min-w-full divide-y divide-brand-border-faint">
                                 <thead>
-                                    <tr className="text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <tr className="text-left text-xs font-medium uppercase text-brand-muted">
                                         {!isDocente && <th className="py-2 pr-4">Docente</th>}
                                         <th className="py-2 pr-4">Fecha</th>
                                         <th className="py-2 pr-4">Curso</th>
@@ -313,48 +362,65 @@ export default function Index({
                                         <th className="py-2" />
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                <tbody className="divide-y divide-brand-border-faint">
                                     {registros.data.map((registro) => (
                                         <tr key={registro.id}>
                                             {!isDocente && (
-                                                <td className="py-2 pr-4 text-sm text-gray-900 dark:text-gray-100">
+                                                <td className="py-2 pr-4 text-sm text-brand-ink-strong">
                                                     {registro.teacher?.first_name}{' '}
                                                     {registro.teacher?.last_name}
                                                 </td>
                                             )}
-                                            <td className="py-2 pr-4 text-sm text-gray-700 dark:text-gray-300">
-                                                {registro.fecha}
+                                            <td className="py-2 pr-4 text-sm text-brand-ink">
+                                                {formatDate(registro.fecha)}
                                             </td>
-                                            <td className="py-2 pr-4 text-sm text-gray-700 dark:text-gray-300">
+                                            <td className="py-2 pr-4 text-sm text-brand-ink">
                                                 {registro.course?.name ?? '—'}
                                             </td>
-                                            <td className="py-2 pr-4 text-sm text-gray-700 dark:text-gray-300">
+                                            <td className="py-2 pr-4 text-sm text-brand-ink">
                                                 {registro.horas_academicas}
                                             </td>
-                                            <td className="py-2 pr-4 text-sm text-gray-700 dark:text-gray-300">
+                                            <td className="py-2 pr-4 text-sm text-brand-ink">
                                                 {registro.minutos_tardanza} min
                                             </td>
-                                            <td className="py-2 pr-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            <td className="py-2 pr-4 text-sm font-medium text-brand-ink-strong">
                                                 S/ {(registro.monto_neto ?? 0).toFixed(2)}
                                             </td>
                                             <td className="py-2 pr-4 text-sm">
                                                 <span
                                                     className={`rounded-full px-2 py-1 text-xs font-medium ${
                                                         registro.pagado
-                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                                                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
                                                     }`}
                                                 >
                                                     {registro.pagado ? 'Pagado' : 'Pendiente'}
                                                 </span>
                                             </td>
                                             <td className="py-2 text-right">
+                                                {registro.pagado && registro.egreso_id && (
+                                                    <a
+                                                        href={route(
+                                                            'registros-horas.comprobante',
+                                                            registro.egreso_id,
+                                                        )}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-brand-link hover:opacity-70"
+                                                        title="Ver comprobante"
+                                                        aria-label="Ver comprobante"
+                                                    >
+                                                        <DocumentTextIcon className="size-4" />
+                                                    </a>
+                                                )}
                                                 {!registro.pagado && (
                                                     <button
                                                         onClick={() => deleteRegistro(registro.id)}
-                                                        className="text-sm text-red-600 hover:underline dark:text-red-400"
+                                                        className="ms-3 text-sm text-red-600 hover:opacity-70"
+                                                        title="Eliminar"
+                                                        aria-label="Eliminar"
                                                     >
-                                                        Eliminar
+                                                        <TrashIcon className="size-4" />
                                                     </button>
                                                 )}
                                             </td>
@@ -364,7 +430,7 @@ export default function Index({
                                         <tr>
                                             <td
                                                 colSpan={isDocente ? 6 : 7}
-                                                className="py-4 text-center text-sm text-gray-500 dark:text-gray-400"
+                                                className="py-4 text-center text-sm text-brand-muted"
                                             >
                                                 Sin registros de horas.
                                             </td>

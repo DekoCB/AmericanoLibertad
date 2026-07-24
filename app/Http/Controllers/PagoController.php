@@ -17,9 +17,9 @@ class PagoController extends Controller
 
         $validated = $request->validate([
             'monto' => ['required', 'numeric', 'min:0.01', 'max:' . $cuota->saldoRestante()],
-            'medio' => ['required', Rule::in(['efectivo', 'yape', 'mixto'])],
-            'monto_efectivo' => ['required_if:medio,efectivo,mixto', 'nullable', 'numeric', 'min:0'],
-            'monto_yape' => ['required_if:medio,yape,mixto', 'nullable', 'numeric', 'min:0'],
+            'medio' => ['required', Rule::in(['efectivo', 'yape', 'plin', 'tarjeta'])],
+            'monto_efectivo' => ['required_if:medio,efectivo', 'nullable', 'numeric', 'min:0'],
+            'monto_yape' => ['required_if:medio,yape', 'nullable', 'numeric', 'min:0'],
             'fecha' => ['required', 'date'],
             'nota' => ['nullable', 'string', 'max:500'],
         ]);
@@ -41,7 +41,7 @@ class PagoController extends Controller
 
         $this->recalcularEstadoMatricula($cuota->matricula);
 
-        return redirect()->route('matriculas.show', $cuota->matricula_id)->with('success', 'Pago registrado correctamente.');
+        return back()->with('success', 'Pago registrado correctamente.');
     }
 
     public function destroy(Cuota $cuota, Pago $pago): RedirectResponse
@@ -54,7 +54,7 @@ class PagoController extends Controller
 
         $this->recalcularEstadoMatricula($cuota->matricula);
 
-        return redirect()->route('matriculas.show', $cuota->matricula_id)->with('success', 'Pago eliminado correctamente.');
+        return back()->with('success', 'Pago eliminado correctamente.');
     }
 
     private function recalcularEstadoMatricula(Matricula $matricula): void

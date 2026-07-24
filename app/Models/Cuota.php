@@ -26,6 +26,8 @@ class Cuota extends Model
     {
         return [
             'fecha_vencimiento' => 'date',
+            'monto_programado' => 'float',
+            'monto_pagado' => 'float',
         ];
     }
 

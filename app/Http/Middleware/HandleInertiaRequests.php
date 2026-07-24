@@ -53,13 +53,18 @@ class HandleInertiaRequests extends Middleware
                     'carreras' => $user->can('viewAny', Carrera::class),
                     'matriculas' => $user->can('viewAny', Matricula::class),
                     'caja' => $user->can('viewAny', Egreso::class),
-                    'horarios' => $user->can('viewAny', Course::class),
-                    'asistencias' => $user->can('viewAny', Course::class),
+                    'reportes' => $user->can('viewAny', Egreso::class),
+                    'horarios' => $user->can('viewAny', Course::class) || $user->role === UserRole::Estudiante,
+                    'asistencias' => $user->can('viewAny', Course::class) || $user->role === UserRole::Estudiante,
                     'aulaVirtual' => true,
                     'registrosHoras' => $user->can('viewAny', RegistroHoras::class),
                     'permisos' => $user->can('viewAny', PermisoDocente::class),
                     'users' => $user->role === UserRole::Gerencia,
                 ] : null,
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
         ];
     }

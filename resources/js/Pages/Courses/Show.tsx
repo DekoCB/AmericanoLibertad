@@ -1,7 +1,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
+import { PencilIcon } from '@/Components/Icons';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 import {
     Course,
     Enrollment,
@@ -9,7 +11,12 @@ import {
     Evaluation,
     evaluationTypeLabels,
     Student,
+    Subject,
+    Teacher,
 } from '@/types/models';
+import { formatDate } from '@/utils/date';
+import CourseForm from './Form';
+import EvaluationForm from '../Evaluations/Form';
 
 interface CourseShowPermissions {
     manageEnrollments: boolean;
@@ -23,15 +30,25 @@ export default function Show({
     enrollments,
     evaluations,
     availableStudents,
+    subjects,
+    teachers,
     can,
 }: {
     course: Course;
     enrollments: Enrollment[];
     evaluations: Evaluation[];
     availableStudents: Pick<Student, 'id' | 'first_name' | 'last_name'>[];
+    subjects: Pick<Subject, 'id' | 'name'>[];
+    teachers: Pick<Teacher, 'id' | 'first_name' | 'last_name'>[];
     can: CourseShowPermissions;
 }) {
     const enrollForm = useForm({ student_id: availableStudents[0]?.id ?? '' });
+    const [editingCourse, setEditingCourse] = useState(false);
+    const [creatingEvaluation, setCreatingEvaluation] = useState(false);
+    const [editingEvaluation, setEditingEvaluation] =
+        useState<Evaluation | null>(null);
+    const [editEvaluationModalOpen, setEditEvaluationModalOpen] =
+        useState(false);
 
     const submitEnroll = (e: FormEvent) => {
         e.preventDefault();
@@ -44,29 +61,32 @@ export default function Show({
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                    <h2 className="text-2xl font-bold text-brand-ink-strong">
                         {course.name} — {course.subject?.name}
                     </h2>
                     <div className="flex items-center gap-4 text-sm">
                         {can.manageCourse && (
                             <Link
                                 href={route('courses.asistencias.index', course.id)}
-                                className="text-blue-600 hover:underline dark:text-blue-400"
+                                className="text-brand-link hover:underline"
                             >
                                 Tomar asistencia
                             </Link>
                         )}
                         {can.manageCourse && (
-                            <Link
-                                href={route('courses.edit', course.id)}
-                                className="text-blue-600 hover:underline dark:text-blue-400"
+                            <button
+                                type="button"
+                                onClick={() => setEditingCourse(true)}
+                                className="text-brand-link hover:opacity-70"
+                                title="Editar curso"
+                                aria-label="Editar curso"
                             >
-                                Editar curso
-                            </Link>
+                                <PencilIcon className="size-4" />
+                            </button>
                         )}
                         <Link
                             href={route('courses.index')}
-                            className="text-gray-600 hover:underline dark:text-gray-400"
+                            className="text-brand-muted hover:underline"
                         >
                             Volver a cursos
                         </Link>
@@ -76,49 +96,49 @@ export default function Show({
         >
             <Head title={course.name} />
 
-            <div className="py-12">
+            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 gap-4 rounded-lg bg-white p-6 shadow-sm sm:grid-cols-4 dark:bg-gray-800">
+                    <div className="grid grid-cols-1 gap-4 rounded-[20px] bg-brand-card p-6 shadow-sm sm:grid-cols-4">
                         <div>
-                            <div className="text-xs uppercase text-gray-500 dark:text-gray-400">
+                            <div className="text-xs uppercase text-brand-muted">
                                 Profesor
                             </div>
-                            <div className="text-gray-900 dark:text-gray-100">
+                            <div className="text-brand-ink-strong">
                                 {course.teacher
                                     ? `${course.teacher.first_name} ${course.teacher.last_name}`
                                     : 'Sin asignar'}
                             </div>
                         </div>
                         <div>
-                            <div className="text-xs uppercase text-gray-500 dark:text-gray-400">
+                            <div className="text-xs uppercase text-brand-muted">
                                 Período
                             </div>
-                            <div className="text-gray-900 dark:text-gray-100">
+                            <div className="text-brand-ink-strong">
                                 {course.period}
                             </div>
                         </div>
                         <div>
-                            <div className="text-xs uppercase text-gray-500 dark:text-gray-400">
+                            <div className="text-xs uppercase text-brand-muted">
                                 Horario
                             </div>
-                            <div className="text-gray-900 dark:text-gray-100">
+                            <div className="text-brand-ink-strong">
                                 {course.schedule ?? '—'}
                             </div>
                         </div>
                         <div>
-                            <div className="text-xs uppercase text-gray-500 dark:text-gray-400">
+                            <div className="text-xs uppercase text-brand-muted">
                                 Cupos
                             </div>
-                            <div className="text-gray-900 dark:text-gray-100">
+                            <div className="text-brand-ink-strong">
                                 {enrollments.length} / {course.capacity}
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
                             <div className="mb-4 flex items-center justify-between">
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                <h3 className="text-lg font-bold text-brand-ink-strong">
                                     Estudiantes matriculados
                                 </h3>
                             </div>
@@ -129,7 +149,7 @@ export default function Show({
                                     className="mb-4 flex gap-2"
                                 >
                                     <select
-                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        className="block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                         value={enrollForm.data.student_id}
                                         onChange={(e) =>
                                             enrollForm.setData(
@@ -157,18 +177,18 @@ export default function Show({
                                 </form>
                             )}
 
-                            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                            <ul className="divide-y divide-brand-border-faint">
                                 {enrollments.map((enrollment) => (
                                     <li
                                         key={enrollment.id}
                                         className="flex items-center justify-between py-2"
                                     >
                                         <div>
-                                            <div className="text-sm text-gray-900 dark:text-gray-100">
+                                            <div className="text-sm text-brand-ink-strong">
                                                 {enrollment.student?.first_name}{' '}
                                                 {enrollment.student?.last_name}
                                             </div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            <div className="text-xs text-brand-muted">
                                                 {
                                                     enrollmentStatusLabels[
                                                         enrollment.status
@@ -190,7 +210,7 @@ export default function Show({
                                                     )
                                                 }
                                                 preserveScroll
-                                                className="text-sm text-red-600 hover:underline dark:text-red-400"
+                                                className="text-sm text-red-600 hover:underline"
                                             >
                                                 Quitar
                                             </Link>
@@ -198,49 +218,46 @@ export default function Show({
                                     </li>
                                 ))}
                                 {enrollments.length === 0 && (
-                                    <li className="py-4 text-sm text-gray-500 dark:text-gray-400">
+                                    <li className="py-4 text-sm text-brand-muted">
                                         Aún no hay estudiantes matriculados.
                                     </li>
                                 )}
                             </ul>
                         </div>
 
-                        <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
                             <div className="mb-4 flex items-center justify-between">
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                <h3 className="text-lg font-bold text-brand-ink-strong">
                                     Evaluaciones
                                 </h3>
                                 {can.manageEvaluations && (
-                                    <Link
-                                        href={route(
-                                            'courses.evaluations.create',
-                                            course.id,
-                                        )}
+                                    <PrimaryButton
+                                        onClick={() =>
+                                            setCreatingEvaluation(true)
+                                        }
                                     >
-                                        <PrimaryButton>
-                                            Nueva evaluación
-                                        </PrimaryButton>
-                                    </Link>
+                                        Nueva evaluación
+                                    </PrimaryButton>
                                 )}
                             </div>
 
-                            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                            <ul className="divide-y divide-brand-border-faint">
                                 {evaluations.map((evaluation) => (
                                     <li
                                         key={evaluation.id}
                                         className="flex items-center justify-between py-2"
                                     >
                                         <div>
-                                            <div className="text-sm text-gray-900 dark:text-gray-100">
+                                            <div className="text-sm text-brand-ink-strong">
                                                 {evaluation.name}
                                             </div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            <div className="text-xs text-brand-muted">
                                                 {
                                                     evaluationTypeLabels[
                                                         evaluation.type
                                                     ]
                                                 }{' '}
-                                                · {evaluation.date} ·{' '}
+                                                · {formatDate(evaluation.date)} ·{' '}
                                                 {evaluation.weight}% ·{' '}
                                                 {evaluation.grades_count ?? 0}{' '}
                                                 notas registradas
@@ -253,25 +270,32 @@ export default function Show({
                                                         'evaluations.grades.edit',
                                                         evaluation.id,
                                                     )}
-                                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                                    className="text-brand-link hover:underline"
                                                 >
                                                     Calificar
                                                 </Link>
-                                                <Link
-                                                    href={route(
-                                                        'evaluations.edit',
-                                                        evaluation.id,
-                                                    )}
-                                                    className="text-gray-600 hover:underline dark:text-gray-400"
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setEditingEvaluation(
+                                                            evaluation,
+                                                        );
+                                                        setEditEvaluationModalOpen(
+                                                            true,
+                                                        );
+                                                    }}
+                                                    className="text-brand-muted hover:opacity-70"
+                                                    title="Editar"
+                                                    aria-label="Editar"
                                                 >
-                                                    Editar
-                                                </Link>
+                                                    <PencilIcon className="size-4" />
+                                                </button>
                                             </div>
                                         )}
                                     </li>
                                 ))}
                                 {evaluations.length === 0 && (
-                                    <li className="py-4 text-sm text-gray-500 dark:text-gray-400">
+                                    <li className="py-4 text-sm text-brand-muted">
                                         Aún no hay evaluaciones para este
                                         curso.
                                     </li>
@@ -281,6 +305,56 @@ export default function Show({
                     </div>
                 </div>
             </div>
+
+            <Modal show={editingCourse} onClose={() => setEditingCourse(false)}>
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Editar curso
+                    </h2>
+                    <CourseForm
+                        course={course}
+                        subjects={subjects}
+                        teachers={teachers}
+                        onSuccess={() => setEditingCourse(false)}
+                        onCancel={() => setEditingCourse(false)}
+                    />
+                </div>
+            </Modal>
+
+            <Modal
+                show={creatingEvaluation}
+                onClose={() => setCreatingEvaluation(false)}
+            >
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Nueva evaluación
+                    </h2>
+                    <EvaluationForm
+                        course={course}
+                        onSuccess={() => setCreatingEvaluation(false)}
+                        onCancel={() => setCreatingEvaluation(false)}
+                    />
+                </div>
+            </Modal>
+
+            <Modal
+                show={editEvaluationModalOpen}
+                onClose={() => setEditEvaluationModalOpen(false)}
+            >
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Editar evaluación
+                    </h2>
+                    {editingEvaluation && (
+                        <EvaluationForm
+                            course={course}
+                            evaluation={editingEvaluation}
+                            onSuccess={() => setEditEvaluationModalOpen(false)}
+                            onCancel={() => setEditEvaluationModalOpen(false)}
+                        />
+                    )}
+                </div>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

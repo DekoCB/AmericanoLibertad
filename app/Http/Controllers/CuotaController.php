@@ -28,7 +28,7 @@ class CuotaController extends Controller
             'estado' => 'pendiente',
         ]);
 
-        return redirect()->route('matriculas.show', $matricula)->with('success', 'Cuota de pensión agregada correctamente.');
+        return back()->with('success', 'Cuota de pensión agregada correctamente.');
     }
 
     public function destroy(Matricula $matricula, Cuota $cuota): RedirectResponse
@@ -37,6 +37,6 @@ class CuotaController extends Controller
 
         $cuota->delete();
 
-        return redirect()->route('matriculas.show', $matricula)->with('success', 'Cuota eliminada correctamente.');
+        return back()->with('success', 'Cuota eliminada correctamente.');
     }
 }

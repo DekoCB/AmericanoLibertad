@@ -33,6 +33,6 @@ class RecursoAulaPolicy
             return $user->teacher_id !== null && $user->teacher_id === $course->teacher_id;
         }
 
-        return $user->hasRole(UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico);
+        return $user->hasRole(UserRole::Coordinador, UserRole::Academico);
     }
 }

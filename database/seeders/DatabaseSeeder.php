@@ -47,10 +47,10 @@ class DatabaseSeeder extends Seeder
         $teachers = Teacher::factory(6)->create();
 
         $subjects = $carreras->flatMap(function (Carrera $carrera) {
-            return Subject::factory(4)->create([
+            return collect(range(1, $carrera->total_ciclos))->flatMap(fn (int $ciclo) => Subject::factory(3)->create([
                 'carrera_id' => $carrera->id,
-                'ciclo' => fake()->numberBetween(1, $carrera->total_ciclos),
-            ]);
+                'ciclo' => $ciclo,
+            ]));
         });
 
         $students = Student::factory(40)->create()->each(function (Student $student) use ($carreras) {
@@ -86,7 +86,7 @@ class DatabaseSeeder extends Seeder
                     $enrolledStudents->each(function (Student $student) use ($evaluation) {
                         $evaluation->grades()->create([
                             'student_id' => $student->id,
-                            'score' => fake()->randomFloat(2, 40, 100),
+                            'score' => fake()->numberBetween(8, 20),
                         ]);
                     });
                 });
@@ -184,15 +184,10 @@ class DatabaseSeeder extends Seeder
 
     private function registrarPago(Cuota $cuota, float $monto): void
     {
-        $medio = fake()->randomElement(['efectivo', 'yape', 'mixto']);
+        $medio = fake()->randomElement(['efectivo', 'yape', 'plin', 'tarjeta']);
 
-        $montoEfectivo = match ($medio) {
-            'efectivo' => $monto,
-            'yape' => 0,
-            'mixto' => round($monto / 2, 2),
-        };
-
-        $montoYape = round($monto - $montoEfectivo, 2);
+        $montoEfectivo = $medio === 'efectivo' ? $monto : 0;
+        $montoYape = $medio === 'yape' ? $monto : 0;
 
         $cuota->pagos()->create([
             'student_id' => $cuota->matricula->student_id,

@@ -11,6 +11,8 @@ type GradeRow = {
     last_name: string;
     score: number | null;
     comments: string | null;
+    entrega_nombre: string | null;
+    entrega_url: string | null;
 };
 
 export default function Edit({
@@ -36,7 +38,7 @@ export default function Edit({
         const grades = [...data.grades];
         grades[index] = {
             ...grades[index],
-            [field]: field === 'score' ? (value === '' ? null : Number(value)) : value,
+            [field]: field === 'score' ? (value === '' ? null : Math.round(Number(value))) : value,
         };
         setData('grades', grades);
     };
@@ -49,7 +51,7 @@ export default function Edit({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-2xl font-bold text-brand-ink-strong">
                     Calificar — {evaluation.name}
                 </h2>
             }
@@ -58,32 +60,38 @@ export default function Edit({
 
             <div className="py-12">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
-                    <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="mb-4 text-sm text-brand-muted">
                         {evaluationTypeLabels[evaluation.type]} · Puntaje
                         máximo: {evaluation.max_score} · Ponderación:{' '}
                         {evaluation.weight}%
                     </div>
 
-                    <div className="bg-white p-6 shadow-sm sm:rounded-lg dark:bg-gray-800">
+                    <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
                         <form onSubmit={submit} className="space-y-6">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <table className="min-w-full divide-y divide-brand-border-faint">
                                 <thead>
                                     <tr>
-                                        <th className="px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                        <th className="px-2 py-2 text-left text-xs font-medium uppercase text-brand-muted">
                                             Estudiante
                                         </th>
-                                        <th className="px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                        <th className="px-2 py-2 text-left text-xs font-medium uppercase text-brand-muted">
                                             Nota
                                         </th>
-                                        <th className="px-2 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                        <th className="px-2 py-2 text-left text-xs font-medium uppercase text-brand-muted">
                                             Comentarios
                                         </th>
+                                        {(evaluation.type === 'homework' ||
+                                            evaluation.type === 'project') && (
+                                            <th className="px-2 py-2 text-left text-xs font-medium uppercase text-brand-muted">
+                                                Entrega
+                                            </th>
+                                        )}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tbody className="divide-y divide-brand-border-faint">
                                     {students.map((student, index) => (
                                         <tr key={student.student_id}>
-                                            <td className="whitespace-nowrap px-2 py-2 text-sm text-gray-900 dark:text-gray-100">
+                                            <td className="whitespace-nowrap px-2 py-2 text-sm text-brand-ink-strong">
                                                 {student.first_name}{' '}
                                                 {student.last_name}
                                             </td>
@@ -92,8 +100,8 @@ export default function Edit({
                                                     type="number"
                                                     min={0}
                                                     max={evaluation.max_score}
-                                                    step="0.01"
-                                                    className="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                                    step={1}
+                                                    className="block w-24 rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                                     value={
                                                         data.grades[index]
                                                             ?.score ?? ''
@@ -118,7 +126,7 @@ export default function Edit({
                                             <td className="px-2 py-2">
                                                 <input
                                                     type="text"
-                                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                                    className="block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                                     value={
                                                         data.grades[index]
                                                             ?.comments ?? ''
@@ -132,13 +140,44 @@ export default function Edit({
                                                     }
                                                 />
                                             </td>
+                                            {(evaluation.type === 'homework' ||
+                                                evaluation.type ===
+                                                    'project') && (
+                                                <td className="whitespace-nowrap px-2 py-2 text-sm">
+                                                    {student.entrega_url ? (
+                                                        <a
+                                                            href={
+                                                                student.entrega_url
+                                                            }
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-brand-link hover:underline"
+                                                        >
+                                                            {
+                                                                student.entrega_nombre
+                                                            }
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-brand-muted">
+                                                            Sin entrega
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                     {students.length === 0 && (
                                         <tr>
                                             <td
-                                                colSpan={3}
-                                                className="px-2 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+                                                colSpan={
+                                                    evaluation.type ===
+                                                        'homework' ||
+                                                    evaluation.type ===
+                                                        'project'
+                                                        ? 4
+                                                        : 3
+                                                }
+                                                className="px-2 py-6 text-center text-sm text-brand-muted"
                                             >
                                                 No hay estudiantes
                                                 matriculados activos en este
@@ -158,7 +197,7 @@ export default function Edit({
                                         'courses.show',
                                         evaluation.course_id,
                                     )}
-                                    className="text-sm text-gray-600 hover:underline dark:text-gray-400"
+                                    className="text-sm text-brand-muted hover:underline"
                                 >
                                     Volver al curso
                                 </Link>

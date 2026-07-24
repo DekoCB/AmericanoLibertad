@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Egreso;
 use App\Models\Pago;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,8 +14,12 @@ class CajaController extends Controller
     {
         $this->authorize('viewAny', Egreso::class);
 
+        $mesExpr = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', fecha)"
+            : "DATE_FORMAT(fecha, '%Y-%m')";
+
         $ingresosPorMes = Pago::query()
-            ->selectRaw("strftime('%Y-%m', fecha) as mes, SUM(monto) as total")
+            ->selectRaw("{$mesExpr} as mes, SUM(monto) as total")
             ->groupBy('mes')
             ->orderByDesc('mes')
             ->limit(6)
@@ -22,7 +27,7 @@ class CajaController extends Controller
             ->keyBy('mes');
 
         $egresosPorMes = Egreso::query()
-            ->selectRaw("strftime('%Y-%m', fecha) as mes, SUM(monto) as total")
+            ->selectRaw("{$mesExpr} as mes, SUM(monto) as total")
             ->groupBy('mes')
             ->orderByDesc('mes')
             ->limit(6)

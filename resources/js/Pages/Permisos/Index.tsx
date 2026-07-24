@@ -1,9 +1,11 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import Pagination from '@/Components/Pagination';
+import { CheckIcon, XMarkIcon } from '@/Components/Icons';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import {
@@ -13,13 +15,14 @@ import {
     permisoEstadoLabels,
     permisoTipoLabels,
 } from '@/types/models';
+import { formatDate } from '@/utils/date';
 
 const estadoBadge: Record<PermisoDocente['estado'], string> = {
     pendiente:
-        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+        'bg-yellow-100 text-yellow-800',
     aprobado:
-        'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-    rechazado: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+        'bg-green-100 text-green-800',
+    rechazado: 'bg-red-100 text-red-800',
 };
 
 export default function Index({
@@ -60,17 +63,17 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-2xl font-bold text-brand-ink-strong">
                     Permisos y licencias
                 </h2>
             }
         >
             <Head title="Permisos y licencias" />
 
-            <div className="py-12">
+            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-5xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                             Solicitar permiso
                         </h3>
                         <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -79,7 +82,7 @@ export default function Index({
                                     <InputLabel htmlFor="teacher_id" value="Docente" />
                                     <select
                                         id="teacher_id"
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                         value={data.teacher_id}
                                         onChange={(e) => setData('teacher_id', e.target.value)}
                                     >
@@ -97,7 +100,7 @@ export default function Index({
                                 <InputLabel htmlFor="tipo" value="Tipo" />
                                 <select
                                     id="tipo"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                    className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                     value={data.tipo}
                                     onChange={(e) => setData('tipo', e.target.value)}
                                 >
@@ -110,23 +113,21 @@ export default function Index({
                             </div>
                             <div>
                                 <InputLabel htmlFor="fecha_inicio" value="Desde" />
-                                <TextInput
+                                <DateInput
                                     id="fecha_inicio"
-                                    type="date"
                                     className="mt-1 block w-full"
                                     value={data.fecha_inicio}
-                                    onChange={(e) => setData('fecha_inicio', e.target.value)}
+                                    onChange={(v) => setData('fecha_inicio', v)}
                                 />
                                 <InputError message={errors.fecha_inicio} className="mt-1" />
                             </div>
                             <div>
                                 <InputLabel htmlFor="fecha_fin" value="Hasta" />
-                                <TextInput
+                                <DateInput
                                     id="fecha_fin"
-                                    type="date"
                                     className="mt-1 block w-full"
                                     value={data.fecha_fin}
-                                    onChange={(e) => setData('fecha_fin', e.target.value)}
+                                    onChange={(v) => setData('fecha_fin', v)}
                                 />
                                 <InputError message={errors.fecha_fin} className="mt-1" />
                             </div>
@@ -147,14 +148,14 @@ export default function Index({
                         </form>
                     </div>
 
-                    <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                             Solicitudes
                         </h3>
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <table className="min-w-full divide-y divide-brand-border-faint">
                                 <thead>
-                                    <tr className="text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <tr className="text-left text-xs font-medium uppercase text-brand-muted">
                                         {!isDocente && <th className="py-2 pr-4">Docente</th>}
                                         <th className="py-2 pr-4">Tipo</th>
                                         <th className="py-2 pr-4">Desde</th>
@@ -164,25 +165,25 @@ export default function Index({
                                         <th className="py-2" />
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                <tbody className="divide-y divide-brand-border-faint">
                                     {permisos.data.map((permiso) => (
                                         <tr key={permiso.id}>
                                             {!isDocente && (
-                                                <td className="py-2 pr-4 text-sm text-gray-900 dark:text-gray-100">
+                                                <td className="py-2 pr-4 text-sm text-brand-ink-strong">
                                                     {permiso.teacher?.first_name}{' '}
                                                     {permiso.teacher?.last_name}
                                                 </td>
                                             )}
-                                            <td className="py-2 pr-4 text-sm text-gray-700 dark:text-gray-300">
+                                            <td className="py-2 pr-4 text-sm text-brand-ink">
                                                 {permisoTipoLabels[permiso.tipo]}
                                             </td>
-                                            <td className="py-2 pr-4 text-sm text-gray-700 dark:text-gray-300">
-                                                {permiso.fecha_inicio}
+                                            <td className="py-2 pr-4 text-sm text-brand-ink">
+                                                {formatDate(permiso.fecha_inicio)}
                                             </td>
-                                            <td className="py-2 pr-4 text-sm text-gray-700 dark:text-gray-300">
-                                                {permiso.fecha_fin}
+                                            <td className="py-2 pr-4 text-sm text-brand-ink">
+                                                {formatDate(permiso.fecha_fin)}
                                             </td>
-                                            <td className="py-2 pr-4 text-sm text-gray-700 dark:text-gray-300">
+                                            <td className="py-2 pr-4 text-sm text-brand-ink">
                                                 {permiso.motivo ?? '—'}
                                             </td>
                                             <td className="py-2 pr-4 text-sm">
@@ -199,24 +200,28 @@ export default function Index({
                                                             onClick={() =>
                                                                 responder(permiso.id, 'aprobado')
                                                             }
-                                                            className="text-green-600 hover:underline dark:text-green-400"
+                                                            className="text-green-600 hover:opacity-70"
+                                                            title="Aprobar"
+                                                            aria-label="Aprobar"
                                                         >
-                                                            Aprobar
+                                                            <CheckIcon className="size-4" />
                                                         </button>
                                                         <button
                                                             onClick={() =>
                                                                 responder(permiso.id, 'rechazado')
                                                             }
-                                                            className="ms-3 text-red-600 hover:underline dark:text-red-400"
+                                                            className="ms-3 text-red-600 hover:opacity-70"
+                                                            title="Rechazar"
+                                                            aria-label="Rechazar"
                                                         >
-                                                            Rechazar
+                                                            <XMarkIcon className="size-4" />
                                                         </button>
                                                     </>
                                                 )}
                                                 {isDocente && permiso.estado === 'pendiente' && (
                                                     <button
                                                         onClick={() => cancelar(permiso.id)}
-                                                        className="text-red-600 hover:underline dark:text-red-400"
+                                                        className="text-red-600 hover:underline"
                                                     >
                                                         Cancelar
                                                     </button>
@@ -228,7 +233,7 @@ export default function Index({
                                         <tr>
                                             <td
                                                 colSpan={isDocente ? 5 : 6}
-                                                className="py-4 text-center text-sm text-gray-500 dark:text-gray-400"
+                                                className="py-4 text-center text-sm text-brand-muted"
                                             >
                                                 Sin solicitudes registradas.
                                             </td>

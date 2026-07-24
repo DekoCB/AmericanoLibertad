@@ -1,10 +1,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
+import Modal from '@/Components/Modal';
 import Pagination from '@/Components/Pagination';
+import { TrashIcon } from '@/Components/Icons';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { Egreso, Paginated, egresoCategoriaLabels } from '@/types/models';
+import { formatDate } from '@/utils/date';
+import Form from './Form';
 
 export default function Index({
     egresos,
@@ -13,6 +17,7 @@ export default function Index({
     egresos: Paginated<Egreso>;
     can: { create: boolean; delete: boolean };
 }) {
+    const [creating, setCreating] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState<Egreso | null>(
         null,
     );
@@ -28,61 +33,63 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Egresos
-                </h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-brand-ink-strong">
+                        Egresos
+                    </h2>
+                    <Link
+                        href={route('caja.index')}
+                        className="text-sm text-brand-muted hover:underline"
+                    >
+                        Volver a flujo de caja
+                    </Link>
+                </div>
             }
         >
             <Head title="Egresos" />
 
-            <div className="py-12">
+            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-5xl space-y-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
-                        <Link
-                            href={route('caja.index')}
-                            className="text-sm text-gray-600 hover:underline dark:text-gray-400"
-                        >
-                            ← Volver a Flujo de Caja
-                        </Link>
+                    <div className="flex items-center justify-end">
                         {can.create && (
-                            <Link href={route('egresos.create')}>
-                                <PrimaryButton>Nuevo egreso</PrimaryButton>
-                            </Link>
+                            <PrimaryButton onClick={() => setCreating(true)}>
+                                Nuevo egreso
+                            </PrimaryButton>
                         )}
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-900">
+                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
+                        <table className="min-w-full divide-y divide-brand-border-faint">
+                            <thead className="bg-brand-thead">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Fecha
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Concepto
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Categoría
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Monto
                                     </th>
                                     <th className="px-4 py-3" />
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody className="divide-y divide-brand-border-faint">
                                 {egresos.data.map((egreso) => (
                                     <tr key={egreso.id}>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                            {egreso.fecha}
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                            {formatDate(egreso.fecha)}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
                                             {egreso.concepto}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
                                             {egresoCategoriaLabels[egreso.categoria]}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-red-700">
                                             S/ {Number(egreso.monto).toFixed(2)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
@@ -93,9 +100,11 @@ export default function Index({
                                                             egreso,
                                                         )
                                                     }
-                                                    className="text-red-600 hover:underline dark:text-red-400"
+                                                    className="text-red-600 hover:opacity-70"
+                                                    title="Eliminar"
+                                                    aria-label="Eliminar"
                                                 >
-                                                    Eliminar
+                                                    <TrashIcon className="size-4" />
                                                 </button>
                                             )}
                                         </td>
@@ -105,7 +114,7 @@ export default function Index({
                                     <tr>
                                         <td
                                             colSpan={5}
-                                            className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+                                            className="px-4 py-6 text-center text-sm text-brand-muted"
                                         >
                                             No se encontraron egresos.
                                         </td>
@@ -119,20 +128,32 @@ export default function Index({
                 </div>
             </div>
 
+            <Modal show={creating} onClose={() => setCreating(false)}>
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Nuevo egreso
+                    </h2>
+                    <Form
+                        onSuccess={() => setCreating(false)}
+                        onCancel={() => setCreating(false)}
+                    />
+                </div>
+            </Modal>
+
             {confirmingDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-                    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
+                        <h3 className="text-lg font-bold text-brand-ink-strong">
                             ¿Eliminar egreso?
                         </h3>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p className="mt-2 text-sm text-brand-muted">
                             Vas a eliminar &quot;{confirmingDelete.concepto}
                             &quot;. Esta acción no se puede deshacer.
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button
                                 onClick={() => setConfirmingDelete(null)}
-                                className="rounded-md px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                                className="rounded-xl px-4 py-2 text-sm text-brand-muted hover:bg-brand-cream"
                             >
                                 Cancelar
                             </button>

@@ -22,7 +22,7 @@ class GradeFactory extends Factory
         return [
             'evaluation_id' => Evaluation::factory(),
             'student_id' => Student::factory(),
-            'score' => fake()->randomFloat(2, 40, 100),
+            'score' => fake()->numberBetween(8, 20),
             'comments' => fake()->optional()->sentence(),
         ];
     }

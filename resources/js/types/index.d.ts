@@ -14,6 +14,7 @@ export interface User {
     role: UserRole;
     teacher_id: number | null;
     student_id: number | null;
+    avatar_url: string | null;
 }
 
 export interface NavPermissions {
@@ -24,6 +25,7 @@ export interface NavPermissions {
     carreras: boolean;
     matriculas: boolean;
     caja: boolean;
+    reportes: boolean;
     horarios: boolean;
     asistencias: boolean;
     aulaVirtual: boolean;
@@ -38,5 +40,9 @@ export type PageProps<
     auth: {
         user: User;
         nav: NavPermissions | null;
+    };
+    flash: {
+        success: string | null;
+        error: string | null;
     };
 };

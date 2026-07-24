@@ -17,23 +17,25 @@ class StudentController extends Controller
         $this->authorize('viewAny', Student::class);
 
         $students = Student::query()
-            ->with('carrera')
-            ->when($request->string('search')->toString(), function ($query, $search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('document_number', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
+            ->with(['carrera', 'user'])
+            ->when($request->string('student_id')->toString(), function ($query, $studentId) {
+                $query->where('id', $studentId);
+            })
+            ->when($request->string('carrera_id')->toString(), function ($query, $carreraId) {
+                $query->where('carrera_id', $carreraId);
             })
             ->withCount('enrollments')
+            ->orderBy('ciclo')
+            ->orderBy('turno')
             ->orderBy('last_name')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
         return Inertia::render('Students/Index', [
             'students' => $students,
-            'filters' => $request->only('search'),
+            'allStudents' => Student::orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'email', 'document_number']),
+            'filters' => $request->only(['student_id', 'carrera_id']),
+            'carreras' => Carrera::orderBy('name')->get(['id', 'name', 'total_ciclos']),
             'can' => [
                 'create' => $request->user()->can('create', Student::class),
                 'update' => $request->user()->can('update', new Student()),
@@ -65,7 +67,7 @@ class StudentController extends Controller
         $this->authorize('update', $student);
 
         return Inertia::render('Students/Edit', [
-            'student' => $student,
+            'student' => $student->load('user'),
             'carreras' => Carrera::orderBy('name')->get(['id', 'name', 'total_ciclos']),
         ]);
     }

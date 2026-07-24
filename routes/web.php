@@ -8,6 +8,7 @@ use App\Http\Controllers\CuotaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\EnrollmentController;
+use App\Http\Controllers\EntregaEvaluacionController;
 use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HorarioController;
@@ -15,8 +16,11 @@ use App\Http\Controllers\MatriculaController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\PermisoDocenteController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QuizIntentoController;
+use App\Http\Controllers\QuizPreguntaController;
 use App\Http\Controllers\RecursoAulaController;
 use App\Http\Controllers\RegistroHorasController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
@@ -50,7 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('users', UserController::class)->except('show');
     Route::resource('carreras', CarreraController::class)->except('show');
 
-    Route::resource('matriculas', MatriculaController::class);
+    Route::resource('matriculas', MatriculaController::class)->except('edit');
     Route::post('matriculas/{matricula}/cuotas', [CuotaController::class, 'store'])->name('matriculas.cuotas.store');
     Route::delete('matriculas/{matricula}/cuotas/{cuota}', [CuotaController::class, 'destroy'])->name('matriculas.cuotas.destroy');
     Route::post('cuotas/{cuota}/pagos', [PagoController::class, 'store'])->name('cuotas.pagos.store');
@@ -58,6 +62,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('egresos', EgresoController::class)->except(['show', 'edit', 'update']);
     Route::get('caja', [CajaController::class, 'index'])->name('caja.index');
+
+    Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');
+    Route::get('reportes/exportar', [ReporteController::class, 'exportar'])->name('reportes.exportar');
 
     Route::post('courses/{course}/enrollments', [EnrollmentController::class, 'store'])->name('courses.enrollments.store');
     Route::delete('courses/{course}/enrollments/{enrollment}', [EnrollmentController::class, 'destroy'])->name('courses.enrollments.destroy');
@@ -71,13 +78,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('evaluations/{evaluation}/grades', [GradeController::class, 'edit'])->name('evaluations.grades.edit');
     Route::put('evaluations/{evaluation}/grades', [GradeController::class, 'update'])->name('evaluations.grades.update');
 
+    // Preguntas de cuestionario (docente/staff)
+    Route::get('evaluations/{evaluation}/preguntas', [QuizPreguntaController::class, 'index'])->name('evaluations.preguntas.index');
+    Route::post('evaluations/{evaluation}/preguntas', [QuizPreguntaController::class, 'store'])->name('evaluations.preguntas.store');
+    Route::put('preguntas/{pregunta}', [QuizPreguntaController::class, 'update'])->name('preguntas.update');
+    Route::delete('preguntas/{pregunta}', [QuizPreguntaController::class, 'destroy'])->name('preguntas.destroy');
+
+    // Resolver cuestionario (estudiante)
+    Route::get('evaluations/{evaluation}/resolver', [QuizIntentoController::class, 'create'])->name('evaluations.resolver');
+    Route::post('evaluations/{evaluation}/resolver', [QuizIntentoController::class, 'store'])->name('evaluations.resolver.store');
+
+    // Entrega de archivo (estudiante)
+    Route::post('evaluations/{evaluation}/entrega', [EntregaEvaluacionController::class, 'store'])->name('evaluations.entrega.store');
+
     // Horarios
     Route::get('horarios', [HorarioController::class, 'index'])->name('horarios.index');
-    Route::post('courses/{course}/horarios', [HorarioController::class, 'store'])->name('courses.horarios.store');
-    Route::delete('courses/{course}/horarios/{horario}', [HorarioController::class, 'destroy'])->name('courses.horarios.destroy');
+    Route::get('horarios/mi-horario/exportar', [HorarioController::class, 'exportarPropio'])
+        ->name('horarios.propio.exportar');
+    Route::post('horarios/aulas', [HorarioController::class, 'registrarAula'])->name('horarios.aulas.store');
+    Route::get('horarios/aulas/{aula}/exportar', [HorarioController::class, 'exportarAula'])
+        ->name('horarios.aulas.exportar');
+    Route::post('horarios/aulas/{aula}/importar', [HorarioController::class, 'importarAula'])
+        ->name('horarios.aulas.importar');
 
     // Asistencia por DNI/QR
     Route::get('asistencias', [AsistenciaController::class, 'cursos'])->name('asistencias.index');
+    Route::get('asistencias/historial', [AsistenciaController::class, 'historial'])->name('asistencias.historial');
+    Route::post('mis-asistencias/escanear', [AsistenciaController::class, 'escanearPropio'])->name('mis-asistencias.escanear');
     Route::get('courses/{course}/asistencias', [AsistenciaController::class, 'index'])->name('courses.asistencias.index');
     Route::post('courses/{course}/asistencias', [AsistenciaController::class, 'store'])->name('courses.asistencias.store');
     Route::post('courses/{course}/asistencias/escanear', [AsistenciaController::class, 'escanear'])->name('courses.asistencias.escanear');
@@ -93,6 +120,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('registros-horas', [RegistroHorasController::class, 'store'])->name('registros-horas.store');
     Route::delete('registros-horas/{registroHora}', [RegistroHorasController::class, 'destroy'])->name('registros-horas.destroy');
     Route::post('registros-horas/generar-pago', [RegistroHorasController::class, 'generarPago'])->name('registros-horas.generar-pago');
+    Route::get('registros-horas/comprobante/{egreso}', [RegistroHorasController::class, 'comprobante'])->name('registros-horas.comprobante');
 
     Route::get('permisos', [PermisoDocenteController::class, 'index'])->name('permisos.index');
     Route::post('permisos', [PermisoDocenteController::class, 'store'])->name('permisos.store');
@@ -103,7 +131,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/ayuda', fn () => Inertia::render('Help/Index'))->name('help');
 });
 
 require __DIR__.'/auth.php';

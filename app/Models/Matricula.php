@@ -27,6 +27,7 @@ class Matricula extends Model
     {
         return [
             'fecha_matricula' => 'date',
+            'monto_matricula' => 'float',
         ];
     }
 
@@ -43,6 +44,11 @@ class Matricula extends Model
     public function cuotas(): HasMany
     {
         return $this->hasMany(Cuota::class);
+    }
+
+    public function historiales(): HasMany
+    {
+        return $this->hasMany(HistorialMatricula::class)->latest();
     }
 
     /**

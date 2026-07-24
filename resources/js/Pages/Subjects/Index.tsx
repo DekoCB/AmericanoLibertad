@@ -1,32 +1,42 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
-import TextInput from '@/Components/TextInput';
+import Modal from '@/Components/Modal';
+import SearchableSelect from '@/Components/SearchableSelect';
 import Pagination from '@/Components/Pagination';
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { PencilIcon, TrashIcon } from '@/Components/Icons';
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import { Paginated, Subject } from '@/types/models';
+import Form from './Form';
 
 export default function Index({
     subjects,
+    nombresMaterias,
     filters,
     can,
 }: {
     subjects: Paginated<Subject>;
-    filters: { search?: string };
+    nombresMaterias: string[];
+    filters: { name?: string };
     can: { create: boolean; update: boolean; delete: boolean };
 }) {
-    const [search, setSearch] = useState(filters.search ?? '');
+    const [name, setName] = useState(filters.name ?? '');
+    const [creating, setCreating] = useState(false);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingSubject, setEditingSubject] = useState<Subject | null>(
+        null,
+    );
     const [confirmingDelete, setConfirmingDelete] = useState<Subject | null>(
         null,
     );
     const { delete: destroy, processing } = useForm();
 
-    const submitSearch = (e: FormEvent) => {
-        e.preventDefault();
+    const changeName = (nuevoNombre: string) => {
+        setName(nuevoNombre);
         router.get(
             route('subjects.index'),
-            { search },
+            { name: nuevoNombre },
             { preserveState: true, replace: true },
         );
     };
@@ -41,83 +51,97 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-2xl font-bold text-brand-ink-strong">
                     Materias
                 </h2>
             }
         >
             <Head title="Materias" />
 
-            <div className="py-12">
+            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <form
-                            onSubmit={submitSearch}
-                            className="flex w-full max-w-sm gap-2"
-                        >
-                            <TextInput
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Buscar por nombre o código"
-                                className="w-full"
+                        <div className="w-full max-w-sm">
+                            <SearchableSelect
+                                value={name}
+                                onChange={changeName}
+                                placeholder="Buscar por nombre de materia"
+                                allLabel="Todas las materias"
+                                options={nombresMaterias.map((nombre) => ({
+                                    value: nombre,
+                                    label: nombre,
+                                }))}
                             />
-                            <PrimaryButton type="submit">
-                                Buscar
-                            </PrimaryButton>
-                        </form>
+                        </div>
 
                         {can.create && (
-                            <Link href={route('subjects.create')}>
-                                <PrimaryButton>Nueva materia</PrimaryButton>
-                            </Link>
+                            <PrimaryButton onClick={() => setCreating(true)}>
+                                Nueva materia
+                            </PrimaryButton>
                         )}
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-900">
+                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
+                        <table className="min-w-full divide-y divide-brand-border-faint">
+                            <thead className="bg-brand-thead">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Código
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Nombre
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Carrera
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Ciclo
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Horas crédito
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Cursos
                                     </th>
                                     <th className="px-4 py-3" />
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody className="divide-y divide-brand-border-faint">
                                 {subjects.data.map((subject) => (
                                     <tr key={subject.id}>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
                                             {subject.code}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
                                             {subject.name}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                            {subject.carrera?.name ?? '—'}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                            {subject.ciclo ?? '—'}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
                                             {subject.credit_hours}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
                                             {subject.courses_count ?? 0}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
                                             {can.update && (
-                                                <Link
-                                                    href={route(
-                                                        'subjects.edit',
-                                                        subject.id,
-                                                    )}
-                                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingSubject(
+                                                            subject,
+                                                        );
+                                                        setEditModalOpen(true);
+                                                    }}
+                                                    className="text-brand-link hover:opacity-70"
+                                                    title="Editar"
+                                                    aria-label="Editar"
                                                 >
-                                                    Editar
-                                                </Link>
+                                                    <PencilIcon className="size-4" />
+                                                </button>
                                             )}
                                             {can.delete && (
                                                 <button
@@ -126,9 +150,11 @@ export default function Index({
                                                             subject,
                                                         )
                                                     }
-                                                    className="ms-4 text-red-600 hover:underline dark:text-red-400"
+                                                    className="ms-4 text-red-600 hover:opacity-70"
+                                                    title="Eliminar"
+                                                    aria-label="Eliminar"
                                                 >
-                                                    Eliminar
+                                                    <TrashIcon className="size-4" />
                                                 </button>
                                             )}
                                         </td>
@@ -137,8 +163,8 @@ export default function Index({
                                 {subjects.data.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={5}
-                                            className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+                                            colSpan={7}
+                                            className="px-4 py-6 text-center text-sm text-brand-muted"
                                         >
                                             No se encontraron materias.
                                         </td>
@@ -152,20 +178,50 @@ export default function Index({
                 </div>
             </div>
 
+            <Modal show={creating} onClose={() => setCreating(false)}>
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Nueva materia
+                    </h2>
+                    <Form
+                        onSuccess={() => setCreating(false)}
+                        onCancel={() => setCreating(false)}
+                    />
+                </div>
+            </Modal>
+
+            <Modal
+                show={editModalOpen}
+                onClose={() => setEditModalOpen(false)}
+            >
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Editar materia
+                    </h2>
+                    {editingSubject && (
+                        <Form
+                            subject={editingSubject}
+                            onSuccess={() => setEditModalOpen(false)}
+                            onCancel={() => setEditModalOpen(false)}
+                        />
+                    )}
+                </div>
+            </Modal>
+
             {confirmingDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-                    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
+                        <h3 className="text-lg font-bold text-brand-ink-strong">
                             ¿Eliminar materia?
                         </h3>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p className="mt-2 text-sm text-brand-muted">
                             Vas a eliminar {confirmingDelete.name}. Los cursos
                             asociados también se eliminarán.
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button
                                 onClick={() => setConfirmingDelete(null)}
-                                className="rounded-md px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                                className="rounded-xl px-4 py-2 text-sm text-brand-muted hover:bg-brand-cream"
                             >
                                 Cancelar
                             </button>

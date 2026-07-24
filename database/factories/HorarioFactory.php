@@ -22,7 +22,7 @@ class HorarioFactory extends Factory
 
         return [
             'course_id' => Course::factory(),
-            'dia_semana' => fake()->randomElement(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']),
+            'dia_semana' => fake()->randomElement(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']),
             'hora_inicio' => sprintf('%02d:00', $horaInicio),
             'hora_fin' => sprintf('%02d:30', $horaInicio + 1),
             'aula' => fake()->randomElement(['Aula 101', 'Aula 102', 'Aula 201', 'Laboratorio 1', 'Auditorio']),

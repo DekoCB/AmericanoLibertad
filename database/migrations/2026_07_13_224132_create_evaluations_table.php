@@ -18,7 +18,7 @@ return new class extends Migration
             $table->enum('type', ['exam', 'quiz', 'homework', 'project'])->default('exam');
             $table->decimal('weight', 5, 2)->default(100);
             $table->date('date');
-            $table->decimal('max_score', 5, 2)->default(100);
+            $table->unsignedTinyInteger('max_score')->default(20);
             $table->timestamps();
         });
     }

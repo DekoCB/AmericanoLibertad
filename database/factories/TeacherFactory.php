@@ -22,9 +22,10 @@ class TeacherFactory extends Factory
             'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->phoneNumber(),
-            'specialty' => fake()->randomElement([
-                'Matemáticas', 'Ciencias', 'Humanidades', 'Idiomas', 'Tecnología', 'Artes',
-            ]),
+            'specialty' => fake()->randomElements(
+                ['Matemáticas', 'Ciencias', 'Humanidades', 'Idiomas', 'Tecnología', 'Artes'],
+                fake()->numberBetween(1, 3),
+            ),
             'tarifa_hora' => fake()->randomElement([18, 20, 22, 25, 30]),
         ];
     }

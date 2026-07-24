@@ -21,6 +21,13 @@ class Teacher extends Model
         'tarifa_hora',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'specialty' => 'array',
+        ];
+    }
+
     public function courses(): HasMany
     {
         return $this->hasMany(Course::class);

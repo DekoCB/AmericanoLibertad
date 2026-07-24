@@ -1,3 +1,102 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    color-scheme: light;
+    --brand-cream: oklch(97% 0.012 85);
+    --brand-surface: oklch(99% 0.004 85);
+    --brand-card: oklch(100% 0 0);
+    --brand-hover: oklch(94% 0.012 85);
+    --brand-navy: oklch(32% 0.07 255);
+    --brand-navy-dark: oklch(26% 0.07 255);
+    --brand-ink: oklch(25% 0.02 255);
+    --brand-ink-strong: oklch(28% 0.05 255);
+    --brand-ink-soft: oklch(35% 0.03 255);
+    --brand-muted: oklch(50% 0.02 255);
+    --brand-muted-soft: oklch(55% 0.02 255);
+    --brand-border: oklch(90% 0.01 85);
+    --brand-border-faint: oklch(93% 0.008 85);
+    --brand-thead: oklch(98% 0.008 85);
+    --brand-link: oklch(42% 0.1 255);
+    --brand-input: oklch(100% 0 0);
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: oklch(62% 0.06 255 / 0.55);
+    --scrollbar-thumb-hover: oklch(48% 0.09 255 / 0.75);
+    --theme-pattern-bg: url('/images/White.png');
+    --theme-pattern-overlay: rgba(20, 20, 30, 0.15);
+    --star-dot-near: oklch(55% 0.03 255 / 0.16);
+    --star-dot-far: oklch(55% 0.03 255 / 0.1);
+}
+
+:root.dark {
+    color-scheme: dark;
+    --brand-cream: oklch(20% 0.015 260);
+    --brand-surface: oklch(16% 0.02 260);
+    --brand-card: oklch(24% 0.016 260);
+    --brand-hover: oklch(30% 0.02 260);
+    --brand-navy: oklch(58% 0.12 255);
+    --brand-navy-dark: oklch(50% 0.12 255);
+    --brand-ink: oklch(88% 0.01 255);
+    --brand-ink-strong: oklch(96% 0.005 255);
+    --brand-ink-soft: oklch(82% 0.02 255);
+    --brand-muted: oklch(68% 0.02 255);
+    --brand-muted-soft: oklch(62% 0.02 255);
+    --brand-border: oklch(32% 0.02 260);
+    --brand-border-faint: oklch(28% 0.018 260);
+    --brand-thead: oklch(26% 0.02 260);
+    --brand-link: oklch(75% 0.12 255);
+    --brand-input: #2F3748;
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: oklch(55% 0.09 255 / 0.6);
+    --scrollbar-thumb-hover: oklch(68% 0.11 255 / 0.8);
+    --theme-pattern-bg: url('/images/Black.png');
+    --theme-pattern-overlay: rgba(0, 0, 0, 0.55);
+    --star-dot-near: oklch(92% 0.02 255 / 0.55);
+    --star-dot-far: oklch(80% 0.02 255 / 0.3);
+}
+
+html {
+    scrollbar-gutter: stable;
+}
+
+.bg-starfield {
+    background-image:
+        radial-gradient(var(--star-dot-near) 1.4px, transparent 1.6px),
+        radial-gradient(var(--star-dot-far) 1px, transparent 1.2px);
+    background-size: 90px 90px, 60px 60px;
+    background-position: 0 0, 30px 20px;
+}
+
+.bg-page-pattern {
+    background-image:
+        linear-gradient(var(--theme-pattern-overlay), var(--theme-pattern-overlay)),
+        var(--theme-pattern-bg);
+    background-repeat: repeat;
+    background-size: 340px;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
