@@ -1,5 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import SearchableSelect from '@/Components/SearchableSelect';
+import PageTitle from '@/Components/PageTitle';
+import { ComputerDesktopIcon } from '@/Components/Icons';
 import { Head, Link, router } from '@inertiajs/react';
 import { Course, turnoLabels } from '@/types/models';
 
@@ -18,9 +20,9 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
+                <PageTitle icon={<ComputerDesktopIcon />}>
                     Aula virtual
-                </h2>
+                </PageTitle>
             }
         >
             <Head title="Aula virtual" />

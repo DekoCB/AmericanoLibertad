@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>{{ $numeroBoleta }} — {{ $teacher->first_name }} {{ $teacher->last_name }}</title>
+    <title>{{ $numeroBoleta }} — {{ $student->first_name }} {{ $student->last_name }}</title>
     <style>
         :root {
             --ink: #1a1a1a;
@@ -21,7 +21,7 @@
         }
 
         .sheet {
-            max-width: 460px;
+            max-width: 420px;
             margin: 0 auto;
             background: #fff;
             border: 1px solid var(--border);
@@ -96,7 +96,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            font-size: 12px;
         }
 
         thead th {
@@ -111,8 +111,7 @@
         }
 
         tbody td {
-            padding: 5px 2px;
-            border-bottom: 1px solid var(--border);
+            padding: 6px 2px;
             overflow-wrap: break-word;
         }
 
@@ -153,7 +152,7 @@
         }
 
         .no-print {
-            max-width: 460px;
+            max-width: 420px;
             margin: 0 auto 16px;
             text-align: right;
         }
@@ -192,10 +191,6 @@
                 flex-basis: 34vw;
             }
 
-            table {
-                font-size: 10px;
-            }
-
             .no-print { display: none; }
         }
     </style>
@@ -225,27 +220,40 @@
 
         <div class="fila">
             <span class="etiqueta">F. EMISIÓN</span>
-            <span class="valor">: {{ $egreso->fecha->format('d-m-Y') }}</span>
+            <span class="valor">: {{ $pago->fecha->format('d-m-Y') }}</span>
         </div>
         <div class="fila">
             <span class="etiqueta">H. EMISIÓN</span>
-            <span class="valor">: {{ $egreso->created_at->format('H:i:s') }}</span>
+            <span class="valor">: {{ $pago->created_at->format('H:i:s') }}</span>
         </div>
         <div class="fila">
-            <span class="etiqueta">DOCENTE</span>
-            <span class="valor">: {{ mb_strtoupper($teacher->first_name . ' ' . $teacher->last_name) }}</span>
+            <span class="etiqueta">F. VENCIMIENTO</span>
+            <span class="valor">: {{ $cuota->fecha_vencimiento?->format('d-m-Y') ?? '-' }}</span>
         </div>
         <div class="fila">
-            <span class="etiqueta">CORREO</span>
-            <span class="valor">: {{ $teacher->email ?: '-' }}</span>
+            <span class="etiqueta">CLIENTE</span>
+            <span class="valor">: {{ mb_strtoupper($student->first_name . ' ' . $student->last_name) }}</span>
         </div>
         <div class="fila">
-            <span class="etiqueta">TARIFA/HORA</span>
-            <span class="valor">: S/ {{ number_format($teacher->tarifa_hora, 2) }}</span>
+            <span class="etiqueta">DNI/RUC</span>
+            <span class="valor">: {{ $student->document_number }}</span>
         </div>
         <div class="fila">
-            <span class="etiqueta">PERIODO PAGADO</span>
-            <span class="valor">: {{ $desde }} — {{ $hasta }}</span>
+            <span class="etiqueta">DIRECCIÓN</span>
+            <span class="valor">: {{ $student->address ?: '-' }}</span>
+        </div>
+        <div class="fila">
+            <span class="etiqueta">AULA</span>
+            <span class="valor">:
+                {{ mb_strtoupper($matricula->carrera?->name ?? '-') }}
+                — CICLO {{ $matricula->ciclo }}
+                — {{ match ($matricula->turno) {
+                    'mañana' => 'MAÑANA',
+                    'tarde' => 'TARDE',
+                    'noche' => 'NOCHE',
+                    default => mb_strtoupper($matricula->turno),
+                } }}
+            </span>
         </div>
 
         <hr>
@@ -262,16 +270,19 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($filas as $fila)
-                    <tr>
-                        <td>{{ $fila['horas'] }}</td>
-                        <td>{{ $fila['fecha'] }} — {{ mb_strtoupper($fila['curso'] ?? '-') }}</td>
-                        <td class="num">{{ number_format($fila['monto_bruto'], 2) }}</td>
-                        <td class="num">{{ number_format($fila['descuento_tardanza'], 2) }}</td>
-                        <td class="num">0.00</td>
-                        <td class="num">{{ number_format($fila['monto_neto'], 2) }}</td>
-                    </tr>
-                @endforeach
+                <tr>
+                    <td>1</td>
+                    <td>
+                        {{ $cuota->tipo === 'matricula' ? 'MATRÍCULA' : 'PENSIÓN' }}
+                        @if ($cuota->tipo === 'pension' && $cuota->mes)
+                            — {{ mb_strtoupper($cuota->mes) }}
+                        @endif
+                    </td>
+                    <td class="num">{{ number_format($pago->monto, 2) }}</td>
+                    <td class="num">0.00</td>
+                    <td class="num">0.00</td>
+                    <td class="num">{{ number_format($pago->monto, 2) }}</td>
+                </tr>
             </tbody>
         </table>
 
@@ -280,15 +291,15 @@
         <div class="totales">
             <div class="fila-total">
                 <span>VALOR DE VENTA</span>
-                <span>S/ {{ number_format($totalBruto, 2) }}</span>
+                <span>S/ {{ number_format($pago->monto, 2) }}</span>
             </div>
             <div class="fila-total">
                 <span>DESCUENTO</span>
-                <span>- S/ {{ number_format($totalDescuento, 2) }}</span>
+                <span>- S/ 0.00</span>
             </div>
             <div class="fila-total">
                 <span>SUBTOTAL</span>
-                <span>S/ {{ number_format($totalBruto - $totalDescuento, 2) }}</span>
+                <span>S/ {{ number_format($pago->monto, 2) }}</span>
             </div>
             <div class="fila-total">
                 <span>OTROS CARGOS</span>
@@ -296,7 +307,7 @@
             </div>
             <div class="fila-total final">
                 <span>TOTAL A PAGAR</span>
-                <span>S/ {{ number_format($totalNeto, 2) }}</span>
+                <span>S/ {{ number_format($pago->monto, 2) }}</span>
             </div>
         </div>
 
@@ -305,17 +316,28 @@
         <hr>
 
         <div class="detalles">
-            <p><strong>Detalles:</strong> Pago realizado al docente <em>{{ $teacher->first_name }} {{ $teacher->last_name }}</em> por {{ $totalHoras }} horas académicas dictadas.</p>
+            <p><strong>Detalles:</strong> Pago realizado para el estudiante <em>{{ $student->first_name }} {{ $student->last_name }}</em></p>
         </div>
 
         <hr>
 
         <div class="info-adicional">
             <p><strong>Información adicional</strong></p>
-            <p><strong>Vendedor:</strong> Administración</p>
+            @if ($pago->nota)
+                <p>{{ $pago->nota }}</p>
+            @endif
+            <p><strong>Origen:</strong> {{ match ($pago->medio) {
+                'efectivo' => 'EFECTIVO',
+                'yape' => 'YAPE',
+                'plin' => 'PLIN',
+                'tarjeta' => 'TARJETA',
+                'mixto' => 'MIXTO',
+                default => mb_strtoupper($pago->medio),
+            } }}</p>
+            <p><strong>Vendedor:</strong> {{ $pago->registradoPor?->name ?? '-' }}</p>
         </div>
 
-        <p class="footer">Gracias por su servicio</p>
+        <p class="footer">Gracias por su pago</p>
     </div>
 </body>
 </html>

@@ -3,7 +3,8 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import Pagination from '@/Components/Pagination';
-import { PencilIcon, TrashIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import { AcademicCapIcon, PencilIcon, TrashIcon } from '@/Components/Icons';
 import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { Carrera, Paginated } from '@/types/models';
@@ -34,9 +35,7 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Carreras
-                </h2>
+                <PageTitle icon={<AcademicCapIcon />}>Carreras</PageTitle>
             }
         >
             <Head title="Carreras" />

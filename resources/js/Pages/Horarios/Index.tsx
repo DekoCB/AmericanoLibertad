@@ -4,7 +4,12 @@ import Modal from '@/Components/Modal';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import { ArrowDownTrayIcon, ArrowUpTrayIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import {
+    ArrowDownTrayIcon,
+    ArrowUpTrayIcon,
+    CalendarDaysIcon,
+} from '@/Components/Icons';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEvent, useRef, useState } from 'react';
 
@@ -114,9 +119,7 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Horarios
-                </h2>
+                <PageTitle icon={<CalendarDaysIcon />}>Horarios</PageTitle>
             }
         >
             <Head title="Horarios" />

@@ -5,12 +5,38 @@ namespace App\Http\Controllers;
 use App\Models\Cuota;
 use App\Models\Matricula;
 use App\Models\Pago;
+use App\Models\Student;
+use App\Support\NumeroALetras;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class PagoController extends Controller
 {
+    public function index(Request $request): Response
+    {
+        $this->authorize('viewAny', Pago::class);
+
+        $pagos = Pago::query()
+            ->with(['student', 'cuota.matricula'])
+            ->when($request->string('student_id')->toString(), function ($query, $studentId) {
+                $query->where('student_id', $studentId);
+            })
+            ->latest('fecha')
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('Ingresos/Index', [
+            'pagos' => $pagos,
+            'allStudents' => Student::orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'document_number']),
+            'filters' => $request->only(['student_id']),
+        ]);
+    }
+
     public function store(Request $request, Cuota $cuota): RedirectResponse
     {
         $this->authorize('create', Pago::class);
@@ -42,6 +68,22 @@ class PagoController extends Controller
         $this->recalcularEstadoMatricula($cuota->matricula);
 
         return back()->with('success', 'Pago registrado correctamente.');
+    }
+
+    public function comprobante(Pago $pago): View
+    {
+        $this->authorize('view', $pago);
+
+        $pago->load(['cuota.matricula.student', 'cuota.matricula.carrera', 'registradoPor']);
+
+        return view('comprobantes.pago-matricula', [
+            'pago' => $pago,
+            'cuota' => $pago->cuota,
+            'matricula' => $pago->cuota->matricula,
+            'student' => $pago->cuota->matricula->student,
+            'numeroBoleta' => 'B001-' . str_pad((string) $pago->id, 8, '0', STR_PAD_LEFT),
+            'montoEnLetras' => NumeroALetras::convertir((float) $pago->monto),
+        ]);
     }
 
     public function destroy(Cuota $cuota, Pago $pago): RedirectResponse

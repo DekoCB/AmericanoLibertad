@@ -4,7 +4,8 @@ import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
 import Pagination from '@/Components/Pagination';
-import { EyeIcon, TrashIcon, XMarkIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import { CreditCardIcon, EyeIcon, TrashIcon, XMarkIcon } from '@/Components/Icons';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import {
@@ -100,9 +101,7 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Matrículas
-                </h2>
+                <PageTitle icon={<CreditCardIcon />}>Matrículas</PageTitle>
             }
         >
             <Head title="Matrículas" />

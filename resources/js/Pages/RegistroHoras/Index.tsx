@@ -7,7 +7,8 @@ import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import Pagination from '@/Components/Pagination';
-import { DocumentTextIcon, TrashIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import { ClockIcon, DocumentTextIcon, TrashIcon } from '@/Components/Icons';
 import { Transition } from '@headlessui/react';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FormEvent, useMemo, useState } from 'react';
@@ -158,9 +159,9 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
+                <PageTitle icon={<ClockIcon />}>
                     {isDocente ? 'Mis horas y pagos' : 'Horas y pagos docentes'}
-                </h2>
+                </PageTitle>
             }
         >
             <Head title="Horas y pagos docentes" />

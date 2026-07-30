@@ -3,6 +3,8 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import QrScanner from '@/Components/QrScanner';
 import StudentQrCode from '@/Components/StudentQrCode';
+import PageTitle from '@/Components/PageTitle';
+import { QrCodeIcon } from '@/Components/Icons';
 import { PageProps } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
@@ -75,9 +77,7 @@ export default function Estudiante({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Mis asistencias
-                </h2>
+                <PageTitle icon={<QrCodeIcon />}>Mis asistencias</PageTitle>
             }
         >
             <Head title="Mis asistencias" />

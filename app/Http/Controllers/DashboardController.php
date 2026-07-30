@@ -13,7 +13,9 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -107,6 +109,53 @@ class DashboardController extends Controller
         };
     }
 
+    private function estudiantesPorCarrera(): Collection
+    {
+        return DB::table('students')
+            ->join('carreras', 'carreras.id', '=', 'students.carrera_id')
+            ->where('students.status', 'active')
+            ->selectRaw('carreras.name as carrera, count(*) as total')
+            ->groupBy('carreras.id', 'carreras.name')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($fila) => [
+                'carrera' => $fila->carrera,
+                'total' => (int) $fila->total,
+            ])
+            ->values();
+    }
+
+    private function promedioPorPeriodo(): Collection
+    {
+        return DB::table('grades')
+            ->join('evaluations', 'evaluations.id', '=', 'grades.evaluation_id')
+            ->join('courses', 'courses.id', '=', 'evaluations.course_id')
+            ->selectRaw('courses.period as periodo, AVG(grades.score) as promedio')
+            ->groupBy('courses.period')
+            ->orderBy('courses.period')
+            ->get()
+            ->map(fn ($fila) => [
+                'periodo' => $fila->periodo,
+                'promedio' => round((float) $fila->promedio, 1),
+            ]);
+    }
+
+    private function matriculasPorCiclo(): Collection
+    {
+        return DB::table('enrollments')
+            ->join('students', 'students.id', '=', 'enrollments.student_id')
+            ->where('enrollments.status', 'active')
+            ->whereNotNull('students.ciclo')
+            ->selectRaw('students.ciclo as ciclo, count(*) as total')
+            ->groupBy('students.ciclo')
+            ->orderBy('students.ciclo')
+            ->get()
+            ->map(fn ($fila) => [
+                'ciclo' => (int) $fila->ciclo,
+                'total' => (int) $fila->total,
+            ]);
+    }
+
     private function staffDashboard(): Response
     {
         return Inertia::render('Dashboard', [
@@ -123,13 +172,14 @@ class DashboardController extends Controller
             ],
             'recentEnrollments' => Enrollment::with(['student.user', 'course.subject'])
                 ->latest('enrolled_at')
-                ->limit(6)
+                ->limit(15)
                 ->get(),
-            'upcomingEvaluations' => Evaluation::with('course.subject')
-                ->whereDate('date', '>=', now())
+            'evaluacionesCalendario' => Evaluation::with('course.subject')
                 ->orderBy('date')
-                ->limit(6)
                 ->get(),
+            'estudiantesPorCarrera' => $this->estudiantesPorCarrera(),
+            'matriculasPorCiclo' => $this->matriculasPorCiclo(),
+            'promedioPorPeriodo' => $this->promedioPorPeriodo(),
         ]);
     }
 
@@ -143,8 +193,6 @@ class DashboardController extends Controller
             ->get();
 
         $courseIds = $courses->pluck('id');
-
-        $diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 
         $topEstudiantes = Grade::whereHas('evaluation', fn ($query) => $query->whereIn('course_id', $courseIds))
             ->selectRaw('student_id, AVG(score) as promedio')
@@ -170,17 +218,14 @@ class DashboardController extends Controller
                     ->count('student_id'),
                 'evaluations' => Evaluation::whereIn('course_id', $courseIds)->count(),
             ],
-            'horarioHoy' => Horario::with('course.subject')
+            'horarioSemana' => Horario::with('course.subject')
                 ->whereIn('course_id', $courseIds)
-                ->where('dia_semana', $diasSemana[now()->dayOfWeek])
                 ->orderBy('hora_inicio')
                 ->get(),
             'topEstudiantes' => $topEstudiantes,
-            'upcomingEvaluations' => Evaluation::with('course.subject')
+            'evaluacionesCalendario' => Evaluation::with('course.subject')
                 ->whereIn('course_id', $courseIds)
-                ->whereDate('date', '>=', now())
                 ->orderBy('date')
-                ->limit(6)
                 ->get(),
         ]);
     }
@@ -209,11 +254,9 @@ class DashboardController extends Controller
             ],
             'myCourses' => $enrollments->pluck('course'),
             'myGrades' => $grades,
-            'upcomingEvaluations' => Evaluation::with('course.subject')
+            'evaluacionesCalendario' => Evaluation::with('course.subject')
                 ->whereIn('course_id', $courseIds)
-                ->whereDate('date', '>=', now())
                 ->orderBy('date')
-                ->limit(6)
                 ->get(),
         ]);
     }

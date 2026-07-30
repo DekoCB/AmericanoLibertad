@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { ArrowDownTrayIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import { ArrowDownTrayIcon, CalendarDaysIcon } from '@/Components/Icons';
 import { Head } from '@inertiajs/react';
 import { useMemo } from 'react';
 import { DiaSemana, diaSemanaLabels, Horario } from '@/types/models';
@@ -33,9 +34,9 @@ export default function Estudiante({ horarios }: { horarios: Horario[] }) {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-brand-ink-strong">
+                    <PageTitle icon={<CalendarDaysIcon />}>
                         Mi horario
-                    </h2>
+                    </PageTitle>
                     <a
                         href={route('horarios.propio.exportar')}
                         className="inline-flex items-center gap-2 rounded-xl border border-brand-border px-3 py-2 text-xs font-semibold uppercase tracking-widest text-brand-ink transition hover:bg-brand-hover"

@@ -59,6 +59,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('matriculas/{matricula}/cuotas/{cuota}', [CuotaController::class, 'destroy'])->name('matriculas.cuotas.destroy');
     Route::post('cuotas/{cuota}/pagos', [PagoController::class, 'store'])->name('cuotas.pagos.store');
     Route::delete('cuotas/{cuota}/pagos/{pago}', [PagoController::class, 'destroy'])->name('cuotas.pagos.destroy');
+    Route::get('pagos/{pago}/comprobante', [PagoController::class, 'comprobante'])->name('pagos.comprobante');
+    Route::get('ingresos', [PagoController::class, 'index'])->name('ingresos.index');
 
     Route::resource('egresos', EgresoController::class)->except(['show', 'edit', 'update']);
     Route::get('caja', [CajaController::class, 'index'])->name('caja.index');

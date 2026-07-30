@@ -5,7 +5,7 @@ import Modal from '@/Components/Modal';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import { PencilIcon, TrashIcon } from '@/Components/Icons';
+import { DocumentTextIcon, PencilIcon, TrashIcon } from '@/Components/Icons';
 import { useForm } from '@inertiajs/react';
 import { FormEvent, useState } from 'react';
 import {
@@ -604,6 +604,19 @@ export default function MatriculaDetail({
                                                         }
                                                     </td>
                                                     <td className="py-1 text-right">
+                                                        <a
+                                                            href={route(
+                                                                'pagos.comprobante',
+                                                                pago.id,
+                                                            )}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-brand-link hover:opacity-70"
+                                                            title="Ver comprobante"
+                                                            aria-label="Ver comprobante"
+                                                        >
+                                                            <DocumentTextIcon className="size-4" />
+                                                        </a>
                                                         {can.manage && (
                                                             <button
                                                                 onClick={() =>
@@ -612,7 +625,7 @@ export default function MatriculaDetail({
                                                                         pago.id,
                                                                     )
                                                                 }
-                                                                className="text-red-600 hover:opacity-70"
+                                                                className="ms-3 text-red-600 hover:opacity-70"
                                                                 title="Eliminar"
                                                                 aria-label="Eliminar"
                                                             >

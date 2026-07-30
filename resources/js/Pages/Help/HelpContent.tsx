@@ -14,7 +14,7 @@ const ESTUDIANTE_FAQS: Faq[] = [
     {
         pregunta: '¿Dónde veo mis cursos, horario y notas?',
         respuesta:
-            'En el Tablero verás tus cursos activos, tu promedio general y tus notas más recientes. Tu horario completo está en Horarios.',
+            'En el Dashboard verás tus cursos activos, tu promedio general y tus notas más recientes. Tu horario completo está en Horarios.',
     },
     {
         pregunta: '¿Cómo registro mi asistencia?',

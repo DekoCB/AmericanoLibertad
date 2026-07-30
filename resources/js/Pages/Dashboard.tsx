@@ -4,21 +4,48 @@ import {
     ArrowTrendingUpIcon,
     BookOpenIcon,
     BriefcaseIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
     CreditCardIcon,
     DocumentTextIcon,
+    HomeIcon,
     UsersIcon,
 } from '@/Components/Icons';
-import UpcomingEvaluationsCard from '@/Components/UpcomingEvaluationsCard';
 import UserAvatar from '@/Components/UserAvatar';
 import { PageProps } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Course, Enrollment, Evaluation, Grade, Horario, Student } from '@/types/models';
-import { ReactNode } from 'react';
+import {
+    Course,
+    DiaSemana,
+    diaSemanaLabels,
+    Enrollment,
+    Evaluation,
+    evaluationTypeLabels,
+    Grade,
+    Horario,
+    Student,
+} from '@/types/models';
+import { ReactNode, useMemo, useRef, useState } from 'react';
 
 interface TopEstudiante {
     student_id: number;
     promedio: number;
     student?: Student;
+}
+
+interface EstudiantesPorCarrera {
+    carrera: string;
+    total: number;
+}
+
+interface MatriculasPorCiclo {
+    ciclo: number;
+    total: number;
+}
+
+interface PromedioPorPeriodo {
+    periodo: string;
+    promedio: number;
 }
 
 interface Clima {
@@ -55,15 +82,18 @@ type DashboardProps =
           clima: Clima | null;
           stats: StaffStats;
           recentEnrollments: Enrollment[];
-          upcomingEvaluations: Evaluation[];
+          evaluacionesCalendario: Evaluation[];
+          estudiantesPorCarrera: EstudiantesPorCarrera[];
+          matriculasPorCiclo: MatriculasPorCiclo[];
+          promedioPorPeriodo: PromedioPorPeriodo[];
       }
     | {
           view: 'docente';
           clima: Clima | null;
           stats: DocenteStats;
-          horarioHoy: Horario[];
+          horarioSemana: Horario[];
           topEstudiantes: TopEstudiante[];
-          upcomingEvaluations: Evaluation[];
+          evaluacionesCalendario: Evaluation[];
       }
     | {
           view: 'estudiante';
@@ -71,7 +101,7 @@ type DashboardProps =
           stats: EstudianteStats;
           myCourses: Course[];
           myGrades: Grade[];
-          upcomingEvaluations: Evaluation[];
+          evaluacionesCalendario: Evaluation[];
       };
 
 function capitalize(value: string): string {
@@ -218,8 +248,14 @@ function DateCard({ clima }: { clima: Clima | null }) {
                     <div className="absolute inset-x-0 top-1/3 h-1/2 animate-fog-drift bg-gradient-to-r from-white/10 via-white/30 to-white/10" />
                 ) : isDaytime ? (
                     <>
-                        <div className="absolute -right-5 -top-5 size-16 animate-sun-pulse rounded-full bg-yellow-300/40 blur-lg transition-all duration-300 group-hover:bg-yellow-200/60" />
-                        <div className="absolute -right-2 -top-2 size-8 animate-sun-pulse rounded-full bg-yellow-200/60 blur-sm [animation-delay:0.4s]" />
+                        <div
+                            className="absolute size-16 animate-sun-pulse rounded-full bg-yellow-300/40 blur-lg transition-all duration-300 group-hover:bg-yellow-200/60"
+                            style={{ left: '15%', top: '-3%' }}
+                        />
+                        <div
+                            className="absolute size-8 animate-sun-pulse rounded-full bg-yellow-200/60 blur-sm [animation-delay:0.4s]"
+                            style={{ left: '17.5%', top: '0%' }}
+                        />
                     </>
                 ) : (
                     STARS.map((star, index) => (
@@ -332,6 +368,287 @@ function MiniStat({
     );
 }
 
+function PromedioGeneralBar({
+    value,
+    porPeriodo,
+}: {
+    value: number | string;
+    porPeriodo: PromedioPorPeriodo[];
+}) {
+    return (
+        <div
+            className="flex flex-wrap items-center gap-6 rounded-[20px] border bg-brand-card p-[22px_26px]"
+            style={{ borderColor: 'var(--brand-border)' }}
+        >
+            <div className="flex shrink-0 items-center gap-4">
+                <span style={{ color: 'var(--stat-icon-promedio)' }}>
+                    <ArrowTrendingUpIcon className="size-6" />
+                </span>
+                <div>
+                    <div
+                        className="text-[30px] font-bold"
+                        style={{ color: 'var(--brand-ink-strong)' }}
+                    >
+                        {value || '—'}
+                    </div>
+                    <div
+                        className="text-sm"
+                        style={{ color: 'var(--brand-muted)' }}
+                    >
+                        Promedio general
+                    </div>
+                </div>
+            </div>
+
+            {porPeriodo.length > 0 && (
+                <div className="h-64 min-w-[220px] flex-1">
+                    <PromedioLineChart data={porPeriodo} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+function PromedioLineChart({ data }: { data: PromedioPorPeriodo[] }) {
+    const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+    const lastActiveIndexRef = useRef(0);
+
+    if (hoverIndex !== null) {
+        lastActiveIndexRef.current = hoverIndex;
+    }
+
+    const width = 300;
+    const height = 140;
+    const paddingX = 16;
+    const paddingTop = 16;
+    const paddingBottom = 24;
+    const chartWidth = width - paddingX * 2;
+    const chartHeight = height - paddingTop - paddingBottom;
+    const maxValue = 20;
+
+    const points = data.map((item, index) => {
+        const x =
+            data.length > 1
+                ? paddingX + (index / (data.length - 1)) * chartWidth
+                : paddingX + chartWidth / 2;
+        const y =
+            paddingTop + chartHeight - (item.promedio / maxValue) * chartHeight;
+        return { ...item, x, y };
+    });
+
+    const linePath = points
+        .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+        .join(' ');
+
+    const areaPath =
+        points.length > 0
+            ? `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${(paddingTop + chartHeight).toFixed(1)} L ${points[0].x.toFixed(1)} ${(paddingTop + chartHeight).toFixed(1)} Z`
+            : '';
+
+    const isActive = hoverIndex !== null;
+    const active = points[hoverIndex ?? lastActiveIndexRef.current];
+
+    return (
+        <div
+            className="relative h-full w-full"
+            onMouseLeave={() => setHoverIndex(null)}
+        >
+            <svg
+                viewBox={`0 0 ${width} ${height}`}
+                preserveAspectRatio="none"
+                className="h-full w-full"
+            >
+                {areaPath && (
+                    <path d={areaPath} fill="var(--stat-chart-promedio-area)" />
+                )}
+                {linePath && (
+                    <path
+                        d={linePath}
+                        fill="none"
+                        stroke="var(--stat-chart-promedio)"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                )}
+
+                <line
+                    x1={active.x}
+                    y1={paddingTop}
+                    x2={active.x}
+                    y2={paddingTop + chartHeight}
+                    stroke="var(--stat-chart-promedio)"
+                    strokeWidth="1"
+                    strokeDasharray="3 3"
+                    opacity={isActive ? 0.5 : 0}
+                    style={{
+                        transition:
+                            'x1 0.25s ease, x2 0.25s ease, opacity 0.2s ease',
+                    }}
+                />
+                <circle
+                    cx={active.x}
+                    cy={active.y}
+                    r={4}
+                    fill="var(--stat-chart-promedio)"
+                    stroke="var(--brand-card)"
+                    strokeWidth="1.5"
+                    opacity={isActive ? 1 : 0}
+                    style={{
+                        transition:
+                            'cx 0.25s ease, cy 0.25s ease, opacity 0.2s ease',
+                    }}
+                />
+
+                {points.map((p, index) => (
+                    <circle
+                        key={p.periodo}
+                        cx={p.x}
+                        cy={p.y}
+                        r={12}
+                        fill="transparent"
+                        className="cursor-pointer"
+                        onMouseEnter={() => setHoverIndex(index)}
+                    />
+                ))}
+            </svg>
+
+            {points.map((p, index) => (
+                <span
+                    key={p.periodo}
+                    className="pointer-events-none absolute bottom-0 -translate-x-1/2 whitespace-nowrap text-[11px]"
+                    style={{
+                        left: `${(p.x / width) * 100}%`,
+                        color:
+                            hoverIndex === index
+                                ? 'var(--brand-ink-strong)'
+                                : 'var(--brand-muted)',
+                        fontWeight: hoverIndex === index ? 700 : 400,
+                        transition: 'color 0.2s ease',
+                    }}
+                >
+                    {p.periodo}
+                </span>
+            ))}
+
+            <div
+                className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border px-2 py-1 text-xs font-semibold shadow-md"
+                style={{
+                    left: `${(active.x / width) * 100}%`,
+                    top: `${(active.y / height) * 100}%`,
+                    marginTop: '-6px',
+                    opacity: isActive ? 1 : 0,
+                    background: 'var(--brand-card)',
+                    borderColor: 'var(--brand-border)',
+                    color: 'var(--brand-ink-strong)',
+                    transition: 'left 0.25s ease, top 0.25s ease, opacity 0.2s ease',
+                }}
+            >
+                {active.periodo}: {active.promedio}
+            </div>
+        </div>
+    );
+}
+
+function MatriculasActivasCard({
+    value,
+    porCiclo,
+    className = '',
+}: {
+    value: number | string;
+    porCiclo: MatriculasPorCiclo[];
+    className?: string;
+}) {
+    const maxTotal = Math.max(1, ...porCiclo.map((item) => item.total));
+
+    return (
+        <div
+            className={`flex flex-col rounded-3xl border bg-brand-card p-6 shadow-sm ${className}`}
+            style={{ borderColor: 'var(--brand-border)' }}
+        >
+            <div className="flex items-center gap-3">
+                <span style={{ color: 'var(--matriculas-accent)' }}>
+                    <CreditCardIcon className="size-7" />
+                </span>
+                <div>
+                    <div
+                        className="text-4xl font-bold"
+                        style={{ color: 'var(--brand-ink-strong)' }}
+                    >
+                        {value}
+                    </div>
+                    <div
+                        className="text-[13px] font-medium uppercase tracking-wide"
+                        style={{ color: 'var(--brand-muted)' }}
+                    >
+                        Matrículas activas
+                    </div>
+                </div>
+            </div>
+
+            {porCiclo.length > 0 ? (
+                <>
+                    <div
+                        className="mt-2 text-[13px] font-medium"
+                        style={{ color: 'var(--brand-muted-soft)' }}
+                    >
+                        Matrículas por ciclo
+                    </div>
+                    <div className="mt-3 flex flex-1 items-end justify-between gap-2">
+                        {porCiclo.map((item) => {
+                            const alturaPct = Math.max(
+                                6,
+                                (item.total / maxTotal) * 100,
+                            );
+
+                            return (
+                                <div
+                                    key={item.ciclo}
+                                    className="flex flex-1 flex-col items-center gap-2"
+                                >
+                                    <span
+                                        className="text-xs font-semibold"
+                                        style={{
+                                            color: 'var(--brand-ink-strong)',
+                                        }}
+                                    >
+                                        {item.total}
+                                    </span>
+                                    <div
+                                        className="flex h-32 w-full items-end overflow-hidden rounded-lg"
+                                        style={{
+                                            background: 'var(--brand-hover)',
+                                        }}
+                                    >
+                                        <div
+                                            className="w-full rounded-lg transition-all duration-500"
+                                            style={{
+                                                height: `${alturaPct}%`,
+                                                background:
+                                                    'var(--matriculas-accent)',
+                                            }}
+                                        />
+                                    </div>
+                                    <span
+                                        className="text-[11px]"
+                                        style={{ color: 'var(--brand-muted)' }}
+                                    >
+                                        Ciclo {item.ciclo}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            ) : (
+                <div className="mt-6 flex flex-1 items-center justify-center">
+                    <EmptyRow>Aún no hay matrículas activas.</EmptyRow>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function ListCard({ title, children }: { title: string; children: ReactNode }) {
     return (
         <div
@@ -346,6 +663,213 @@ function ListCard({ title, children }: { title: string; children: ReactNode }) {
             </h3>
             <div className="flex flex-col">{children}</div>
         </div>
+    );
+}
+
+const ITEMS_POR_PAGINA = 5;
+
+function MisCursosCard({ courses }: { courses: Course[] }) {
+    const [page, setPage] = useState(0);
+    const totalPages = Math.max(
+        1,
+        Math.ceil(courses.length / ITEMS_POR_PAGINA),
+    );
+    const visibles = courses.slice(
+        page * ITEMS_POR_PAGINA,
+        (page + 1) * ITEMS_POR_PAGINA,
+    );
+
+    return (
+        <ListCard title="Mis cursos">
+            <div key={page} className="animate-fade-in-soft">
+                {visibles.map((course) => (
+                    <div
+                        key={course.id}
+                        className="border-b py-3 last:border-b-0"
+                        style={{ borderColor: 'var(--brand-border-faint)' }}
+                    >
+                        <div
+                            className="text-sm font-medium"
+                            style={{ color: 'var(--brand-ink-strong)' }}
+                        >
+                            {course.name} — {course.subject?.name}
+                        </div>
+                        <div
+                            className="text-[13px]"
+                            style={{ color: 'var(--brand-muted-soft)' }}
+                        >
+                            {course.teacher
+                                ? `${course.teacher.first_name} ${course.teacher.last_name}`
+                                : 'Sin profesor asignado'}
+                        </div>
+                    </div>
+                ))}
+                {courses.length === 0 && (
+                    <EmptyRow>No tienes cursos matriculados.</EmptyRow>
+                )}
+            </div>
+            <CardPager
+                page={page}
+                totalPages={totalPages}
+                onChange={setPage}
+            />
+        </ListCard>
+    );
+}
+
+function CardPager({
+    page,
+    totalPages,
+    onChange,
+}: {
+    page: number;
+    totalPages: number;
+    onChange: (updater: (p: number) => number) => void;
+}) {
+    if (totalPages <= 1) return null;
+
+    return (
+        <div className="mt-auto flex items-center justify-between pt-4">
+            <button
+                type="button"
+                onClick={() => onChange((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 hover:bg-brand-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                    borderColor: 'var(--brand-border)',
+                    color: 'var(--brand-ink-strong)',
+                }}
+            >
+                <ChevronLeftIcon className="size-3.5" />
+                Anterior
+            </button>
+            <span className="text-xs" style={{ color: 'var(--brand-muted)' }}>
+                Página {page + 1} de {totalPages}
+            </span>
+            <button
+                type="button"
+                onClick={() => onChange((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 hover:bg-brand-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                    borderColor: 'var(--brand-border)',
+                    color: 'var(--brand-ink-strong)',
+                }}
+            >
+                Siguiente
+                <ChevronRightIcon className="size-3.5" />
+            </button>
+        </div>
+    );
+}
+
+function MisCalificacionesCard({ grades }: { grades: Grade[] }) {
+    const [page, setPage] = useState(0);
+    const totalPages = Math.max(
+        1,
+        Math.ceil(grades.length / ITEMS_POR_PAGINA),
+    );
+    const visibles = grades.slice(
+        page * ITEMS_POR_PAGINA,
+        (page + 1) * ITEMS_POR_PAGINA,
+    );
+
+    return (
+        <ListCard title="Mis calificaciones recientes">
+            <div key={page} className="animate-fade-in-soft">
+                {visibles.map((grade) => (
+                    <div
+                        key={grade.id}
+                        className="flex items-center justify-between border-b py-3 last:border-b-0"
+                        style={{ borderColor: 'var(--brand-border-faint)' }}
+                    >
+                        <div
+                            className="text-sm"
+                            style={{ color: 'var(--brand-ink-strong)' }}
+                        >
+                            {grade.evaluation?.name} —{' '}
+                            {grade.evaluation?.course?.subject?.name}
+                        </div>
+                        <div
+                            className="text-sm font-semibold"
+                            style={{ color: 'var(--brand-ink-strong)' }}
+                        >
+                            {grade.score}
+                        </div>
+                    </div>
+                ))}
+                {grades.length === 0 && (
+                    <EmptyRow>
+                        Aún no tienes calificaciones registradas.
+                    </EmptyRow>
+                )}
+            </div>
+            <CardPager
+                page={page}
+                totalPages={totalPages}
+                onChange={setPage}
+            />
+        </ListCard>
+    );
+}
+
+function MatriculasRecientesCard({
+    enrollments,
+}: {
+    enrollments: Enrollment[];
+}) {
+    const [page, setPage] = useState(0);
+    const totalPages = Math.max(
+        1,
+        Math.ceil(enrollments.length / ITEMS_POR_PAGINA),
+    );
+    const visibles = enrollments.slice(
+        page * ITEMS_POR_PAGINA,
+        (page + 1) * ITEMS_POR_PAGINA,
+    );
+
+    return (
+        <ListCard title="Matrículas recientes">
+            <div key={page} className="animate-fade-in-soft">
+                {visibles.map((enrollment) => (
+                    <div
+                        key={enrollment.id}
+                        className="flex items-center gap-3.5 border-b py-3 last:border-b-0"
+                        style={{ borderColor: 'var(--brand-border-faint)' }}
+                    >
+                        <UserAvatar
+                            src={enrollment.student?.user?.avatar_url}
+                            size="size-[38px]"
+                            iconSize="size-5"
+                        />
+                        <div>
+                            <div
+                                className="font-medium"
+                                style={{ color: 'var(--brand-ink-strong)' }}
+                            >
+                                {enrollment.student?.first_name}{' '}
+                                {enrollment.student?.last_name}
+                            </div>
+                            <div
+                                className="text-[13px]"
+                                style={{ color: 'var(--brand-muted-soft)' }}
+                            >
+                                {enrollment.course?.subject?.name} —{' '}
+                                {enrollment.course?.name}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                {enrollments.length === 0 && (
+                    <EmptyRow>Aún no hay matrículas registradas.</EmptyRow>
+                )}
+            </div>
+            <CardPager
+                page={page}
+                totalPages={totalPages}
+                onChange={setPage}
+            />
+        </ListCard>
     );
 }
 
@@ -372,9 +896,39 @@ function subjectTag(subjectId: number) {
     return SUBJECT_TAG_PALETTE[subjectId % SUBJECT_TAG_PALETTE.length];
 }
 
+const ORDEN_DIAS: DiaSemana[] = [
+    'lunes',
+    'martes',
+    'miercoles',
+    'jueves',
+    'viernes',
+    'sabado',
+    'domingo',
+];
+
+function diaSemanaActual(): DiaSemana {
+    const dias: DiaSemana[] = [
+        'domingo',
+        'lunes',
+        'martes',
+        'miercoles',
+        'jueves',
+        'viernes',
+        'sabado',
+    ];
+    return dias[new Date().getDay()];
+}
+
 function HorarioHoyCard({ horarios }: { horarios: Horario[] }) {
-    const diaHoy = capitalize(
-        new Date().toLocaleDateString('es-ES', { weekday: 'long' }),
+    const hoy = diaSemanaActual();
+    const [diaSeleccionado, setDiaSeleccionado] = useState<DiaSemana>(hoy);
+
+    const horariosDelDia = useMemo(
+        () =>
+            horarios
+                .filter((h) => h.dia_semana === diaSeleccionado)
+                .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio)),
+        [horarios, diaSeleccionado],
     );
 
     return (
@@ -382,22 +936,39 @@ function HorarioHoyCard({ horarios }: { horarios: Horario[] }) {
             className="rounded-[20px] border bg-brand-card p-[26px_28px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
-            <div className="mb-4 flex items-center justify-between">
-                <h3
-                    className="text-lg font-bold"
-                    style={{ color: 'var(--brand-ink-strong)' }}
-                >
-                    Horario de hoy
-                </h3>
-                <span
-                    className="text-[13px] font-medium"
-                    style={{ color: 'var(--brand-muted)' }}
-                >
-                    {diaHoy}
-                </span>
+            <h3
+                className="mb-4 text-lg font-bold"
+                style={{ color: 'var(--brand-ink-strong)' }}
+            >
+                Horario de la semana
+            </h3>
+
+            <div className="mb-4 flex flex-wrap gap-1.5">
+                {ORDEN_DIAS.map((dia) => {
+                    const activo = dia === diaSeleccionado;
+
+                    return (
+                        <button
+                            key={dia}
+                            type="button"
+                            onClick={() => setDiaSeleccionado(dia)}
+                            className="rounded-full px-3 py-1 text-xs font-semibold transition"
+                            style={{
+                                background: activo
+                                    ? 'var(--brand-navy)'
+                                    : 'var(--brand-hover)',
+                                color: activo ? '#fff' : 'var(--brand-muted)',
+                            }}
+                        >
+                            {diaSemanaLabels[dia].slice(0, 3)}
+                            {dia === hoy && !activo ? ' •' : ''}
+                        </button>
+                    );
+                })}
             </div>
+
             <div className="flex flex-col">
-                {horarios.map((horario) => {
+                {horariosDelDia.map((horario) => {
                     const tag = subjectTag(horario.course?.subject_id ?? 0);
 
                     return (
@@ -437,8 +1008,8 @@ function HorarioHoyCard({ horarios }: { horarios: Horario[] }) {
                         </div>
                     );
                 })}
-                {horarios.length === 0 && (
-                    <EmptyRow>No tienes clases programadas para hoy.</EmptyRow>
+                {horariosDelDia.length === 0 && (
+                    <EmptyRow>No tienes clases programadas este día.</EmptyRow>
                 )}
             </div>
         </div>
@@ -504,6 +1075,376 @@ function RankingEstudiantesCard({
     );
 }
 
+const DONUT_PALETTE = [
+    'var(--chart-pink)',
+    'var(--chart-blue)',
+    'var(--chart-green)',
+    'var(--chart-amber)',
+    'var(--chart-purple)',
+];
+
+function DonutChart({ data }: { data: EstudiantesPorCarrera[] }) {
+    const total = data.reduce((sum, item) => sum + item.total, 0);
+    const radio = 46;
+    const circunferencia = 2 * Math.PI * radio;
+    const espacio = data.length > 1 ? 5 : 0;
+
+    let acumulado = 0;
+    const segmentos = data.map((item, index) => {
+        const fraccion = total > 0 ? item.total / total : 0;
+        const largoBruto = fraccion * circunferencia;
+        const largo = Math.max(largoBruto - espacio, 0);
+        const dashOffset = -acumulado;
+        acumulado += largoBruto;
+
+        return {
+            ...item,
+            color: DONUT_PALETTE[index % DONUT_PALETTE.length],
+            dashArray: `${largo} ${circunferencia - largo}`,
+            dashOffset,
+        };
+    });
+
+    return (
+        <div className="relative flex items-center justify-center py-2">
+            <svg viewBox="0 0 120 120" className="size-48 -rotate-90">
+                <circle
+                    cx="60"
+                    cy="60"
+                    r={radio}
+                    fill="none"
+                    stroke="var(--brand-border-faint)"
+                    strokeWidth="14"
+                />
+                {segmentos.map((segmento, index) => (
+                    <circle
+                        key={index}
+                        cx="60"
+                        cy="60"
+                        r={radio}
+                        fill="none"
+                        stroke={segmento.color}
+                        strokeWidth="14"
+                        strokeLinecap="round"
+                        strokeDasharray={segmento.dashArray}
+                        strokeDashoffset={segmento.dashOffset}
+                    />
+                ))}
+            </svg>
+            <div className="absolute flex flex-col items-center">
+                <span
+                    className="text-3xl font-bold"
+                    style={{ color: 'var(--brand-ink-strong)' }}
+                >
+                    {total}
+                </span>
+                <span
+                    className="text-[11px] uppercase tracking-wide"
+                    style={{ color: 'var(--brand-muted)' }}
+                >
+                    Estudiantes
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function EstudiantesPorCarreraCard({
+    data,
+}: {
+    data: EstudiantesPorCarrera[];
+}) {
+    return (
+        <div
+            className="rounded-[20px] border bg-brand-card p-[26px_28px]"
+            style={{ borderColor: 'var(--brand-border)' }}
+        >
+            <h3
+                className="mb-4 text-lg font-bold"
+                style={{ color: 'var(--brand-ink-strong)' }}
+            >
+                Estudiantes por carrera
+            </h3>
+
+            {data.length === 0 ? (
+                <EmptyRow>Aún no hay matrículas activas.</EmptyRow>
+            ) : (
+                <>
+                    <div className="mb-2 flex flex-wrap gap-x-4 gap-y-2">
+                        {data.map((item, index) => (
+                            <div
+                                key={item.carrera}
+                                className="flex items-center gap-1.5 text-[13px]"
+                                style={{ color: 'var(--brand-muted)' }}
+                            >
+                                <span
+                                    className="size-2 shrink-0 rounded-full"
+                                    style={{
+                                        background:
+                                            DONUT_PALETTE[
+                                                index % DONUT_PALETTE.length
+                                            ],
+                                    }}
+                                />
+                                {item.carrera}
+                            </div>
+                        ))}
+                    </div>
+
+                    <DonutChart data={data} />
+
+                    <Link
+                        href={route('students.index')}
+                        className="mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-brand-hover"
+                        style={{
+                            borderColor: 'var(--brand-border)',
+                            color: 'var(--brand-ink-strong)',
+                        }}
+                    >
+                        <UsersIcon className="size-4" />
+                        Ver estudiantes
+                    </Link>
+                </>
+            )}
+        </div>
+    );
+}
+
+const DIAS_SEMANA_CALENDARIO = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'];
+
+const EVALUATION_CALENDAR_COLORS: Record<
+    Evaluation['type'],
+    { bg: string; text: string }
+> = {
+    exam: { bg: 'var(--eval-exam-bg)', text: 'var(--eval-exam-text)' },
+    quiz: { bg: 'var(--eval-quiz-bg)', text: 'var(--eval-quiz-text)' },
+    homework: {
+        bg: 'var(--eval-homework-bg)',
+        text: 'var(--eval-homework-text)',
+    },
+    project: { bg: 'var(--eval-project-bg)', text: 'var(--eval-project-text)' },
+};
+
+function toFechaKey(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function EvaluacionesCalendarCard({
+    evaluations,
+}: {
+    evaluations: Evaluation[];
+}) {
+    const hoy = new Date();
+    const [cursor, setCursor] = useState(
+        new Date(hoy.getFullYear(), hoy.getMonth(), 1),
+    );
+    const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+    const porFecha = useMemo(() => {
+        const map = new Map<string, Evaluation[]>();
+        evaluations.forEach((evaluation) => {
+            const key = evaluation.date.slice(0, 10);
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(evaluation);
+        });
+        return map;
+    }, [evaluations]);
+
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth();
+    const startOffset = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const cells: { date: Date; inMonth: boolean }[] = [];
+    for (let i = startOffset - 1; i >= 0; i--) {
+        cells.push({
+            date: new Date(year, month - 1, daysInPrevMonth - i),
+            inMonth: false,
+        });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+        cells.push({ date: new Date(year, month, d), inMonth: true });
+    }
+    let siguiente = 1;
+    while (cells.length < 42) {
+        cells.push({ date: new Date(year, month + 1, siguiente), inMonth: false });
+        siguiente++;
+    }
+
+    const monthLabel = capitalize(
+        cursor.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+    );
+    const todayKey = toFechaKey(hoy);
+    const seleccionadas = selectedDay ? (porFecha.get(selectedDay) ?? []) : [];
+
+    return (
+        <div
+            className="rounded-[20px] border bg-brand-card p-[26px_28px]"
+            style={{ borderColor: 'var(--brand-border)' }}
+        >
+            <h3
+                className="mb-4 text-lg font-bold"
+                style={{ color: 'var(--brand-ink-strong)' }}
+            >
+                Calendario de evaluaciones
+            </h3>
+
+            <div className="mb-4 flex items-center justify-between">
+                <button
+                    type="button"
+                    onClick={() => {
+                        setCursor(new Date(year, month - 1, 1));
+                        setSelectedDay(null);
+                    }}
+                    className="flex size-7 items-center justify-center rounded-full border transition hover:bg-brand-hover"
+                    style={{
+                        borderColor: 'var(--brand-border)',
+                        color: 'var(--brand-ink-strong)',
+                    }}
+                    aria-label="Mes anterior"
+                >
+                    <ChevronLeftIcon className="size-4" />
+                </button>
+                <span
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--brand-ink-strong)' }}
+                >
+                    {monthLabel}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setCursor(new Date(year, month + 1, 1));
+                        setSelectedDay(null);
+                    }}
+                    className="flex size-7 items-center justify-center rounded-full border transition hover:bg-brand-hover"
+                    style={{
+                        borderColor: 'var(--brand-border)',
+                        color: 'var(--brand-ink-strong)',
+                    }}
+                    aria-label="Mes siguiente"
+                >
+                    <ChevronRightIcon className="size-4" />
+                </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 text-center">
+                {DIAS_SEMANA_CALENDARIO.map((dia) => (
+                    <div
+                        key={dia}
+                        className="pb-1 text-[11px] font-medium uppercase"
+                        style={{ color: 'var(--brand-muted)' }}
+                    >
+                        {dia}
+                    </div>
+                ))}
+                {cells.map(({ date, inMonth }, index) => {
+                    const key = toFechaKey(date);
+                    const dayEvaluations = porFecha.get(key);
+                    const tieneEvaluacion = Boolean(
+                        inMonth && dayEvaluations && dayEvaluations.length > 0,
+                    );
+                    const color = tieneEvaluacion
+                        ? EVALUATION_CALENDAR_COLORS[dayEvaluations![0].type]
+                        : null;
+                    const esHoy = key === todayKey;
+                    const seleccionado = key === selectedDay;
+
+                    return (
+                        <button
+                            type="button"
+                            key={index}
+                            disabled={!tieneEvaluacion}
+                            onClick={() =>
+                                setSelectedDay(seleccionado ? null : key)
+                            }
+                            className={`relative flex h-9 items-center justify-center rounded-lg text-[13px] transition ${
+                                !inMonth ? 'opacity-35' : ''
+                            } ${tieneEvaluacion ? 'cursor-pointer font-bold' : 'cursor-default'}`}
+                            style={{
+                                background: tieneEvaluacion
+                                    ? color!.bg
+                                    : 'transparent',
+                                color: tieneEvaluacion
+                                    ? color!.text
+                                    : 'var(--brand-ink)',
+                                boxShadow: seleccionado
+                                    ? 'inset 0 0 0 2px var(--brand-navy)'
+                                    : 'none',
+                            }}
+                        >
+                            {date.getDate()}
+                            {esHoy && (
+                                <span
+                                    className="absolute bottom-0.5 size-1 rounded-full"
+                                    style={{
+                                        background: tieneEvaluacion
+                                            ? color!.text
+                                            : 'var(--brand-navy)',
+                                    }}
+                                />
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div
+                className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4"
+                style={{ borderColor: 'var(--brand-border-faint)' }}
+            >
+                {(
+                    Object.keys(evaluationTypeLabels) as Evaluation['type'][]
+                ).map((tipo) => (
+                    <div
+                        key={tipo}
+                        className="flex items-center gap-1.5 text-[12px]"
+                        style={{ color: 'var(--brand-muted)' }}
+                    >
+                        <span
+                            className="size-2 rounded-full"
+                            style={{
+                                background:
+                                    EVALUATION_CALENDAR_COLORS[tipo].bg,
+                            }}
+                        />
+                        {evaluationTypeLabels[tipo]}
+                    </div>
+                ))}
+            </div>
+
+            {selectedDay && (
+                <div
+                    className="mt-4 space-y-2 border-t pt-4"
+                    style={{ borderColor: 'var(--brand-border-faint)' }}
+                >
+                    {seleccionadas.map((evaluacion) => (
+                        <div key={evaluacion.id} className="text-[13px]">
+                            <Link
+                                href={route(
+                                    'courses.show',
+                                    evaluacion.course_id,
+                                )}
+                                className="font-medium hover:underline"
+                                style={{ color: 'var(--brand-ink-strong)' }}
+                            >
+                                {evaluacion.name}
+                            </Link>
+                            <span style={{ color: 'var(--brand-muted-soft)' }}>
+                                {' '}
+                                — {evaluacion.course?.subject?.name} ·{' '}
+                                {evaluationTypeLabels[evaluacion.type]}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function DashboardHeader({ title }: { title: string }) {
     const { auth } = usePage<PageProps>().props;
 
@@ -517,9 +1458,10 @@ function DashboardHeader({ title }: { title: string }) {
                     Instituto Educativo Superior Americano Libertad
                 </div>
                 <h1
-                    className="mt-1 text-[32px] font-bold"
+                    className="mt-1 flex items-center gap-3 text-[32px] font-bold"
                     style={{ color: 'var(--brand-ink-strong)' }}
                 >
+                    <HomeIcon className="size-7" style={{ color: 'var(--brand-muted)' }} />
                     {title}
                 </h1>
             </div>
@@ -558,7 +1500,7 @@ function DashboardHeader({ title }: { title: string }) {
 export default function Dashboard(props: DashboardProps) {
     return (
         <AuthenticatedLayout>
-            <Head title="Tablero" />
+            <Head title="Dashboard" />
 
             <div
                 className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] px-4 py-9 sm:px-6 lg:px-11 lg:pt-9"
@@ -568,123 +1510,64 @@ export default function Dashboard(props: DashboardProps) {
                 }}
             >
                 <div className="mx-auto max-w-7xl">
-                    <DashboardHeader title="Tablero" />
+                    <DashboardHeader title="Dashboard" />
 
                     {props.view === 'staff' && (
                         <div className="space-y-5">
                             <DateCard clima={props.clima} />
 
-                            <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+                            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                                <MatriculasActivasCard
+                                    value={props.stats.activeEnrollments}
+                                    porCiclo={props.matriculasPorCiclo}
+                                    className="lg:row-span-2"
+                                />
                                 <ColorStat
                                     label="Estudiantes activos"
                                     value={props.stats.activeStudents}
                                     href={route('students.index')}
-                                    iconColor="oklch(50% 0.14 350)"
+                                    iconColor="var(--stat-icon-pink)"
                                     icon={<UsersIcon className="size-7" />}
                                 />
                                 <ColorStat
                                     label="Profesores"
                                     value={props.stats.teachers}
                                     href={route('teachers.index')}
-                                    iconColor="oklch(45% 0.13 240)"
+                                    iconColor="var(--stat-icon-blue)"
                                     icon={<BriefcaseIcon className="size-7" />}
                                 />
                                 <ColorStat
                                     label="Materias"
                                     value={props.stats.subjects}
                                     href={route('subjects.index')}
-                                    iconColor="oklch(45% 0.12 155)"
+                                    iconColor="var(--stat-icon-green)"
                                     icon={<BookOpenIcon className="size-7" />}
                                 />
                                 <ColorStat
                                     label="Cursos"
                                     value={props.stats.courses}
                                     href={route('courses.index')}
-                                    iconColor="oklch(48% 0.14 55)"
+                                    iconColor="var(--stat-icon-amber)"
                                     icon={<AcademicCapIcon className="size-7" />}
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                <MiniStat
-                                    icon={<CreditCardIcon className="size-6" />}
-                                    iconColor="oklch(45% 0.09 85)"
-                                    value={props.stats.activeEnrollments}
-                                    label="Matrículas activas"
-                                />
-                                <MiniStat
-                                    icon={
-                                        <ArrowTrendingUpIcon className="size-6" />
-                                    }
-                                    iconColor="oklch(42% 0.1 255)"
-                                    value={props.stats.averageScore || '—'}
-                                    label="Promedio general"
-                                />
-                            </div>
+                            <PromedioGeneralBar
+                                value={props.stats.averageScore}
+                                porPeriodo={props.promedioPorPeriodo}
+                            />
 
-                            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                                <ListCard title="Matrículas recientes">
-                                    {props.recentEnrollments.map(
-                                        (enrollment) => (
-                                            <div
-                                                key={enrollment.id}
-                                                className="flex items-center gap-3.5 border-b py-3 last:border-b-0"
-                                                style={{
-                                                    borderColor:
-                                                        'var(--brand-border-faint)',
-                                                }}
-                                            >
-                                                <UserAvatar
-                                                    src={
-                                                        enrollment.student
-                                                            ?.user
-                                                            ?.avatar_url
-                                                    }
-                                                    size="size-[38px]"
-                                                    iconSize="size-5"
-                                                />
-                                                <div>
-                                                    <div
-                                                        className="font-medium"
-                                                        style={{
-                                                            color: 'var(--brand-ink-strong)',
-                                                        }}
-                                                    >
-                                                        {
-                                                            enrollment.student
-                                                                ?.first_name
-                                                        }{' '}
-                                                        {
-                                                            enrollment.student
-                                                                ?.last_name
-                                                        }
-                                                    </div>
-                                                    <div
-                                                        className="text-[13px]"
-                                                        style={{
-                                                            color: 'var(--brand-muted-soft)',
-                                                        }}
-                                                    >
-                                                        {
-                                                            enrollment.course
-                                                                ?.subject?.name
-                                                        }{' '}
-                                                        —{' '}
-                                                        {enrollment.course?.name}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ),
-                                    )}
-                                    {props.recentEnrollments.length === 0 && (
-                                        <EmptyRow>
-                                            Aún no hay matrículas registradas.
-                                        </EmptyRow>
-                                    )}
-                                </ListCard>
+                            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+                                <EvaluacionesCalendarCard
+                                    evaluations={props.evaluacionesCalendario}
+                                />
 
-                                <UpcomingEvaluationsCard
-                                    evaluations={props.upcomingEvaluations}
+                                <EstudiantesPorCarreraCard
+                                    data={props.estudiantesPorCarrera}
+                                />
+
+                                <MatriculasRecientesCard
+                                    enrollments={props.recentEnrollments}
                                 />
                             </div>
                         </div>
@@ -699,7 +1582,7 @@ export default function Dashboard(props: DashboardProps) {
                                     label="Mis cursos"
                                     value={props.stats.courses}
                                     href={route('courses.index')}
-                                    iconColor="oklch(45% 0.13 240)"
+                                    iconColor="var(--stat-icon-blue)"
                                     icon={
                                         <AcademicCapIcon className="size-7" />
                                     }
@@ -708,14 +1591,14 @@ export default function Dashboard(props: DashboardProps) {
                                     label="Estudiantes"
                                     value={props.stats.students}
                                     href={route('courses.index')}
-                                    iconColor="oklch(50% 0.14 350)"
+                                    iconColor="var(--stat-icon-pink)"
                                     icon={<UsersIcon className="size-7" />}
                                 />
                                 <ColorStat
                                     label="Evaluaciones"
                                     value={props.stats.evaluations}
                                     href={route('courses.index')}
-                                    iconColor="oklch(48% 0.14 55)"
+                                    iconColor="var(--stat-icon-amber)"
                                     icon={
                                         <DocumentTextIcon className="size-7" />
                                     }
@@ -723,11 +1606,11 @@ export default function Dashboard(props: DashboardProps) {
                             </div>
 
                             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                                <HorarioHoyCard horarios={props.horarioHoy} />
-
-                                <UpcomingEvaluationsCard
-                                    evaluations={props.upcomingEvaluations}
+                                <EvaluacionesCalendarCard
+                                    evaluations={props.evaluacionesCalendario}
                                 />
+
+                                <HorarioHoyCard horarios={props.horarioSemana} />
                             </div>
 
                             <RankingEstudiantesCard
@@ -745,7 +1628,7 @@ export default function Dashboard(props: DashboardProps) {
                                     label="Mis cursos"
                                     value={props.stats.courses}
                                     href="#mis-cursos"
-                                    iconColor="oklch(45% 0.13 240)"
+                                    iconColor="var(--stat-icon-blue)"
                                     icon={
                                         <AcademicCapIcon className="size-7" />
                                     }
@@ -754,101 +1637,28 @@ export default function Dashboard(props: DashboardProps) {
                                     label="Mi promedio"
                                     value={props.stats.averageScore || '—'}
                                     href="#mis-notas"
-                                    iconColor="oklch(50% 0.14 350)"
+                                    iconColor="var(--stat-icon-pink)"
                                     icon={
                                         <ArrowTrendingUpIcon className="size-7" />
                                     }
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+                                <EvaluacionesCalendarCard
+                                    evaluations={props.evaluacionesCalendario}
+                                />
+
                                 <div id="mis-cursos">
-                                    <ListCard title="Mis cursos">
-                                        {props.myCourses.map((course) => (
-                                            <div
-                                                key={course.id}
-                                                className="border-b py-3 last:border-b-0"
-                                                style={{
-                                                    borderColor:
-                                                        'var(--brand-border-faint)',
-                                                }}
-                                            >
-                                                <div
-                                                    className="text-sm font-medium"
-                                                    style={{
-                                                        color: 'var(--brand-ink-strong)',
-                                                    }}
-                                                >
-                                                    {course.name} —{' '}
-                                                    {course.subject?.name}
-                                                </div>
-                                                <div
-                                                    className="text-[13px]"
-                                                    style={{
-                                                        color: 'var(--brand-muted-soft)',
-                                                    }}
-                                                >
-                                                    {course.teacher
-                                                        ? `${course.teacher.first_name} ${course.teacher.last_name}`
-                                                        : 'Sin profesor asignado'}
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {props.myCourses.length === 0 && (
-                                            <EmptyRow>
-                                                No tienes cursos matriculados.
-                                            </EmptyRow>
-                                        )}
-                                    </ListCard>
+                                    <MisCursosCard courses={props.myCourses} />
                                 </div>
 
                                 <div id="mis-notas">
-                                    <ListCard title="Mis calificaciones recientes">
-                                        {props.myGrades.map((grade) => (
-                                            <div
-                                                key={grade.id}
-                                                className="flex items-center justify-between border-b py-3 last:border-b-0"
-                                                style={{
-                                                    borderColor:
-                                                        'var(--brand-border-faint)',
-                                                }}
-                                            >
-                                                <div
-                                                    className="text-sm"
-                                                    style={{
-                                                        color: 'var(--brand-ink-strong)',
-                                                    }}
-                                                >
-                                                    {grade.evaluation?.name} —{' '}
-                                                    {
-                                                        grade.evaluation
-                                                            ?.course?.subject
-                                                            ?.name
-                                                    }
-                                                </div>
-                                                <div
-                                                    className="text-sm font-semibold"
-                                                    style={{
-                                                        color: 'var(--brand-ink-strong)',
-                                                    }}
-                                                >
-                                                    {grade.score}
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {props.myGrades.length === 0 && (
-                                            <EmptyRow>
-                                                Aún no tienes calificaciones
-                                                registradas.
-                                            </EmptyRow>
-                                        )}
-                                    </ListCard>
+                                    <MisCalificacionesCard
+                                        grades={props.myGrades}
+                                    />
                                 </div>
                             </div>
-
-                            <UpcomingEvaluationsCard
-                                evaluations={props.upcomingEvaluations}
-                            />
                         </div>
                     )}
                 </div>

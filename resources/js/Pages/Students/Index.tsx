@@ -3,7 +3,8 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
-import { PencilIcon, TrashIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import { PencilIcon, TrashIcon, UsersIcon } from '@/Components/Icons';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import {
@@ -87,9 +88,7 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Estudiantes
-                </h2>
+                <PageTitle icon={<UsersIcon />}>Estudiantes</PageTitle>
             }
         >
             <Head title="Estudiantes" />
@@ -158,7 +157,7 @@ export default function Index({
                                                 Email
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Sección
+                                                Ciclo
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                                 Matrículas

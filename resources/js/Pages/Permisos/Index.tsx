@@ -5,7 +5,8 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import Pagination from '@/Components/Pagination';
-import { CheckIcon, XMarkIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import { CheckIcon, DocumentTextIcon, XMarkIcon } from '@/Components/Icons';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import {
@@ -63,9 +64,9 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
+                <PageTitle icon={<DocumentTextIcon />}>
                     Permisos y licencias
-                </h2>
+                </PageTitle>
             }
         >
             <Head title="Permisos y licencias" />

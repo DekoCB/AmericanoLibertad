@@ -4,7 +4,8 @@ import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
 import UpcomingEvaluationsCard from '@/Components/UpcomingEvaluationsCard';
-import { PencilIcon, TrashIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import { PencilIcon, RectangleStackIcon, TrashIcon } from '@/Components/Icons';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { Course, Evaluation, Subject, Teacher } from '@/types/models';
@@ -84,9 +85,7 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Cursos
-                </h2>
+                <PageTitle icon={<RectangleStackIcon />}>Cursos</PageTitle>
             }
         >
             <Head title="Cursos" />

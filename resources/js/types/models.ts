@@ -222,6 +222,7 @@ export interface Pago {
     fecha: string;
     nota: string | null;
     student?: Student;
+    cuota?: Cuota;
 }
 
 export interface Cuota {
@@ -234,6 +235,7 @@ export interface Cuota {
     fecha_vencimiento: string | null;
     estado: 'pendiente' | 'parcial' | 'pagado' | 'vencido';
     pagos?: Pago[];
+    matricula?: Matricula;
 }
 
 export interface HistorialMatricula {

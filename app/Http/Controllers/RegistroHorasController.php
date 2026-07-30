@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Egreso;
 use App\Models\RegistroHoras;
 use App\Models\Teacher;
+use App\Support\NumeroALetras;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -184,6 +185,8 @@ class RegistroHorasController extends Controller
             'monto_neto' => $r->montoNeto(),
         ]);
 
+        $totalNeto = $filas->sum('monto_neto');
+
         return view('comprobantes.pago-docente', [
             'egreso' => $egreso,
             'teacher' => $teacher,
@@ -193,7 +196,9 @@ class RegistroHorasController extends Controller
             'totalHoras' => $filas->sum('horas'),
             'totalBruto' => $filas->sum('monto_bruto'),
             'totalDescuento' => $filas->sum('descuento_tardanza'),
-            'totalNeto' => $filas->sum('monto_neto'),
+            'totalNeto' => $totalNeto,
+            'numeroBoleta' => 'P001-' . str_pad((string) $egreso->id, 8, '0', STR_PAD_LEFT),
+            'montoEnLetras' => NumeroALetras::convertir((float) $totalNeto),
         ]);
     }
 }

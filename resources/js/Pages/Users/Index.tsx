@@ -4,7 +4,8 @@ import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
 import Pagination from '@/Components/Pagination';
-import { PencilIcon, TrashIcon } from '@/Components/Icons';
+import PageTitle from '@/Components/PageTitle';
+import { PencilIcon, ShieldCheckIcon, TrashIcon } from '@/Components/Icons';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Paginated } from '@/types/models';
@@ -68,9 +69,7 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Usuarios
-                </h2>
+                <PageTitle icon={<ShieldCheckIcon />}>Usuarios</PageTitle>
             }
         >
             <Head title="Usuarios" />

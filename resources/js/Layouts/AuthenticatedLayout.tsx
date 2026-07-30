@@ -143,9 +143,10 @@ function SidebarSectionLabel({
     return (
         <div className="relative mt-4 h-5 px-3 first:mt-0">
             <div
-                className={`absolute inset-x-3 top-1/2 -translate-y-1/2 border-t border-brand-border/70 transition-opacity duration-300 ease-in-out ${
+                className={`absolute inset-x-3 top-1/2 -translate-y-1/2 border-t transition-opacity duration-300 ease-in-out ${
                     collapsed ? 'opacity-100' : 'opacity-0'
                 }`}
+                style={{ borderColor: 'var(--sidebar-divider)' }}
             />
             <span
                 className={`absolute left-3 top-1/2 block -translate-y-1/2 overflow-hidden whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-brand-muted-soft transition-[opacity,max-width] duration-300 ease-in-out ${
@@ -193,7 +194,7 @@ function SidebarNav({
                 collapsed={collapsed}
                 icon={<HomeIcon />}
             >
-                Tablero
+                Dashboard
             </SidebarLink>
 
             {academicoVisible && (

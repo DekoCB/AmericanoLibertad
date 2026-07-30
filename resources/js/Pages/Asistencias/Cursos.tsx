@@ -1,5 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import SearchableSelect from '@/Components/SearchableSelect';
+import PageTitle from '@/Components/PageTitle';
+import { QrCodeIcon } from '@/Components/Icons';
 import { Head, Link, router } from '@inertiajs/react';
 import { useMemo } from 'react';
 import { Course, turnoLabels } from '@/types/models';
@@ -38,9 +40,7 @@ export default function Cursos({
             header={
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold text-brand-ink-strong">
-                            Asistencia
-                        </h2>
+                        <PageTitle icon={<QrCodeIcon />}>Asistencia</PageTitle>
                         <p className="mt-1 text-sm text-brand-muted">
                             Selecciona un curso para tomar asistencia
                             escaneando el DNI o código QR de cada estudiante.

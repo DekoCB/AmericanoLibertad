@@ -20,6 +20,7 @@
     --brand-thead: oklch(98% 0.008 85);
     --brand-link: oklch(42% 0.1 255);
     --brand-input: oklch(100% 0 0);
+    --sidebar-divider: oklch(78% 0.02 255);
     --scrollbar-track: transparent;
     --scrollbar-thumb: oklch(62% 0.06 255 / 0.55);
     --scrollbar-thumb-hover: oklch(48% 0.09 255 / 0.75);
@@ -27,6 +28,27 @@
     --theme-pattern-overlay: rgba(20, 20, 30, 0.15);
     --star-dot-near: oklch(55% 0.03 255 / 0.16);
     --star-dot-far: oklch(55% 0.03 255 / 0.1);
+    --chart-pink: oklch(64% 0.16 350);
+    --chart-blue: oklch(58% 0.14 240);
+    --chart-green: oklch(62% 0.13 155);
+    --chart-amber: oklch(78% 0.13 90);
+    --chart-purple: oklch(55% 0.12 300);
+    --eval-exam-bg: oklch(74% 0.13 350);
+    --eval-exam-text: #fff;
+    --eval-quiz-bg: oklch(72% 0.12 155);
+    --eval-quiz-text: #fff;
+    --eval-homework-bg: oklch(78% 0.13 90);
+    --eval-homework-text: #fff;
+    --eval-project-bg: oklch(66% 0.13 240);
+    --eval-project-text: #fff;
+    --matriculas-accent: oklch(78% 0.13 90);
+    --stat-icon-pink: oklch(50% 0.14 350);
+    --stat-icon-blue: oklch(45% 0.13 240);
+    --stat-icon-green: oklch(45% 0.12 155);
+    --stat-icon-amber: oklch(48% 0.14 55);
+    --stat-icon-promedio: oklch(42% 0.1 255);
+    --stat-chart-promedio: oklch(58% 0.14 255);
+    --stat-chart-promedio-area: oklch(58% 0.14 255 / 0.12);
 }
 
 :root.dark {
@@ -47,6 +69,7 @@
     --brand-thead: oklch(26% 0.02 260);
     --brand-link: oklch(75% 0.12 255);
     --brand-input: #2F3748;
+    --sidebar-divider: oklch(32% 0.02 260 / 0.7);
     --scrollbar-track: transparent;
     --scrollbar-thumb: oklch(55% 0.09 255 / 0.6);
     --scrollbar-thumb-hover: oklch(68% 0.11 255 / 0.8);
@@ -54,6 +77,27 @@
     --theme-pattern-overlay: rgba(0, 0, 0, 0.55);
     --star-dot-near: oklch(92% 0.02 255 / 0.55);
     --star-dot-far: oklch(80% 0.02 255 / 0.3);
+    --chart-pink: oklch(72% 0.27 350);
+    --chart-blue: oklch(75% 0.19 215);
+    --chart-green: oklch(82% 0.26 148);
+    --chart-amber: #fcff00;
+    --chart-purple: oklch(66% 0.27 305);
+    --eval-exam-bg: oklch(70% 0.27 350);
+    --eval-exam-text: oklch(16% 0.02 350);
+    --eval-quiz-bg: oklch(82% 0.26 148);
+    --eval-quiz-text: oklch(18% 0.03 148);
+    --eval-homework-bg: #fcff00;
+    --eval-homework-text: oklch(22% 0.04 100);
+    --eval-project-bg: oklch(75% 0.19 215);
+    --eval-project-text: oklch(16% 0.03 215);
+    --matriculas-accent: #fcff00;
+    --stat-icon-pink: oklch(72% 0.27 350);
+    --stat-icon-blue: oklch(75% 0.19 215);
+    --stat-icon-green: oklch(82% 0.26 148);
+    --stat-icon-amber: oklch(75% 0.22 50);
+    --stat-icon-promedio: oklch(75% 0.2 255);
+    --stat-chart-promedio: oklch(75% 0.22 255);
+    --stat-chart-promedio-area: oklch(75% 0.22 255 / 0.16);
 }
 
 html {

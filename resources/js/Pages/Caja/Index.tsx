@@ -1,5 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
+import PageTitle from '@/Components/PageTitle';
+import { BanknotesIcon } from '@/Components/Icons';
 import { Head, Link } from '@inertiajs/react';
 import { Egreso, Pago, medioPagoLabels } from '@/types/models';
 import { formatDate } from '@/utils/date';
@@ -52,16 +54,17 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Flujo de caja
-                </h2>
+                <PageTitle icon={<BanknotesIcon />}>Flujo de caja</PageTitle>
             }
         >
             <Head title="Flujo de caja" />
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-end gap-3">
+                        <Link href={route('ingresos.index')}>
+                            <PrimaryButton>Ver ingresos</PrimaryButton>
+                        </Link>
                         <Link href={route('egresos.index')}>
                             <PrimaryButton>Ver egresos</PrimaryButton>
                         </Link>

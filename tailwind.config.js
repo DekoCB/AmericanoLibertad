@@ -47,6 +47,10 @@ export default {
                     '0%': { opacity: 0, transform: 'translateY(22px) scale(0.98)' },
                     '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
                 },
+                'fade-in-soft': {
+                    '0%': { opacity: 0, transform: 'translateY(6px)' },
+                    '100%': { opacity: 1, transform: 'translateY(0)' },
+                },
                 twinkle: {
                     '0%, 100%': { opacity: 0.25, transform: 'scale(0.75)' },
                     '50%': { opacity: 1, transform: 'scale(1.15)' },
@@ -100,6 +104,7 @@ export default {
             },
             animation: {
                 'fade-in': 'fade-in 0.55s cubic-bezier(0.16, 1, 0.3, 1)',
+                'fade-in-soft': 'fade-in-soft 0.3s ease-out',
                 twinkle: 'twinkle 2.6s ease-in-out infinite',
                 'sun-pulse': 'sun-pulse 3.2s ease-in-out infinite',
                 'sun-spin': 'sun-spin 18s linear infinite',
