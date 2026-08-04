@@ -795,6 +795,9 @@ function MisCalificacionesCard({ grades }: { grades: Grade[] }) {
                             style={{ color: 'var(--brand-ink-strong)' }}
                         >
                             {grade.score}
+                            <span style={{ color: 'var(--brand-muted)' }}>
+                                /{grade.evaluation?.max_score ?? 20}
+                            </span>
                         </div>
                     </div>
                 ))}

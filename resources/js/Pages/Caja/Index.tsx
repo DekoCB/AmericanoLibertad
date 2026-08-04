@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 import PageTitle from '@/Components/PageTitle';
-import { BanknotesIcon } from '@/Components/Icons';
+import { BanknotesIcon, ArrowTrendingUpIcon } from '@/Components/Icons';
 import { Head, Link } from '@inertiajs/react';
 import { Egreso, Pago, medioPagoLabels } from '@/types/models';
 import { formatDate } from '@/utils/date';
@@ -22,19 +22,36 @@ interface Stats {
 function StatCard({
     label,
     value,
-    className,
+    trend,
 }: {
     label: string;
     value: number;
-    className: string;
+    trend: 'in' | 'out';
 }) {
+    const color = trend === 'in' ? 'var(--money-in)' : 'var(--money-out)';
+
     return (
         <div
-            className={`flex flex-col items-center justify-center rounded-lg p-4 text-center text-white shadow-sm ${className}`}
+            className="flex items-center gap-3 rounded-[20px] border bg-brand-card p-[18px_20px]"
+            style={{ borderColor: 'var(--brand-border)' }}
         >
-            <div className="text-2xl font-bold">S/ {value.toFixed(2)}</div>
-            <div className="mt-1 text-xs font-medium uppercase tracking-wide">
-                {label}
+            <ArrowTrendingUpIcon
+                className={`size-6 shrink-0 ${trend === 'out' ? 'rotate-180' : ''}`}
+                style={{ color }}
+            />
+            <div>
+                <div
+                    className="text-xl font-bold"
+                    style={{ color: 'var(--brand-ink-strong)' }}
+                >
+                    S/ {value.toFixed(2)}
+                </div>
+                <div
+                    className="text-xs font-medium uppercase tracking-wide"
+                    style={{ color: 'var(--brand-muted)' }}
+                >
+                    {label}
+                </div>
             </div>
         </div>
     );
@@ -74,22 +91,22 @@ export default function Index({
                         <StatCard
                             label="Ingresos de hoy"
                             value={stats.ingresosHoy}
-                            className="bg-emerald-500"
+                            trend="in"
                         />
                         <StatCard
                             label="Egresos de hoy"
                             value={stats.egresosHoy}
-                            className="bg-red-500"
+                            trend="out"
                         />
                         <StatCard
                             label="Ingresos del mes"
                             value={stats.ingresosMes}
-                            className="bg-sky-500"
+                            trend="in"
                         />
                         <StatCard
                             label="Egresos del mes"
                             value={stats.egresosMes}
-                            className="bg-orange-500"
+                            trend="out"
                         />
                     </div>
 
@@ -113,10 +130,16 @@ export default function Index({
                                             <td className="py-2 pr-4 text-sm text-brand-ink-strong">
                                                 {mes.mes}
                                             </td>
-                                            <td className="py-2 pr-4 text-sm text-emerald-700">
+                                            <td
+                                                className="py-2 pr-4 text-sm"
+                                                style={{ color: 'var(--money-in)' }}
+                                            >
                                                 S/ {mes.ingresos.toFixed(2)}
                                             </td>
-                                            <td className="py-2 pr-4 text-sm text-red-700">
+                                            <td
+                                                className="py-2 pr-4 text-sm"
+                                                style={{ color: 'var(--money-out)' }}
+                                            >
                                                 S/ {mes.egresos.toFixed(2)}
                                             </td>
                                             <td className="py-2 text-sm font-medium text-brand-ink-strong">
@@ -156,7 +179,10 @@ export default function Index({
                                                     ? `${pago.student.first_name} ${pago.student.last_name}`
                                                     : '—'}
                                             </span>
-                                            <span className="font-medium text-emerald-700">
+                                            <span
+                                                className="font-medium"
+                                                style={{ color: 'var(--money-in)' }}
+                                            >
                                                 S/ {Number(pago.monto).toFixed(2)}
                                             </span>
                                         </div>
@@ -185,7 +211,10 @@ export default function Index({
                                             <span className="text-brand-ink-strong">
                                                 {egreso.concepto}
                                             </span>
-                                            <span className="font-medium text-red-700">
+                                            <span
+                                                className="font-medium"
+                                                style={{ color: 'var(--money-out)' }}
+                                            >
                                                 S/{' '}
                                                 {Number(egreso.monto).toFixed(2)}
                                             </span>

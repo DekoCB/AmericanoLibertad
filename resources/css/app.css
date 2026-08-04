@@ -10,6 +10,12 @@
     --brand-hover: oklch(94% 0.012 85);
     --brand-navy: oklch(32% 0.07 255);
     --brand-navy-dark: oklch(26% 0.07 255);
+    /* Fixed brand-identity navy for marketing sections (hero, quote band).
+       Intentionally not redefined under :root.dark so it stays the same
+       deep navy in both themes, instead of the lighter tone --brand-navy*
+       take on dark theme to stay legible as a UI accent. */
+    --brand-hero: oklch(20% 0.07 255);
+    --brand-hero-to: oklch(14% 0.06 258);
     --brand-ink: oklch(25% 0.02 255);
     --brand-ink-strong: oklch(28% 0.05 255);
     --brand-ink-soft: oklch(35% 0.03 255);
@@ -25,7 +31,7 @@
     --scrollbar-thumb: oklch(62% 0.06 255 / 0.55);
     --scrollbar-thumb-hover: oklch(48% 0.09 255 / 0.75);
     --theme-pattern-bg: url('/images/White.png');
-    --theme-pattern-overlay: rgba(20, 20, 30, 0.15);
+    --theme-pattern-overlay: rgba(255, 255, 255, 0.72);
     --star-dot-near: oklch(55% 0.03 255 / 0.16);
     --star-dot-far: oklch(55% 0.03 255 / 0.1);
     --chart-pink: oklch(64% 0.16 350);
@@ -47,6 +53,8 @@
     --stat-icon-green: oklch(45% 0.12 155);
     --stat-icon-amber: oklch(48% 0.14 55);
     --stat-icon-promedio: oklch(42% 0.1 255);
+    --money-in: oklch(45% 0.12 155);
+    --money-out: oklch(50% 0.19 25);
     --stat-chart-promedio: oklch(58% 0.14 255);
     --stat-chart-promedio-area: oklch(58% 0.14 255 / 0.12);
 }
@@ -98,6 +106,8 @@
     --stat-icon-promedio: oklch(75% 0.2 255);
     --stat-chart-promedio: oklch(75% 0.22 255);
     --stat-chart-promedio-area: oklch(75% 0.22 255 / 0.16);
+    --money-in: oklch(82% 0.26 148);
+    --money-out: oklch(72% 0.2 25);
 }
 
 html {

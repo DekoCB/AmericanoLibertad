@@ -4,6 +4,7 @@ import PageTitle from '@/Components/PageTitle';
 import { ComputerDesktopIcon } from '@/Components/Icons';
 import { Head, Link, router } from '@inertiajs/react';
 import { Course, turnoLabels } from '@/types/models';
+import { useMemo, useState } from 'react';
 
 export default function Index({
     courses,
@@ -12,6 +13,17 @@ export default function Index({
     courses: Course[];
     isStudent: boolean;
 }) {
+    const periods = useMemo(
+        () => [...new Set(courses.map((course) => course.period))],
+        [courses],
+    );
+    const [selectedPeriod, setSelectedPeriod] = useState(periods[0] ?? '');
+
+    const cursosDelPeriodo = useMemo(
+        () => courses.filter((course) => course.period === selectedPeriod),
+        [courses, selectedPeriod],
+    );
+
     const irAlCurso = (courseId: string) => {
         if (!courseId) return;
         router.visit(route('aula-virtual.show', courseId));
@@ -56,8 +68,37 @@ export default function Index({
                         </div>
                     )}
 
+                    {periods.length > 1 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {periods.map((period) => {
+                                const activo = period === selectedPeriod;
+
+                                return (
+                                    <button
+                                        key={period}
+                                        type="button"
+                                        onClick={() =>
+                                            setSelectedPeriod(period)
+                                        }
+                                        className="rounded-full px-3 py-1 text-xs font-semibold transition"
+                                        style={{
+                                            background: activo
+                                                ? 'var(--brand-navy)'
+                                                : 'var(--brand-hover)',
+                                            color: activo
+                                                ? '#fff'
+                                                : 'var(--brand-muted)',
+                                        }}
+                                    >
+                                        {period}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {courses.map((course) => (
+                        {cursosDelPeriodo.map((course) => (
                             <Link
                                 key={course.id}
                                 href={route('aula-virtual.show', course.id)}
@@ -77,7 +118,7 @@ export default function Index({
                                 </p>
                             </Link>
                         ))}
-                        {courses.length === 0 && (
+                        {cursosDelPeriodo.length === 0 && (
                             <div className="col-span-full rounded-lg bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
                                 No tienes cursos con aula virtual disponible.
                             </div>
