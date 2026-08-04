@@ -1,5 +1,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import DateInput from '@/Components/DateInput';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SelectMenu from '@/Components/SelectMenu';
 import ThemeToggleButton from '@/Components/ThemeToggleButton';
 import { CheckIcon } from '@/Components/Icons';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -7,6 +9,7 @@ import {
     cloneElement,
     FormEventHandler,
     isValidElement,
+    useEffect,
     useId,
     useRef,
     useState,
@@ -21,6 +24,140 @@ const steps = ['Estudiante', 'Apoderado', 'Documentos'] as const;
 
 const inputClass =
     'w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy';
+
+function ParticlesBackground() {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) return;
+
+        const prefersReducedMotion = window.matchMedia(
+            '(prefers-reduced-motion: reduce)',
+        ).matches;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let width = 0;
+        let height = 0;
+        let isDark = document.documentElement.classList.contains('dark');
+
+        type Particle = {
+            x: number;
+            y: number;
+            radius: number;
+            speed: number;
+            drift: number;
+            driftSpeed: number;
+            phase: number;
+            baseOpacity: number;
+        };
+
+        let particles: Particle[] = [];
+
+        const rand = (min: number, max: number) => min + Math.random() * (max - min);
+
+        const buildParticles = () => {
+            const count = Math.min(80, Math.round((width * height) / 16000));
+            particles = Array.from({ length: count }, () => ({
+                x: rand(0, width),
+                y: rand(0, height),
+                radius: rand(1.2, 3.6),
+                speed: rand(14, 34),
+                drift: rand(-1, 1),
+                driftSpeed: rand(0.3, 0.9),
+                phase: rand(0, Math.PI * 2),
+                baseOpacity: rand(0.25, 0.65),
+            }));
+        };
+
+        const resize = () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            buildParticles();
+        };
+
+        resize();
+        window.addEventListener('resize', resize);
+
+        const themeObserver = new MutationObserver(() => {
+            isDark = document.documentElement.classList.contains('dark');
+        });
+        themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+
+        const drawFrame = () => {
+            const color = isDark ? '191,219,254' : '30,58,95';
+            const fadeZone = 70;
+
+            ctx.clearRect(0, 0, width, height);
+
+            particles.forEach((p) => {
+                const x = p.x + Math.sin(p.phase) * 18 * p.drift;
+
+                let opacity = p.baseOpacity;
+                if (p.y > height - fadeZone) {
+                    opacity *= Math.max(0, (height - p.y) / fadeZone);
+                } else if (p.y < fadeZone) {
+                    opacity *= Math.max(0, p.y / fadeZone);
+                }
+
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(${color},${opacity})`;
+                ctx.arc(x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        };
+
+        let raf = 0;
+        let last = performance.now();
+
+        const loop = (time: number) => {
+            const dt = Math.min((time - last) / 1000, 0.05);
+            last = time;
+
+            particles.forEach((p) => {
+                p.y -= p.speed * dt;
+                p.phase += p.driftSpeed * dt;
+
+                if (p.y < -10) {
+                    p.y = height + 10;
+                    p.x = rand(0, width);
+                }
+            });
+
+            drawFrame();
+            raf = requestAnimationFrame(loop);
+        };
+
+        if (prefersReducedMotion) {
+            drawFrame();
+        } else {
+            raf = requestAnimationFrame(loop);
+        }
+
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener('resize', resize);
+            themeObserver.disconnect();
+        };
+    }, []);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 -z-10"
+        />
+    );
+}
 
 function Field({
     label,
@@ -102,7 +239,10 @@ export default function AdmisionIndex({
         <>
             <Head title="Solicita tu admisión" />
 
-            <div className="min-h-screen bg-brand-cream text-brand-ink">
+            <div className="pointer-events-none fixed inset-0 -z-20 bg-brand-cream" />
+            <ParticlesBackground />
+
+            <div className="min-h-screen text-brand-ink">
                 <header className="border-b border-brand-border-faint bg-brand-card">
                     <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
                         <Link href="/" className="flex items-center gap-3">
@@ -114,6 +254,16 @@ export default function AdmisionIndex({
                         <ThemeToggleButton />
                     </div>
                 </header>
+
+                <div className="hidden xl:fixed xl:right-12 xl:top-1/3 xl:block">
+                    <div className="animate-float" style={{ animationDelay: '0.2s' }}>
+                        <img
+                            src="/images/ISI2.png"
+                            alt="Mascota del instituto invitándote a postular"
+                            className="w-[240px] drop-shadow-2xl 2xl:w-[280px]"
+                        />
+                    </div>
+                </div>
 
                 <div className="mx-auto max-w-4xl px-6 py-12">
                     <p className="text-sm font-semibold uppercase tracking-widest text-brand-navy">
@@ -297,19 +447,17 @@ export default function AdmisionIndex({
                                                     />
                                                 </Field>
                                                 <Field label="Fecha de nacimiento">
-                                                    <input
-                                                        type="date"
+                                                    <DateInput
                                                         className={
                                                             inputClass
                                                         }
                                                         value={
                                                             data.fecha_nacimiento
                                                         }
-                                                        onChange={(e) =>
+                                                        onChange={(iso) =>
                                                             setData(
                                                                 'fecha_nacimiento',
-                                                                e.target
-                                                                    .value,
+                                                                iso,
                                                             )
                                                         }
                                                     />
@@ -439,30 +587,29 @@ export default function AdmisionIndex({
                                                     </select>
                                                 </Field>
                                                 <Field label="Turno preferido" required>
-                                                    <select
-                                                        required
-                                                        className={
-                                                            inputClass
-                                                        }
+                                                    <SelectMenu
                                                         value={data.turno}
-                                                        onChange={(e) =>
+                                                        onChange={(value) =>
                                                             setData(
                                                                 'turno',
-                                                                e.target
-                                                                    .value,
+                                                                value,
                                                             )
                                                         }
-                                                    >
-                                                        <option value="mañana">
-                                                            Mañana
-                                                        </option>
-                                                        <option value="tarde">
-                                                            Tarde
-                                                        </option>
-                                                        <option value="noche">
-                                                            Noche
-                                                        </option>
-                                                    </select>
+                                                        options={[
+                                                            {
+                                                                value: 'mañana',
+                                                                label: 'Mañana',
+                                                            },
+                                                            {
+                                                                value: 'tarde',
+                                                                label: 'Tarde',
+                                                            },
+                                                            {
+                                                                value: 'noche',
+                                                                label: 'Noche',
+                                                            },
+                                                        ]}
+                                                    />
                                                 </Field>
                                             </div>
 
@@ -551,40 +698,43 @@ export default function AdmisionIndex({
                                             </div>
                                             <div className="grid gap-5 sm:grid-cols-3">
                                                 <Field label="Parentesco">
-                                                    <select
-                                                        className={
-                                                            inputClass
-                                                        }
+                                                    <SelectMenu
                                                         value={
                                                             data.apoderado_parentesco
                                                         }
-                                                        onChange={(e) =>
+                                                        onChange={(value) =>
                                                             setData(
                                                                 'apoderado_parentesco',
-                                                                e.target
-                                                                    .value,
+                                                                value,
                                                             )
                                                         }
-                                                    >
-                                                        <option value="">
-                                                            Selecciona
-                                                        </option>
-                                                        <option value="Padre">
-                                                            Padre
-                                                        </option>
-                                                        <option value="Madre">
-                                                            Madre
-                                                        </option>
-                                                        <option value="Hermano(a)">
-                                                            Hermano(a)
-                                                        </option>
-                                                        <option value="Tutor">
-                                                            Tutor
-                                                        </option>
-                                                        <option value="Otro">
-                                                            Otro
-                                                        </option>
-                                                    </select>
+                                                        options={[
+                                                            {
+                                                                value: '',
+                                                                label: 'Selecciona',
+                                                            },
+                                                            {
+                                                                value: 'Padre',
+                                                                label: 'Padre',
+                                                            },
+                                                            {
+                                                                value: 'Madre',
+                                                                label: 'Madre',
+                                                            },
+                                                            {
+                                                                value: 'Hermano(a)',
+                                                                label: 'Hermano(a)',
+                                                            },
+                                                            {
+                                                                value: 'Tutor',
+                                                                label: 'Tutor',
+                                                            },
+                                                            {
+                                                                value: 'Otro',
+                                                                label: 'Otro',
+                                                            },
+                                                        ]}
+                                                    />
                                                 </Field>
                                                 <Field label="Teléfono">
                                                     <input
