@@ -222,6 +222,16 @@ function SidebarNav({
                             Profesores
                         </SidebarLink>
                     )}
+                    {nav?.carreras && (
+                        <SidebarLink
+                            href={route('carreras.index')}
+                            active={route().current('carreras.*')}
+                            collapsed={collapsed}
+                            icon={<AcademicCapIcon />}
+                        >
+                            Carreras
+                        </SidebarLink>
+                    )}
                     {nav?.subjects && (
                         <SidebarLink
                             href={route('subjects.index')}
@@ -229,7 +239,7 @@ function SidebarNav({
                             collapsed={collapsed}
                             icon={<BookOpenIcon />}
                         >
-                            Materias
+                            Cursos
                         </SidebarLink>
                     )}
                     {nav?.courses && (
@@ -239,17 +249,7 @@ function SidebarNav({
                             collapsed={collapsed}
                             icon={<RectangleStackIcon />}
                         >
-                            Cursos
-                        </SidebarLink>
-                    )}
-                    {nav?.carreras && (
-                        <SidebarLink
-                            href={route('carreras.index')}
-                            active={route().current('carreras.*')}
-                            collapsed={collapsed}
-                            icon={<AcademicCapIcon />}
-                        >
-                            Carreras
+                            Secciones
                         </SidebarLink>
                     )}
                     {nav?.horarios && (

@@ -122,7 +122,7 @@ export default function Index({
                                         Especialidad
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Cursos
+                                        Secciones
                                     </th>
                                     <th className="px-4 py-3" />
                                 </tr>
@@ -247,8 +247,8 @@ export default function Index({
                         </h3>
                         <p className="mt-2 text-sm text-brand-muted">
                             Vas a eliminar a {confirmingDelete.first_name}{' '}
-                            {confirmingDelete.last_name}. Los cursos asignados
-                            quedarán sin profesor.
+                            {confirmingDelete.last_name}. Las secciones
+                            asignadas quedarán sin profesor.
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button

@@ -51,19 +51,23 @@ class HorarioController extends Controller
 
         $esDocente = $user->hasRole(UserRole::Docente);
 
-        $totalesPorAula = Horario::query()
+        $horariosPorAula = Horario::query()
             ->whereNotNull('aula')
             ->where('aula', '!=', '')
             ->when($esDocente, fn ($q) => $q->whereHas('course', fn ($q2) => $q2->where('teacher_id', $user->teacher_id)))
-            ->selectRaw('aula, count(*) as total')
-            ->groupBy('aula')
-            ->pluck('total', 'aula');
+            ->with(['course.subject', 'course.teacher'])
+            ->orderBy('hora_inicio')
+            ->get()
+            ->groupBy('aula');
+
+        $totalesPorAula = $horariosPorAula->map->count();
 
         if ($esDocente) {
             $aulas = $totalesPorAula->keys()->sort()->values()
                 ->map(fn (string $nombre) => [
                     'aula' => $nombre,
                     'total' => $totalesPorAula->get($nombre),
+                    'horarios' => $horariosPorAula->get($nombre, collect())->values(),
                 ]);
         } else {
             $aulas = Aula::orderBy('nombre')->pluck('nombre')
@@ -74,6 +78,7 @@ class HorarioController extends Controller
                 ->map(fn (string $nombre) => [
                     'aula' => $nombre,
                     'total' => $totalesPorAula->get($nombre, 0),
+                    'horarios' => $horariosPorAula->get($nombre, collect())->values(),
                 ]);
         }
 
@@ -202,7 +207,7 @@ class HorarioController extends Controller
                     ->filter(fn (Horario $h) => $h->dia_semana === $dia && (int) substr($h->hora_inicio, 0, 2) === $hour)
                     ->map(fn (Horario $h) => sprintf(
                         '%s · %s · %s-%s%s',
-                        $h->course?->subject?->name ?? 'Sin materia',
+                        $h->course?->subject?->name ?? 'Sin curso',
                         $h->course?->name ?? 'Sin sección',
                         substr($h->hora_inicio, 0, 5),
                         substr($h->hora_fin, 0, 5),
@@ -328,7 +333,7 @@ class HorarioController extends Controller
 
             return redirect()->route('horarios.index')->with(
                 'error',
-                'Se importaron '.count($nuevos)." clases, pero algunas filas no coincidieron con ningún curso y fueron omitidas: {$ejemplos}",
+                'Se importaron '.count($nuevos)." clases, pero algunas filas no coincidieron con ninguna sección y fueron omitidas: {$ejemplos}",
             );
         }
 

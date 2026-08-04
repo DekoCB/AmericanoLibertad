@@ -97,7 +97,11 @@ export default function Index({
             header={
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-brand-ink-strong">
-                        Asistencia — {course.name} ({course.subject?.name})
+                        Asistencia — {course.name} ({course.subject?.name}
+                        {course.subject?.ciclo
+                            ? ` · Ciclo ${course.subject.ciclo}`
+                            : ''}
+                        )
                     </h2>
                     <Link
                         href={route('asistencias.index')}
@@ -234,7 +238,7 @@ export default function Index({
                                             colSpan={4}
                                             className="px-4 py-6 text-center text-sm text-brand-muted"
                                         >
-                                            Este curso no tiene estudiantes matriculados.
+                                            Esta sección no tiene estudiantes matriculados.
                                         </td>
                                     </tr>
                                 )}

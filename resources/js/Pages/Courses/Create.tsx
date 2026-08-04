@@ -16,11 +16,11 @@ export default function Create({
         <AuthenticatedLayout
             header={
                 <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Nuevo curso
+                    Nueva sección
                 </h2>
             }
         >
-            <Head title="Nuevo curso" />
+            <Head title="Nueva sección" />
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">

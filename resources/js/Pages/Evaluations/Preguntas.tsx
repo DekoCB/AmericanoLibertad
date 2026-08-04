@@ -277,7 +277,7 @@ export default function Preguntas({
                         href={route('courses.show', evaluation.course_id)}
                         className="text-sm text-brand-muted hover:underline"
                     >
-                        Volver al curso
+                        Volver a la sección
                     </Link>
                 </div>
             </div>

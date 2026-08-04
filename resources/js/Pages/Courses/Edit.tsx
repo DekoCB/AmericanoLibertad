@@ -18,11 +18,11 @@ export default function Edit({
         <AuthenticatedLayout
             header={
                 <h2 className="text-2xl font-bold text-brand-ink-strong">
-                    Editar curso
+                    Editar sección
                 </h2>
             }
         >
-            <Head title="Editar curso" />
+            <Head title="Editar sección" />
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">

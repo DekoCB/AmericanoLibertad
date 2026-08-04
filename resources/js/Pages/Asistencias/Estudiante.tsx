@@ -104,7 +104,7 @@ export default function Estudiante({
 
                         {courses.length === 0 ? (
                             <p className="mt-2 text-sm text-brand-muted">
-                                No tienes cursos matriculados actualmente.
+                                No tienes secciones matriculadas actualmente.
                             </p>
                         ) : (
                             <div className="mt-4 space-y-4">
@@ -185,7 +185,7 @@ export default function Estudiante({
                                             Fecha
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                            Curso
+                                            Sección
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                             Estado

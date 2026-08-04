@@ -43,7 +43,7 @@ export default function Form({
         <form onSubmit={submit} className="space-y-6">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
-                    <InputLabel htmlFor="subject_id" value="Materia" />
+                    <InputLabel htmlFor="subject_id" value="Curso" />
                     <select
                         id="subject_id"
                         className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"

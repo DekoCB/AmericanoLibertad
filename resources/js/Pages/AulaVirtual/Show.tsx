@@ -467,7 +467,7 @@ function NavegacionSemanas({
     return (
         <div className="space-y-3">
             <h3 className="text-lg font-bold text-brand-ink-strong">
-                Contenido del curso
+                Contenido de la sección
             </h3>
             <div className="divide-y divide-brand-border-faint rounded-[20px] border border-brand-border bg-brand-card">
                 {porSemana.map(([semana, items]) => (

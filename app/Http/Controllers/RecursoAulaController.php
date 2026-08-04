@@ -19,7 +19,7 @@ class RecursoAulaController extends Controller
         $user = $request->user();
 
         $courses = Course::query()
-            ->with(['subject', 'teacher'])
+            ->with(['subject.carrera', 'teacher'])
             ->withCount('recursosAula')
             ->when(
                 $user->hasRole(UserRole::Docente),

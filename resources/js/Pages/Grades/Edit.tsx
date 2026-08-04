@@ -180,8 +180,8 @@ export default function Edit({
                                                 className="px-2 py-6 text-center text-sm text-brand-muted"
                                             >
                                                 No hay estudiantes
-                                                matriculados activos en este
-                                                curso.
+                                                matriculados activos en esta
+                                                sección.
                                             </td>
                                         </tr>
                                     )}
@@ -199,7 +199,7 @@ export default function Edit({
                                     )}
                                     className="text-sm text-brand-muted hover:underline"
                                 >
-                                    Volver al curso
+                                    Volver a la sección
                                 </Link>
                             </div>
                         </form>

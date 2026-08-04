@@ -132,7 +132,7 @@ export default function Historial({
                             <div>
                                 <InputLabel
                                     htmlFor="course_id"
-                                    value="Curso"
+                                    value="Sección"
                                 />
                                 <div className="mt-1 w-56">
                                     <SearchableSelect
@@ -140,10 +140,10 @@ export default function Historial({
                                         onChange={(value) =>
                                             updateFilter('course_id', value)
                                         }
-                                        placeholder="Buscar curso..."
+                                        placeholder="Buscar sección..."
                                         options={courses.map((course) => ({
                                             value: String(course.id),
-                                            label: `${course.name} — ${course.subject?.name}`,
+                                            label: `${course.name} — ${course.subject?.name}${course.subject?.ciclo ? ` (Ciclo ${course.subject.ciclo})` : ''}`,
                                         }))}
                                     />
                                 </div>
@@ -196,7 +196,7 @@ export default function Historial({
                                                 Estudiante
                                             </th>
                                             <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Curso
+                                                Sección
                                             </th>
                                             <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                                 Estado

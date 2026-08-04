@@ -45,7 +45,7 @@ const roleOptions: {
     {
         value: 'academico',
         label: 'Académico',
-        description: 'Cursos, evaluaciones y calificaciones',
+        description: 'Secciones, evaluaciones y calificaciones',
         icon: BookOpenIcon,
     },
     {

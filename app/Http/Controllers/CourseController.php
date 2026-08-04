@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\Carrera;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Evaluation;
@@ -30,8 +31,8 @@ class CourseController extends Controller
             ->when($request->string('name')->toString(), function ($query, $name) {
                 $query->where('name', $name);
             })
-            ->when($request->string('subject_name')->toString(), function ($query, $subjectName) {
-                $query->whereHas('subject', fn ($q) => $q->where('name', $subjectName));
+            ->when($request->string('carrera_name')->toString(), function ($query, $carreraName) {
+                $query->whereHas('subject.carrera', fn ($q) => $q->where('name', $carreraName));
             })
             ->orderByDesc('period')
             ->orderBy('name')
@@ -59,13 +60,13 @@ class CourseController extends Controller
             ->distinct()
             ->pluck('name');
 
-        $nombresMaterias = Subject::orderBy('name')->distinct()->pluck('name');
+        $nombresCarreras = Carrera::orderBy('name')->pluck('name');
 
         return Inertia::render('Courses/Index', [
             'courses' => $courses,
             'nombresSecciones' => $nombresSecciones,
-            'nombresMaterias' => $nombresMaterias,
-            'filters' => $request->only('name', 'subject_name'),
+            'nombresCarreras' => $nombresCarreras,
+            'filters' => $request->only('name', 'carrera_name'),
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
             'teachers' => Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             'upcomingEvaluations' => $upcomingEvaluations,
@@ -93,7 +94,7 @@ class CourseController extends Controller
 
         Course::create($this->validateCourse($request));
 
-        return redirect()->route('courses.index')->with('success', 'Curso creado correctamente.');
+        return redirect()->route('courses.index')->with('success', 'Sección creada correctamente.');
     }
 
     public function show(Request $request, Course $course): Response
@@ -151,7 +152,7 @@ class CourseController extends Controller
 
         $course->update($this->validateCourse($request));
 
-        return redirect()->back()->with('success', 'Curso actualizado correctamente.');
+        return redirect()->back()->with('success', 'Sección actualizada correctamente.');
     }
 
     public function destroy(Course $course): RedirectResponse
@@ -160,7 +161,7 @@ class CourseController extends Controller
 
         $course->delete();
 
-        return redirect()->route('courses.index')->with('success', 'Curso eliminado correctamente.');
+        return redirect()->route('courses.index')->with('success', 'Sección eliminada correctamente.');
     }
 
     private function validateCourse(Request $request): array

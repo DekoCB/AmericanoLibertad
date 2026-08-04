@@ -11,12 +11,12 @@ import { useMemo, useState } from 'react';
 import { Course, Evaluation, Subject, Teacher } from '@/types/models';
 import Form from './Form';
 
-const SIN_MATERIA = 'Sin materia';
+const SIN_MATERIA = 'Sin curso';
 
 export default function Index({
     courses,
     nombresSecciones,
-    nombresMaterias,
+    nombresCarreras,
     filters,
     subjects,
     teachers,
@@ -25,15 +25,17 @@ export default function Index({
 }: {
     courses: Course[];
     nombresSecciones: string[];
-    nombresMaterias: string[];
-    filters: { name?: string; subject_name?: string };
+    nombresCarreras: string[];
+    filters: { name?: string; carrera_name?: string };
     subjects: Pick<Subject, 'id' | 'name'>[];
     teachers: Pick<Teacher, 'id' | 'first_name' | 'last_name'>[];
     upcomingEvaluations: Evaluation[];
     can: { create: boolean; update: boolean; delete: boolean };
 }) {
     const [name, setName] = useState(filters.name ?? '');
-    const [subjectName, setSubjectName] = useState(filters.subject_name ?? '');
+    const [carreraName, setCarreraName] = useState(
+        filters.carrera_name ?? '',
+    );
     const [creating, setCreating] = useState(false);
     const [editingCourse, setEditingCourse] = useState<Course | null>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -46,16 +48,16 @@ export default function Index({
         setName(nuevoNombre);
         router.get(
             route('courses.index'),
-            { name: nuevoNombre, subject_name: subjectName },
+            { name: nuevoNombre, carrera_name: carreraName },
             { preserveState: true, replace: true },
         );
     };
 
-    const changeSubject = (nuevoSubjectName: string) => {
-        setSubjectName(nuevoSubjectName);
+    const changeCarrera = (nuevaCarreraName: string) => {
+        setCarreraName(nuevaCarreraName);
         router.get(
             route('courses.index'),
-            { name, subject_name: nuevoSubjectName },
+            { name, carrera_name: nuevaCarreraName },
             { preserveState: true, replace: true },
         );
     };
@@ -85,10 +87,10 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <PageTitle icon={<RectangleStackIcon />}>Cursos</PageTitle>
+                <PageTitle icon={<RectangleStackIcon />}>Secciones</PageTitle>
             }
         >
-            <Head title="Cursos" />
+            <Head title="Secciones" />
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-4 sm:px-6 lg:px-8">
@@ -96,11 +98,11 @@ export default function Index({
                         <div className="flex w-full flex-col gap-2 sm:flex-row">
                             <div className="w-full max-w-sm">
                                 <SearchableSelect
-                                    value={subjectName}
-                                    onChange={changeSubject}
-                                    placeholder="Buscar por materia"
-                                    allLabel="Todas las materias"
-                                    options={nombresMaterias.map((nombre) => ({
+                                    value={carreraName}
+                                    onChange={changeCarrera}
+                                    placeholder="Buscar por carrera"
+                                    allLabel="Todas las carreras"
+                                    options={nombresCarreras.map((nombre) => ({
                                         value: nombre,
                                         label: nombre,
                                     }))}
@@ -122,7 +124,7 @@ export default function Index({
 
                         {can.create && (
                             <PrimaryButton onClick={() => setCreating(true)}>
-                                Nuevo curso
+                                Nueva sección
                             </PrimaryButton>
                         )}
                     </div>
@@ -142,15 +144,23 @@ export default function Index({
                                             key={course.id}
                                             className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition hover:bg-brand-hover"
                                         >
-                                            <Link
-                                                href={route(
-                                                    'courses.show',
-                                                    course.id,
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={route(
+                                                        'courses.show',
+                                                        course.id,
+                                                    )}
+                                                    className="font-medium text-brand-ink hover:text-brand-ink-strong hover:underline"
+                                                >
+                                                    {course.name}
+                                                </Link>
+                                                {course.subject?.ciclo && (
+                                                    <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                        Ciclo{' '}
+                                                        {course.subject.ciclo}
+                                                    </span>
                                                 )}
-                                                className="font-medium text-brand-ink hover:text-brand-ink-strong hover:underline"
-                                            >
-                                                {course.name}
-                                            </Link>
+                                            </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="whitespace-nowrap text-xs text-brand-muted">
                                                     {course.teacher
@@ -200,7 +210,7 @@ export default function Index({
                         ))}
                         {courses.length === 0 && (
                             <div className="col-span-full rounded-[28px] bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
-                                No se encontraron cursos.
+                                No se encontraron secciones.
                             </div>
                         )}
                     </div>
@@ -214,7 +224,7 @@ export default function Index({
             <Modal show={creating} onClose={() => setCreating(false)}>
                 <div className="p-6">
                     <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
-                        Nuevo curso
+                        Nueva sección
                     </h2>
                     <Form
                         subjects={subjects}
@@ -231,7 +241,7 @@ export default function Index({
             >
                 <div className="p-6">
                     <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
-                        Editar curso
+                        Editar sección
                     </h2>
                     {editingCourse && (
                         <Form
@@ -249,7 +259,7 @@ export default function Index({
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
                     <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
-                            ¿Eliminar curso?
+                            ¿Eliminar sección?
                         </h3>
                         <p className="mt-2 text-sm text-brand-muted">
                             Vas a eliminar {confirmingDelete.name}. Las

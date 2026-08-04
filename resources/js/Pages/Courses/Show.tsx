@@ -78,8 +78,8 @@ export default function Show({
                                 type="button"
                                 onClick={() => setEditingCourse(true)}
                                 className="text-brand-link hover:opacity-70"
-                                title="Editar curso"
-                                aria-label="Editar curso"
+                                title="Editar sección"
+                                aria-label="Editar sección"
                             >
                                 <PencilIcon className="size-4" />
                             </button>
@@ -88,7 +88,7 @@ export default function Show({
                             href={route('courses.index')}
                             className="text-brand-muted hover:underline"
                         >
-                            Volver a cursos
+                            Volver a secciones
                         </Link>
                     </div>
                 </div>
@@ -206,7 +206,7 @@ export default function Show({
                                                 )}
                                                 onBefore={() =>
                                                     confirm(
-                                                        '¿Quitar esta matrícula del curso?',
+                                                        '¿Quitar esta matrícula de la sección?',
                                                     )
                                                 }
                                                 preserveScroll
@@ -296,8 +296,8 @@ export default function Show({
                                 ))}
                                 {evaluations.length === 0 && (
                                     <li className="py-4 text-sm text-brand-muted">
-                                        Aún no hay evaluaciones para este
-                                        curso.
+                                        Aún no hay evaluaciones para esta
+                                        sección.
                                     </li>
                                 )}
                             </ul>
@@ -309,7 +309,7 @@ export default function Show({
             <Modal show={editingCourse} onClose={() => setEditingCourse(false)}>
                 <div className="p-6">
                     <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
-                        Editar curso
+                        Editar sección
                     </h2>
                     <CourseForm
                         course={course}

@@ -257,7 +257,7 @@ export default function Index({
                                 </div>
                             )}
                             <div>
-                                <InputLabel htmlFor="course_id" value="Curso (opcional)" />
+                                <InputLabel htmlFor="course_id" value="Sección (opcional)" />
                                 <select
                                     id="course_id"
                                     className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
@@ -355,7 +355,7 @@ export default function Index({
                                     <tr className="text-left text-xs font-medium uppercase text-brand-muted">
                                         {!isDocente && <th className="py-2 pr-4">Docente</th>}
                                         <th className="py-2 pr-4">Fecha</th>
-                                        <th className="py-2 pr-4">Curso</th>
+                                        <th className="py-2 pr-4">Sección</th>
                                         <th className="py-2 pr-4">Horas</th>
                                         <th className="py-2 pr-4">Tardanza</th>
                                         <th className="py-2 pr-4">Neto</th>

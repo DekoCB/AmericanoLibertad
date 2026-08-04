@@ -67,7 +67,7 @@ export default function Index({
                                         Estudiantes
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Materias
+                                        Cursos
                                     </th>
                                     <th className="px-4 py-3" />
                                 </tr>

@@ -6,7 +6,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useMemo } from 'react';
 import { Course, turnoLabels } from '@/types/models';
 
-const SIN_MATERIA = 'Sin materia';
+const SIN_MATERIA = 'Sin curso';
 
 export default function Cursos({
     courses,
@@ -42,7 +42,7 @@ export default function Cursos({
                     <div>
                         <PageTitle icon={<QrCodeIcon />}>Asistencia</PageTitle>
                         <p className="mt-1 text-sm text-brand-muted">
-                            Selecciona un curso para tomar asistencia
+                            Selecciona una sección para tomar asistencia
                             escaneando el DNI o código QR de cada estudiante.
                         </p>
                     </div>
@@ -65,8 +65,8 @@ export default function Cursos({
                         <SearchableSelect
                             value=""
                             onChange={irAlCurso}
-                            placeholder="Buscar por curso..."
-                            allLabel="Selecciona un curso"
+                            placeholder="Buscar por sección..."
+                            allLabel="Selecciona una sección"
                             options={[...courses]
                                 .sort((a, b) => a.name.localeCompare(b.name))
                                 .map((course) => {
@@ -103,10 +103,23 @@ export default function Cursos({
                                                     'courses.asistencias.index',
                                                     course.id,
                                                 )}
-                                                className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-brand-ink transition hover:bg-brand-hover hover:text-brand-ink-strong"
+                                                className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm text-brand-ink transition hover:bg-brand-hover hover:text-brand-ink-strong"
                                             >
-                                                <span>{course.name}</span>
-                                                <span className="text-xs text-brand-muted">
+                                                <span className="flex items-center gap-2">
+                                                    <span>{course.name}</span>
+                                                    {course.subject
+                                                        ?.ciclo && (
+                                                        <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                            Ciclo{' '}
+                                                            {
+                                                                course
+                                                                    .subject
+                                                                    .ciclo
+                                                            }
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span className="whitespace-nowrap text-xs text-brand-muted">
                                                     {course.teacher
                                                         ? `${course.teacher.first_name} ${course.teacher.last_name}`
                                                         : 'Sin docente'}{' '}
@@ -120,7 +133,7 @@ export default function Cursos({
                         ))}
                         {courses.length === 0 && (
                             <div className="col-span-full rounded-[28px] bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
-                                No tienes cursos asignados.
+                                No tienes secciones asignadas.
                             </div>
                         )}
                     </div>

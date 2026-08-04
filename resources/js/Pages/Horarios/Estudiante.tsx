@@ -68,7 +68,7 @@ export default function Estudiante({ horarios }: { horarios: Horario[] }) {
                                         <div>
                                             <p className="font-medium text-brand-ink-strong">
                                                 {horario.course?.subject
-                                                    ?.name ?? 'Sin materia'}{' '}
+                                                    ?.name ?? 'Sin curso'}{' '}
                                                 —{' '}
                                                 {horario.course?.name ??
                                                     'Sin sección'}

@@ -8,13 +8,13 @@ interface Faq {
 }
 
 const ESTUDIANTE_INTRO =
-    'Guía rápida para revisar tus cursos, marcar tu asistencia y entregar tus trabajos.';
+    'Guía rápida para revisar tus secciones, marcar tu asistencia y entregar tus trabajos.';
 
 const ESTUDIANTE_FAQS: Faq[] = [
     {
-        pregunta: '¿Dónde veo mis cursos, horario y notas?',
+        pregunta: '¿Dónde veo mis secciones, horario y notas?',
         respuesta:
-            'En el Dashboard verás tus cursos activos, tu promedio general y tus notas más recientes. Tu horario completo está en Horarios.',
+            'En el Dashboard verás tus secciones activas, tu promedio general y tus notas más recientes. Tu horario completo está en Horarios.',
     },
     {
         pregunta: '¿Cómo registro mi asistencia?',
@@ -24,38 +24,38 @@ const ESTUDIANTE_FAQS: Faq[] = [
     {
         pregunta: '¿Cómo entrego una tarea o resuelvo un quiz?',
         respuesta:
-            'Entra a Aula virtual, elige tu curso y busca la evaluación en la semana correspondiente: ahí podrás subir tu archivo o resolver el cuestionario.',
+            'Entra a Aula virtual, elige tu sección y busca la evaluación en la semana correspondiente: ahí podrás subir tu archivo o resolver el cuestionario.',
     },
     {
-        pregunta: '¿Dónde encuentro los materiales de mis cursos?',
+        pregunta: '¿Dónde encuentro los materiales de mis secciones?',
         respuesta:
-            'En Aula virtual, dentro de cada curso, encontrarás los anuncios, enlaces y archivos que publique tu docente.',
+            'En Aula virtual, dentro de cada sección, encontrarás los anuncios, enlaces y archivos que publique tu docente.',
     },
 ];
 
 const DOCENTE_INTRO =
-    'Guía rápida para gestionar tus cursos: asistencia, notas, aula virtual y tus horas dictadas.';
+    'Guía rápida para gestionar tus secciones: asistencia, notas, aula virtual y tus horas dictadas.';
 
 const DOCENTE_FAQS: Faq[] = [
     {
-        pregunta: '¿Cómo tomo asistencia a mis cursos?',
+        pregunta: '¿Cómo tomo asistencia a mis secciones?',
         respuesta:
-            'Ve a Asistencias, elige el curso y registra a cada estudiante con su DNI/QR o márcalo manualmente.',
+            'Ve a Asistencias, elige la sección y registra a cada estudiante con su DNI/QR o márcalo manualmente.',
     },
     {
         pregunta: '¿Cómo registro las notas de una evaluación?',
         respuesta:
-            'Entra al curso, abre la evaluación y usa "Registrar notas". Si es un quiz, se califica automáticamente al resolverlo el estudiante.',
+            'Entra a la sección, abre la evaluación y usa "Registrar notas". Si es un quiz, se califica automáticamente al resolverlo el estudiante.',
     },
     {
         pregunta: '¿Cómo publico recursos o evaluaciones en el aula virtual?',
         respuesta:
-            'Desde Aula virtual → tu curso, agrega un recurso (enlace, archivo o anuncio) o crea una evaluación indicando la semana en la que debe aparecer.',
+            'Desde Aula virtual → tu sección, agrega un recurso (enlace, archivo o anuncio) o crea una evaluación indicando la semana en la que debe aparecer.',
     },
     {
         pregunta: '¿Cómo registro mis horas dictadas y veo mi pago?',
         respuesta:
-            'En Registro de horas anota tus horas por curso; cuando se genere tu pago, podrás descargar el comprobante desde la misma lista.',
+            'En Registro de horas anota tus horas por sección; cuando se genere tu pago, podrás descargar el comprobante desde la misma lista.',
     },
     {
         pregunta: '¿Cómo solicito un permiso o licencia?',
@@ -82,15 +82,15 @@ function buildStaffFaqs(nav: PageProps['auth']['nav']): Faq[] {
             when: nav?.matriculas,
         },
         {
-            pregunta: '¿Cómo gestiono estudiantes, profesores y cursos?',
+            pregunta: '¿Cómo gestiono estudiantes, profesores y secciones?',
             respuesta:
-                'En el menú Académico puedes crear, editar y filtrar estudiantes, profesores, materias y cursos.',
+                'En el menú Académico puedes crear, editar y filtrar estudiantes, profesores, cursos y secciones.',
             when: nav?.students || nav?.teachers || nav?.courses,
         },
         {
-            pregunta: '¿Cómo tomo o reviso la asistencia de un curso?',
+            pregunta: '¿Cómo tomo o reviso la asistencia de una sección?',
             respuesta:
-                'En Asistencias eliges el curso para marcar asistencia, o revisas el historial por fecha, curso o estudiante.',
+                'En Asistencias eliges la sección para marcar asistencia, o revisas el historial por fecha, sección o estudiante.',
             when: nav?.asistencias,
         },
         {
