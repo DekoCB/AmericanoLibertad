@@ -7,7 +7,7 @@ import PageTitle from '@/Components/PageTitle';
 import { BookOpenIcon, PencilIcon, TrashIcon } from '@/Components/Icons';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { Subject } from '@/types/models';
+import { Carrera, Subject } from '@/types/models';
 import Form from './Form';
 
 const SIN_CARRERA = 'Sin carrera';
@@ -15,11 +15,13 @@ const SIN_CARRERA = 'Sin carrera';
 export default function Index({
     subjects,
     nombresMaterias,
+    carreras,
     filters,
     can,
 }: {
     subjects: Subject[];
     nombresMaterias: string[];
+    carreras: Pick<Carrera, 'id' | 'name' | 'code' | 'total_ciclos'>[];
     filters: { name?: string };
     can: { create: boolean; update: boolean; delete: boolean };
 }) {
@@ -68,10 +70,10 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <PageTitle icon={<BookOpenIcon />}>Materias</PageTitle>
+                <PageTitle icon={<BookOpenIcon />}>Cursos</PageTitle>
             }
         >
-            <Head title="Materias" />
+            <Head title="Cursos" />
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-4 sm:px-6 lg:px-8">
@@ -80,8 +82,8 @@ export default function Index({
                             <SearchableSelect
                                 value={name}
                                 onChange={changeName}
-                                placeholder="Buscar por nombre de materia"
-                                allLabel="Todas las materias"
+                                placeholder="Buscar por nombre de curso"
+                                allLabel="Todos los cursos"
                                 options={nombresMaterias.map((nombre) => ({
                                     value: nombre,
                                     label: nombre,
@@ -91,7 +93,7 @@ export default function Index({
 
                         {can.create && (
                             <PrimaryButton onClick={() => setCreating(true)}>
-                                Nueva materia
+                                Nuevo curso
                             </PrimaryButton>
                         )}
                     </div>
@@ -124,7 +126,7 @@ export default function Index({
                                                 Horas crédito
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Cursos
+                                                Secciones
                                             </th>
                                             <th className="px-4 py-3" />
                                         </tr>
@@ -190,7 +192,7 @@ export default function Index({
 
                     {subjects.length === 0 && (
                         <div className="rounded-[20px] border border-brand-border bg-brand-card px-4 py-6 text-center text-sm text-brand-muted">
-                            No se encontraron materias.
+                            No se encontraron cursos.
                         </div>
                     )}
                 </div>
@@ -199,9 +201,10 @@ export default function Index({
             <Modal show={creating} onClose={() => setCreating(false)}>
                 <div className="p-6">
                     <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
-                        Nueva materia
+                        Nuevo curso
                     </h2>
                     <Form
+                        carreras={carreras}
                         onSuccess={() => setCreating(false)}
                         onCancel={() => setCreating(false)}
                     />
@@ -214,11 +217,12 @@ export default function Index({
             >
                 <div className="p-6">
                     <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
-                        Editar materia
+                        Editar curso
                     </h2>
                     {editingSubject && (
                         <Form
                             subject={editingSubject}
+                            carreras={carreras}
                             onSuccess={() => setEditModalOpen(false)}
                             onCancel={() => setEditModalOpen(false)}
                         />
@@ -230,11 +234,11 @@ export default function Index({
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
                     <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
-                            ¿Eliminar materia?
+                            ¿Eliminar curso?
                         </h3>
                         <p className="mt-2 text-sm text-brand-muted">
-                            Vas a eliminar {confirmingDelete.name}. Los cursos
-                            asociados también se eliminarán.
+                            Vas a eliminar {confirmingDelete.name}. Las
+                            secciones asociadas también se eliminarán.
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button

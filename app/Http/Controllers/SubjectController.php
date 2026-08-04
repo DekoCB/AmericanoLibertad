@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Carrera;
 use App\Models\Subject;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Inertia\Response;
 
 class SubjectController extends Controller
 {
+    private const STOPWORDS = ['de', 'del', 'la', 'las', 'el', 'los', 'en', 'y', 'a', 'con', 'para', 'al'];
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Subject::class);
@@ -28,6 +31,7 @@ class SubjectController extends Controller
         return Inertia::render('Subjects/Index', [
             'subjects' => $subjects,
             'nombresMaterias' => Subject::orderBy('name')->distinct()->pluck('name'),
+            'carreras' => Carrera::orderBy('name')->get(['id', 'name', 'code', 'total_ciclos']),
             'filters' => $request->only('name'),
             'can' => [
                 'create' => $request->user()->can('create', Subject::class),
@@ -41,16 +45,23 @@ class SubjectController extends Controller
     {
         $this->authorize('create', Subject::class);
 
-        return Inertia::render('Subjects/Create');
+        return Inertia::render('Subjects/Create', [
+            'carreras' => Carrera::orderBy('name')->get(['id', 'name', 'code', 'total_ciclos']),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', Subject::class);
 
-        Subject::create($this->validateSubject($request));
+        $validated = $this->validateSubject($request, forCreate: true);
 
-        return redirect()->route('subjects.index')->with('success', 'Materia creada correctamente.');
+        $carrera = Carrera::findOrFail($validated['carrera_id']);
+        $validated['code'] = $this->generateSubjectCode($carrera, (int) $validated['ciclo'], $validated['name']);
+
+        Subject::create($validated);
+
+        return redirect()->route('subjects.index')->with('success', "Curso creado correctamente con el código {$validated['code']}.");
     }
 
     public function edit(Subject $subject): Response
@@ -59,6 +70,7 @@ class SubjectController extends Controller
 
         return Inertia::render('Subjects/Edit', [
             'subject' => $subject,
+            'carreras' => Carrera::orderBy('name')->get(['id', 'name', 'code', 'total_ciclos']),
         ]);
     }
 
@@ -68,7 +80,7 @@ class SubjectController extends Controller
 
         $subject->update($this->validateSubject($request, $subject));
 
-        return redirect()->route('subjects.index')->with('success', 'Materia actualizada correctamente.');
+        return redirect()->route('subjects.index')->with('success', 'Curso actualizado correctamente.');
     }
 
     public function destroy(Subject $subject): RedirectResponse
@@ -77,16 +89,88 @@ class SubjectController extends Controller
 
         $subject->delete();
 
-        return redirect()->route('subjects.index')->with('success', 'Materia eliminada correctamente.');
+        return redirect()->route('subjects.index')->with('success', 'Curso eliminado correctamente.');
     }
 
-    private function validateSubject(Request $request, ?Subject $subject = null): array
+    private function validateSubject(Request $request, ?Subject $subject = null, bool $forCreate = false): array
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'code' => ['required', 'string', 'max:20', Rule::unique('subjects')->ignore($subject)],
+            'code' => $forCreate
+                ? ['nullable']
+                : ['required', 'string', 'max:20', Rule::unique('subjects')->ignore($subject)],
             'description' => ['nullable', 'string', 'max:1000'],
             'credit_hours' => ['required', 'integer', 'min:1', 'max:20'],
+            'carrera_id' => ['required', 'exists:carreras,id'],
+            'ciclo' => ['required', 'integer', 'min:1', 'max:12'],
         ]);
+    }
+
+    /**
+     * Genera un código único con el mismo estilo usado en el resto del
+     * currículo: PREFIJO-ABREVIATURA (p.ej. ADM-LOG), o PREFIJO-CICLO-ABREVIATURA
+     * (p.ej. ENF-1-AE) cuando el mismo nombre de curso ya existe en otro
+     * ciclo de la misma carrera y hace falta distinguirlos.
+     */
+    private function generateSubjectCode(Carrera $carrera, int $ciclo, string $name): string
+    {
+        $words = array_values(array_filter(
+            preg_split('/\s+/u', trim($name)) ?: [],
+            fn (string $word) => $word !== '' && ! in_array(mb_strtolower($word), self::STOPWORDS, true),
+        ));
+
+        if (empty($words)) {
+            $words = [$name];
+        }
+
+        $prefix = mb_strtoupper($carrera->code);
+
+        $hasSiblingCiclo = Subject::where('carrera_id', $carrera->id)
+            ->where('name', $name)
+            ->exists();
+
+        $base = $hasSiblingCiclo ? "{$prefix}-{$ciclo}-" : "{$prefix}-";
+
+        $lastIndex = array_key_last($words);
+        $lastWordLength = mb_strlen(preg_replace('/[^\p{L}]/u', '', $words[$lastIndex]));
+
+        // Si la abreviatura normal ya está en uso, alarga la última palabra
+        // (p.ej. "ASM" vs "ASME") antes de recurrir a un sufijo numérico.
+        for ($lastLen = 1; $lastLen <= max($lastWordLength, 1); $lastLen++) {
+            $letters = [];
+
+            foreach ($words as $index => $word) {
+                $clean = preg_replace('/[^\p{L}]/u', '', $word);
+                if ($clean === '') {
+                    continue;
+                }
+
+                $len = $index === $lastIndex ? $lastLen : 1;
+                $letters[] = mb_strtoupper(mb_substr($clean, 0, $len));
+            }
+
+            $candidate = $base.implode('', $letters);
+
+            if (! Subject::where('code', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        $shortLetters = [];
+        foreach ($words as $word) {
+            $clean = preg_replace('/[^\p{L}]/u', '', $word);
+            if ($clean === '') {
+                continue;
+            }
+            $shortLetters[] = mb_strtoupper(mb_substr($clean, 0, 1));
+        }
+
+        $suffix = 2;
+        do {
+            $candidate = $base.implode('', $shortLetters).$suffix;
+            $suffix++;
+        } while (Subject::where('code', $candidate)->exists());
+
+        return $candidate;
     }
 }

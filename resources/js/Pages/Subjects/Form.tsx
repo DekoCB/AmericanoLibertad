@@ -1,18 +1,21 @@
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { useForm } from '@inertiajs/react';
-import { FormEvent } from 'react';
-import { Subject } from '@/types/models';
+import { FormEvent, useMemo } from 'react';
+import { Carrera, Subject } from '@/types/models';
 
 export default function Form({
     subject,
+    carreras,
     onSuccess,
     onCancel,
 }: {
     subject?: Subject;
+    carreras: Pick<Carrera, 'id' | 'name' | 'code' | 'total_ciclos'>[];
     onSuccess: () => void;
     onCancel: () => void;
 }) {
@@ -21,7 +24,18 @@ export default function Form({
         code: subject?.code ?? '',
         description: subject?.description ?? '',
         credit_hours: subject?.credit_hours ?? 4,
+        carrera_id: subject?.carrera_id ? String(subject.carrera_id) : '',
+        ciclo: subject?.ciclo ? String(subject.ciclo) : '',
     });
+
+    const carreraSeleccionada = carreras.find(
+        (carrera) => String(carrera.id) === data.carrera_id,
+    );
+
+    const ciclosDisponibles = useMemo(() => {
+        const total = carreraSeleccionada?.total_ciclos ?? 12;
+        return Array.from({ length: total }, (_, i) => i + 1);
+    }, [carreraSeleccionada]);
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -49,15 +63,69 @@ export default function Form({
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="code" value="Código" />
-                    <TextInput
-                        id="code"
-                        className="mt-1 block w-full"
-                        value={data.code}
-                        onChange={(e) => setData('code', e.target.value)}
+                    <InputLabel htmlFor="carrera_id" value="Carrera" />
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="carrera_id"
+                            value={data.carrera_id}
+                            onChange={(value) => {
+                                setData('carrera_id', value);
+                                setData('ciclo', '');
+                            }}
+                            placeholder="Selecciona una carrera"
+                            options={carreras.map((carrera) => ({
+                                value: String(carrera.id),
+                                label: carrera.name,
+                            }))}
+                        />
+                    </div>
+                    <InputError
+                        message={errors.carrera_id}
+                        className="mt-2"
                     />
-                    <InputError message={errors.code} className="mt-2" />
                 </div>
+
+                <div>
+                    <InputLabel htmlFor="ciclo" value="Ciclo" />
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="ciclo"
+                            value={data.ciclo}
+                            onChange={(value) => setData('ciclo', value)}
+                            placeholder="Selecciona un ciclo"
+                            options={ciclosDisponibles.map((ciclo) => ({
+                                value: String(ciclo),
+                                label: `Ciclo ${ciclo}`,
+                            }))}
+                        />
+                    </div>
+                    <InputError message={errors.ciclo} className="mt-2" />
+                </div>
+
+                {subject ? (
+                    <div>
+                        <InputLabel htmlFor="code" value="Código" />
+                        <TextInput
+                            id="code"
+                            className="mt-1 block w-full"
+                            value={data.code}
+                            onChange={(e) =>
+                                setData('code', e.target.value)
+                            }
+                        />
+                        <InputError message={errors.code} className="mt-2" />
+                    </div>
+                ) : (
+                    <div>
+                        <InputLabel value="Código" />
+                        <p className="mt-1 flex h-[42px] items-center rounded-xl border border-dashed border-brand-border bg-brand-hover px-3 text-sm text-brand-muted">
+                            Se generará automáticamente
+                            {carreraSeleccionada
+                                ? ` (${carreraSeleccionada.code}-...)`
+                                : ''}
+                        </p>
+                    </div>
+                )}
 
                 <div>
                     <InputLabel
