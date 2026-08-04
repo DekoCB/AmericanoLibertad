@@ -9,22 +9,128 @@ import {
     ArrowDownTrayIcon,
     ArrowUpTrayIcon,
     CalendarDaysIcon,
+    EyeIcon,
 } from '@/Components/Icons';
 import { Head, useForm } from '@inertiajs/react';
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useMemo, useRef, useState } from 'react';
+import { DiaSemana, diaSemanaLabels, Horario } from '@/types/models';
 
-type Aula = { aula: string; total: number };
+type Aula = { aula: string; total: number; horarios: Horario[] };
+
+const ORDEN_DIAS: DiaSemana[] = [
+    'lunes',
+    'martes',
+    'miercoles',
+    'jueves',
+    'viernes',
+    'sabado',
+    'domingo',
+];
+
+function diaSemanaActual(): DiaSemana {
+    const dias: DiaSemana[] = [
+        'domingo',
+        'lunes',
+        'martes',
+        'miercoles',
+        'jueves',
+        'viernes',
+        'sabado',
+    ];
+    return dias[new Date().getDay()];
+}
+
+function VistaPreviaHorario({ aula, horarios }: { aula: string; horarios: Horario[] }) {
+    const hoy = diaSemanaActual();
+    const [diaSeleccionado, setDiaSeleccionado] = useState<DiaSemana>(hoy);
+
+    const horariosDelDia = useMemo(
+        () =>
+            horarios
+                .filter((h) => h.dia_semana === diaSeleccionado)
+                .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio)),
+        [horarios, diaSeleccionado],
+    );
+
+    return (
+        <div className="p-6">
+            <h2 className="text-center text-lg font-bold uppercase text-brand-ink-strong">
+                {aula}
+            </h2>
+            <p className="mt-1 text-center text-sm text-brand-muted">
+                Vista previa del horario semanal
+            </p>
+
+            <div className="mt-6 flex flex-wrap justify-center gap-1.5">
+                {ORDEN_DIAS.map((dia) => {
+                    const activo = dia === diaSeleccionado;
+
+                    return (
+                        <button
+                            key={dia}
+                            type="button"
+                            onClick={() => setDiaSeleccionado(dia)}
+                            className="rounded-full px-3 py-1 text-xs font-semibold transition"
+                            style={{
+                                background: activo
+                                    ? 'var(--brand-navy)'
+                                    : 'var(--brand-hover)',
+                                color: activo ? '#fff' : 'var(--brand-muted)',
+                            }}
+                        >
+                            {diaSemanaLabels[dia].slice(0, 3)}
+                            {dia === hoy && !activo ? ' •' : ''}
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div className="mt-5 flex max-h-[360px] flex-col overflow-y-auto">
+                {horariosDelDia.map((horario) => (
+                    <div
+                        key={horario.id}
+                        className="flex items-center gap-4 border-b border-brand-border-faint py-3 last:border-b-0"
+                    >
+                        <div className="w-24 shrink-0 whitespace-nowrap text-sm font-semibold text-brand-ink-strong">
+                            {horario.hora_inicio.slice(0, 5)}–
+                            {horario.hora_fin.slice(0, 5)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium text-brand-ink-strong">
+                                {horario.course?.subject?.name ?? 'Sin curso'}{' '}
+                                — {horario.course?.name ?? 'Sin sección'}
+                            </div>
+                            <div className="truncate text-[13px] text-brand-muted-soft">
+                                {horario.course?.teacher
+                                    ? `${horario.course.teacher.first_name} ${horario.course.teacher.last_name}`
+                                    : 'Sin docente'}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                {horariosDelDia.length === 0 && (
+                    <p className="py-6 text-center text-sm text-brand-muted">
+                        Sin clases este día.
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function AulaCard({
     aula,
     total,
+    horarios,
     canManage,
 }: {
     aula: string;
     total: number;
+    horarios: Horario[];
     canManage: boolean;
 }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [previaAbierta, setPreviaAbierta] = useState(false);
     const { data, setData, post, processing, reset } = useForm<{
         archivo: File | null;
     }>({ archivo: null });
@@ -53,6 +159,16 @@ function AulaCard({
             </p>
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
+                <SecondaryButton
+                    type="button"
+                    onClick={() => setPreviaAbierta(true)}
+                    disabled={total === 0}
+                    className="inline-flex items-center gap-2 !text-[12px]"
+                >
+                    <EyeIcon className="size-4" />
+                    Vista previa
+                </SecondaryButton>
+
                 <a
                     href={route('horarios.aulas.exportar', aula)}
                     className="inline-flex items-center gap-2 rounded-xl border border-brand-border px-3 py-2 text-[12px] font-semibold uppercase tracking-widest text-brand-ink transition hover:bg-brand-hover"
@@ -82,6 +198,14 @@ function AulaCard({
                     </>
                 )}
             </div>
+
+            <Modal
+                show={previaAbierta}
+                onClose={() => setPreviaAbierta(false)}
+                maxWidth="lg"
+            >
+                <VistaPreviaHorario aula={aula} horarios={horarios} />
+            </Modal>
         </div>
     );
 }
@@ -135,11 +259,12 @@ export default function Index({
                     )}
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {aulas.map(({ aula, total }) => (
+                        {aulas.map(({ aula, total, horarios }) => (
                             <AulaCard
                                 key={aula}
                                 aula={aula}
                                 total={total}
+                                horarios={horarios}
                                 canManage={can.manage}
                             />
                         ))}

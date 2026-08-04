@@ -99,6 +99,7 @@ type DashboardProps =
           view: 'estudiante';
           clima: Clima | null;
           stats: EstudianteStats;
+          studentCarrera: string | null;
           myCourses: Course[];
           myGrades: Grade[];
           evaluacionesCalendario: Evaluation[];
@@ -680,7 +681,7 @@ function MisCursosCard({ courses }: { courses: Course[] }) {
     );
 
     return (
-        <ListCard title="Mis cursos">
+        <ListCard title="Mis secciones">
             <div key={page} className="animate-fade-in-soft">
                 {visibles.map((course) => (
                     <div
@@ -689,13 +690,13 @@ function MisCursosCard({ courses }: { courses: Course[] }) {
                         style={{ borderColor: 'var(--brand-border-faint)' }}
                     >
                         <div
-                            className="text-sm font-medium"
+                            className="truncate text-sm font-medium"
                             style={{ color: 'var(--brand-ink-strong)' }}
                         >
                             {course.name} — {course.subject?.name}
                         </div>
                         <div
-                            className="text-[13px]"
+                            className="truncate text-[13px]"
                             style={{ color: 'var(--brand-muted-soft)' }}
                         >
                             {course.teacher
@@ -705,7 +706,7 @@ function MisCursosCard({ courses }: { courses: Course[] }) {
                     </div>
                 ))}
                 {courses.length === 0 && (
-                    <EmptyRow>No tienes cursos matriculados.</EmptyRow>
+                    <EmptyRow>No tienes secciones matriculadas.</EmptyRow>
                 )}
             </div>
             <CardPager
@@ -780,18 +781,18 @@ function MisCalificacionesCard({ grades }: { grades: Grade[] }) {
                 {visibles.map((grade) => (
                     <div
                         key={grade.id}
-                        className="flex items-center justify-between border-b py-3 last:border-b-0"
+                        className="flex items-center justify-between gap-3 border-b py-3 last:border-b-0"
                         style={{ borderColor: 'var(--brand-border-faint)' }}
                     >
                         <div
-                            className="text-sm"
+                            className="min-w-0 flex-1 truncate text-sm"
                             style={{ color: 'var(--brand-ink-strong)' }}
                         >
                             {grade.evaluation?.name} —{' '}
                             {grade.evaluation?.course?.subject?.name}
                         </div>
                         <div
-                            className="text-sm font-semibold"
+                            className="shrink-0 text-sm font-semibold"
                             style={{ color: 'var(--brand-ink-strong)' }}
                         >
                             {grade.score}
@@ -845,16 +846,16 @@ function MatriculasRecientesCard({
                             size="size-[38px]"
                             iconSize="size-5"
                         />
-                        <div>
+                        <div className="min-w-0 flex-1">
                             <div
-                                className="font-medium"
+                                className="truncate font-medium"
                                 style={{ color: 'var(--brand-ink-strong)' }}
                             >
                                 {enrollment.student?.first_name}{' '}
                                 {enrollment.student?.last_name}
                             </div>
                             <div
-                                className="text-[13px]"
+                                className="truncate text-[13px]"
                                 style={{ color: 'var(--brand-muted-soft)' }}
                             >
                                 {enrollment.course?.subject?.name} —{' '}
@@ -1448,7 +1449,13 @@ function EvaluacionesCalendarCard({
     );
 }
 
-function DashboardHeader({ title }: { title: string }) {
+function DashboardHeader({
+    title,
+    subtitle,
+}: {
+    title: string;
+    subtitle?: string | null;
+}) {
     const { auth } = usePage<PageProps>().props;
 
     return (
@@ -1489,11 +1496,21 @@ function DashboardHeader({ title }: { title: string }) {
                         {initials(auth.user.name)}
                     </div>
                 )}
-                <div
-                    className="text-sm font-medium"
-                    style={{ color: 'var(--brand-ink-soft)' }}
-                >
-                    Bienvenido/a, {auth.user.name}
+                <div>
+                    <div
+                        className="text-sm font-medium"
+                        style={{ color: 'var(--brand-ink-soft)' }}
+                    >
+                        Bienvenido/a, {auth.user.name}
+                    </div>
+                    {subtitle && (
+                        <div
+                            className="text-xs"
+                            style={{ color: 'var(--brand-muted-soft)' }}
+                        >
+                            {subtitle}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -1513,7 +1530,14 @@ export default function Dashboard(props: DashboardProps) {
                 }}
             >
                 <div className="mx-auto max-w-7xl">
-                    <DashboardHeader title="Dashboard" />
+                    <DashboardHeader
+                        title="Dashboard"
+                        subtitle={
+                            props.view === 'estudiante'
+                                ? props.studentCarrera
+                                : null
+                        }
+                    />
 
                     {props.view === 'staff' && (
                         <div className="space-y-5">
@@ -1540,14 +1564,14 @@ export default function Dashboard(props: DashboardProps) {
                                     icon={<BriefcaseIcon className="size-7" />}
                                 />
                                 <ColorStat
-                                    label="Materias"
+                                    label="Cursos"
                                     value={props.stats.subjects}
                                     href={route('subjects.index')}
                                     iconColor="var(--stat-icon-green)"
                                     icon={<BookOpenIcon className="size-7" />}
                                 />
                                 <ColorStat
-                                    label="Cursos"
+                                    label="Secciones"
                                     value={props.stats.courses}
                                     href={route('courses.index')}
                                     iconColor="var(--stat-icon-amber)"
@@ -1582,7 +1606,7 @@ export default function Dashboard(props: DashboardProps) {
 
                             <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                                 <ColorStat
-                                    label="Mis cursos"
+                                    label="Mis secciones"
                                     value={props.stats.courses}
                                     href={route('courses.index')}
                                     iconColor="var(--stat-icon-blue)"
@@ -1628,7 +1652,7 @@ export default function Dashboard(props: DashboardProps) {
 
                             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                 <ColorStat
-                                    label="Mis cursos"
+                                    label="Mis secciones"
                                     value={props.stats.courses}
                                     href="#mis-cursos"
                                     iconColor="var(--stat-icon-blue)"

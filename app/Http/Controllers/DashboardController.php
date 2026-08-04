@@ -232,6 +232,8 @@ class DashboardController extends Controller
 
     private function estudianteDashboard(User $user): Response
     {
+        $student = Student::with('carrera')->find($user->student_id);
+
         $enrollments = Enrollment::with(['course.subject', 'course.teacher'])
             ->where('student_id', $user->student_id)
             ->where('status', 'active')
@@ -252,6 +254,7 @@ class DashboardController extends Controller
                 'courses' => $enrollments->count(),
                 'averageScore' => round((float) Grade::where('student_id', $user->student_id)->avg('score'), 1),
             ],
+            'studentCarrera' => $student?->carrera?->name,
             'myCourses' => $enrollments->pluck('course'),
             'myGrades' => $grades,
             'evaluacionesCalendario' => Evaluation::with('course.subject')
