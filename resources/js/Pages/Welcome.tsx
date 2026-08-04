@@ -1,18 +1,23 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import PrimaryButton from '@/Components/PrimaryButton';
 import ThemeToggleButton from '@/Components/ThemeToggleButton';
 import {
     AcademicCapIcon,
     BanknotesIcon,
     BriefcaseIcon,
+    CheckIcon,
     ClockIcon,
     ComputerDesktopIcon,
     DocumentTextIcon,
+    EnvelopeIcon,
+    MapPinIcon,
+    PhoneIcon,
     ShieldCheckIcon,
     UsersIcon,
 } from '@/Components/Icons';
 import { PageProps } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { ComponentType, ReactNode } from 'react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { ComponentType, FormEventHandler, ReactNode } from 'react';
 
 interface Stats {
     students: number;
@@ -20,9 +25,10 @@ interface Stats {
     subjects: number;
 }
 
-interface SubjectPreview {
+interface CarreraPreview {
     name: string;
-    description: string | null;
+    code: string;
+    total_ciclos: number;
 }
 
 const features = [
@@ -30,16 +36,19 @@ const features = [
         title: 'Gestión académica integral',
         description:
             'Estudiantes, profesores, materias y cursos organizados en un solo lugar, con información siempre actualizada.',
+        icon: UsersIcon,
     },
     {
         title: 'Matrícula y seguimiento',
         description:
             'Matricula estudiantes en sus cursos y da seguimiento a su desempeño a lo largo del período académico.',
+        icon: DocumentTextIcon,
     },
     {
         title: 'Evaluaciones y calificaciones',
         description:
             'Registra evaluaciones, captura calificaciones y consulta promedios de forma clara y ordenada.',
+        icon: CheckIcon,
     },
 ];
 
@@ -111,21 +120,268 @@ function SectionEyebrow({ children }: { children: ReactNode }) {
     );
 }
 
+const contactInfo = [
+    {
+        icon: MapPinIcon,
+        label: 'Dirección',
+        value: 'Block 11 – #1191, Tumán 14601',
+    },
+    {
+        icon: PhoneIcon,
+        label: 'Teléfono',
+        value: '900 512 553',
+        href: 'tel:+51900512553',
+    },
+    {
+        icon: EnvelopeIcon,
+        label: 'Correo',
+        value: 'ieslibertadtuman@gmail.com',
+        href: 'mailto:ieslibertadtuman@gmail.com',
+    },
+    {
+        icon: ClockIcon,
+        label: 'Horario de atención',
+        value: 'Lunes a viernes · 8:00 a.m. – 5:00 p.m.',
+    },
+];
+
+function ContactSection() {
+    const { data, setData, post, processing, errors, wasSuccessful, reset } =
+        useForm({
+            nombre: '',
+            correo: '',
+            asunto: '',
+            mensaje: '',
+        });
+
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+        post(route('contacto.store'), {
+            preserveScroll: true,
+            onSuccess: () => reset(),
+        });
+    };
+
+    return (
+        <section id="contacto" className="bg-brand-surface py-20">
+            <div className="mx-auto max-w-7xl px-6">
+                <SectionEyebrow>Contacto</SectionEyebrow>
+                <p className="mt-2 max-w-2xl text-2xl font-bold tracking-tight text-brand-ink-strong">
+                    ¿Tienes preguntas? Escríbenos
+                </p>
+
+                <div className="mt-12 grid gap-12 lg:grid-cols-2">
+                    <div className="space-y-8">
+                        <dl className="space-y-6">
+                            {contactInfo.map((item) => (
+                                <div key={item.label} className="flex gap-4">
+                                    <item.icon className="mt-0.5 size-6 shrink-0 text-brand-navy" />
+                                    <div>
+                                        <dt className="text-sm font-medium text-brand-muted">
+                                            {item.label}
+                                        </dt>
+                                        <dd className="mt-0.5 text-base font-medium text-brand-ink-strong">
+                                            {item.href ? (
+                                                <a
+                                                    href={item.href}
+                                                    className="hover:text-brand-navy"
+                                                >
+                                                    {item.value}
+                                                </a>
+                                            ) : (
+                                                item.value
+                                            )}
+                                        </dd>
+                                    </div>
+                                </div>
+                            ))}
+                        </dl>
+
+                        <div className="overflow-hidden rounded-[20px] border border-brand-border">
+                            <iframe
+                                title="Ubicación del Instituto Americano Libertad"
+                                src="https://www.google.com/maps?q=Instituto+Libertad+Block+11+%231191+Tum%C3%A1n+14601&output=embed"
+                                className="h-56 w-full"
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6 sm:p-8">
+                        {wasSuccessful ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-center">
+                                <CheckIcon className="size-10 text-brand-navy" />
+                                <p className="mt-4 text-lg font-semibold text-brand-ink-strong">
+                                    ¡Gracias por escribirnos!
+                                </p>
+                                <p className="mt-1 text-sm text-brand-muted">
+                                    Te responderemos a la brevedad.
+                                </p>
+                            </div>
+                        ) : (
+                            <form onSubmit={submit} className="space-y-4">
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-brand-ink-strong">
+                                            Nombre
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.nombre}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'nombre',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            required
+                                            className="w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                        />
+                                        {errors.nombre && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                                {errors.nombre}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-brand-ink-strong">
+                                            Correo
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={data.correo}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'correo',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            required
+                                            className="w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                        />
+                                        {errors.correo && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                                {errors.correo}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-brand-ink-strong">
+                                        Asunto
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={data.asunto}
+                                        onChange={(e) =>
+                                            setData('asunto', e.target.value)
+                                        }
+                                        className="w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-brand-ink-strong">
+                                        Mensaje
+                                    </label>
+                                    <textarea
+                                        value={data.mensaje}
+                                        onChange={(e) =>
+                                            setData('mensaje', e.target.value)
+                                        }
+                                        required
+                                        rows={4}
+                                        className="w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                    />
+                                    {errors.mensaje && (
+                                        <p className="mt-1 text-sm text-red-600">
+                                            {errors.mensaje}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <PrimaryButton
+                                    type="submit"
+                                    disabled={processing}
+                                    className="w-full justify-center"
+                                >
+                                    Enviar mensaje
+                                </PrimaryButton>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
 export default function Welcome({
     auth,
     canLogin,
-    canRegister,
     stats,
-    subjects,
+    carreras,
 }: PageProps<{
     canLogin: boolean;
     canRegister: boolean;
     stats: Stats;
-    subjects: SubjectPreview[];
+    carreras: CarreraPreview[];
 }>) {
+    const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const logoUrl = `${siteUrl}/images/Logo.png`;
+    const description =
+        'Instituto Superior Tecnológico Privado Americano Libertad: educación técnica superior en Enfermería, Farmacia, Administración y Fisioterapia y Rehabilitación. Horarios flexibles y formación práctica orientada al mercado laboral en Trujillo, Perú.';
+
     return (
         <>
-            <Head title="Instituto Americano Libertad" />
+            <Head title="Instituto Americano Libertad">
+                <meta name="description" content={description} />
+                <link rel="canonical" href={siteUrl} />
+
+                <meta property="og:type" content="website" />
+                <meta
+                    property="og:site_name"
+                    content="Instituto Americano Libertad"
+                />
+                <meta
+                    property="og:title"
+                    content="Instituto Americano Libertad"
+                />
+                <meta property="og:description" content={description} />
+                <meta property="og:url" content={siteUrl} />
+                <meta property="og:image" content={logoUrl} />
+                <meta property="og:locale" content="es_PE" />
+
+                <meta name="twitter:card" content="summary" />
+                <meta
+                    name="twitter:title"
+                    content="Instituto Americano Libertad"
+                />
+                <meta name="twitter:description" content={description} />
+                <meta name="twitter:image" content={logoUrl} />
+
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'EducationalOrganization',
+                        name: 'Instituto Superior Tecnológico Privado Americano Libertad',
+                        alternateName: 'Instituto Americano Libertad',
+                        description,
+                        url: siteUrl,
+                        logo: logoUrl,
+                        address: {
+                            '@type': 'PostalAddress',
+                            streetAddress: 'Av. España S/N',
+                            addressLocality: 'Trujillo',
+                            addressCountry: 'PE',
+                        },
+                        telephone: '+51900512553',
+                        email: 'ieslibertadtuman@gmail.com',
+                    })}
+                </script>
+            </Head>
 
             <div className="min-h-screen bg-brand-cream text-brand-ink">
                 <header className="border-b border-brand-border-faint bg-brand-card">
@@ -147,21 +403,19 @@ export default function Welcome({
                                 </Link>
                             ) : (
                                 <>
+                                    <Link
+                                        href={route('admision.create')}
+                                        className="rounded-xl px-4 py-2 text-sm font-medium text-brand-muted transition hover:text-brand-navy"
+                                    >
+                                        Admisión
+                                    </Link>
+                                    <ThemeToggleButton />
                                     {canLogin && (
                                         <Link
                                             href={route('login')}
-                                            className="rounded-xl px-4 py-2 text-sm font-medium text-brand-muted transition hover:text-brand-navy"
-                                        >
-                                            Iniciar sesión
-                                        </Link>
-                                    )}
-                                    <ThemeToggleButton />
-                                    {canRegister && (
-                                        <Link
-                                            href={route('register')}
                                             className="rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-dark"
                                         >
-                                            Registrarse
+                                            Ingresar al sistema
                                         </Link>
                                     )}
                                 </>
@@ -170,7 +424,13 @@ export default function Welcome({
                     </div>
                 </header>
 
-                <section className="relative overflow-hidden bg-brand-navy-dark text-white">
+                <section
+                    className="relative overflow-hidden text-white"
+                    style={{
+                        background:
+                            'linear-gradient(135deg, var(--brand-hero), var(--brand-hero-to))',
+                    }}
+                >
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.35),transparent_55%)]" />
                     <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32">
                         <p className="text-sm font-semibold uppercase tracking-widest text-blue-300">
@@ -186,23 +446,35 @@ export default function Welcome({
                             una enseñanza práctica, innovadora y de calidad.
                         </p>
                         <div className="mt-10 flex flex-wrap items-center gap-4">
+                            {!auth.user && (
+                                <Link
+                                    href={route('admision.create')}
+                                    className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-navy-dark shadow-sm transition hover:bg-blue-50"
+                                >
+                                    Solicita tu admisión
+                                </Link>
+                            )}
                             <Link
                                 href={
                                     auth.user
                                         ? route('dashboard')
                                         : route('login')
                                 }
-                                className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-navy-dark shadow-sm transition hover:bg-blue-50"
+                                className={
+                                    auth.user
+                                        ? 'rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-navy-dark shadow-sm transition hover:bg-blue-50'
+                                        : 'rounded-xl border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10'
+                                }
                             >
                                 {auth.user
                                     ? 'Ir al sistema'
-                                    : 'Ingresar al sistema'}
+                                    : 'Iniciar sesión'}
                             </Link>
                             <a
-                                href="#propuesta"
-                                className="rounded-xl border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                                href="#contacto"
+                                className="text-sm font-semibold text-blue-200 underline-offset-4 transition hover:text-white hover:underline"
                             >
-                                Conocer más
+                                Solicita información →
                             </a>
                         </div>
 
@@ -260,7 +532,10 @@ export default function Welcome({
                     </div>
                 </section>
 
-                <section className="bg-brand-navy py-16 text-white">
+                <section
+                    className="py-16 text-white"
+                    style={{ background: 'var(--brand-hero)' }}
+                >
                     <div className="mx-auto max-w-4xl px-6 text-center">
                         <p className="text-2xl font-bold italic tracking-tight sm:text-3xl">
                             &ldquo;Transformamos tu esfuerzo en
@@ -318,30 +593,43 @@ export default function Welcome({
                 </section>
 
                 <section className="mx-auto max-w-7xl px-6 py-20">
-                    <SectionEyebrow>Nuestra plataforma</SectionEyebrow>
-                    <p className="mt-2 max-w-2xl text-2xl font-bold tracking-tight text-brand-ink-strong">
-                        Todo lo que el instituto necesita para gestionar el
-                        día a día académico
-                    </p>
+                    <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-16">
+                        <div>
+                            <SectionEyebrow>Nuestra plataforma</SectionEyebrow>
+                            <p className="mt-2 text-2xl font-bold tracking-tight text-brand-ink-strong">
+                                Todo lo que el instituto necesita para
+                                gestionar el día a día académico
+                            </p>
+                            <p className="mt-4 text-sm leading-relaxed text-brand-muted">
+                                Un solo sistema para el área académica,
+                                financiera y administrativa del instituto,
+                                pensado para el trabajo diario de docentes y
+                                personal.
+                            </p>
+                        </div>
 
-                    <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                        {features.map((feature) => (
-                            <div
-                                key={feature.title}
-                                className="rounded-[20px] border border-brand-border bg-brand-card p-6"
-                            >
-                                <h3 className="text-lg font-semibold text-brand-ink-strong">
-                                    {feature.title}
-                                </h3>
-                                <p className="mt-3 text-sm leading-relaxed text-brand-muted">
-                                    {feature.description}
-                                </p>
-                            </div>
-                        ))}
+                        <div className="divide-y divide-brand-border-faint border-t border-brand-border-faint">
+                            {features.map((feature) => (
+                                <div
+                                    key={feature.title}
+                                    className="flex items-start gap-4 py-6 first:pt-0"
+                                >
+                                    <feature.icon className="mt-0.5 size-6 shrink-0 text-brand-navy" />
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-brand-ink-strong">
+                                            {feature.title}
+                                        </h3>
+                                        <p className="mt-1 text-sm leading-relaxed text-brand-muted">
+                                            {feature.description}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </section>
 
-                {subjects.length > 0 && (
+                {carreras.length > 0 && (
                     <section
                         id="programas"
                         className="bg-brand-surface py-20"
@@ -349,23 +637,24 @@ export default function Welcome({
                         <div className="mx-auto max-w-7xl px-6">
                             <SectionEyebrow>Oferta académica</SectionEyebrow>
                             <p className="mt-2 max-w-2xl text-2xl font-bold tracking-tight text-brand-ink-strong">
-                                Algunas de nuestras materias
+                                Nuestras carreras técnicas
                             </p>
 
-                            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                {subjects.map((subject) => (
+                            <div className="mt-12 overflow-hidden rounded-[20px] border border-brand-border bg-brand-card shadow-sm">
+                                {carreras.map((carrera) => (
                                     <div
-                                        key={subject.name}
-                                        className="rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-sm"
+                                        key={carrera.name}
+                                        className="flex items-center justify-between gap-4 border-b border-brand-border-faint px-6 py-5 last:border-b-0 sm:px-8"
                                     >
-                                        <h3 className="text-base font-semibold text-brand-ink-strong">
-                                            {subject.name}
-                                        </h3>
-                                        {subject.description && (
-                                            <p className="mt-2 text-sm text-brand-muted">
-                                                {subject.description}
-                                            </p>
-                                        )}
+                                        <div className="flex items-center gap-4">
+                                            <AcademicCapIcon className="size-6 shrink-0 text-brand-navy" />
+                                            <h3 className="text-base font-semibold text-brand-ink-strong">
+                                                {carrera.name}
+                                            </h3>
+                                        </div>
+                                        <span className="shrink-0 text-sm text-brand-muted">
+                                            {carrera.total_ciclos} ciclos
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -373,14 +662,16 @@ export default function Welcome({
                     </section>
                 )}
 
+                <ContactSection />
+
                 <footer className="border-t border-brand-border-faint bg-brand-card">
                     <div className="mx-auto max-w-7xl space-y-4 px-6 py-10 text-sm text-brand-muted">
                         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
                             <div className="flex items-center gap-2">
-                                <DocumentTextIcon className="size-4 shrink-0" />
+                                <MapPinIcon className="size-4 shrink-0" />
                                 <span>
-                                    Sector Pampa el Toro III – Carretera
-                                    Costado de Hospedaje la Hacienda.
+                                    Block 11 – #1191, Tumán 14601 · 900 512
+                                    553
                                 </span>
                             </div>
                             {canLogin && (

@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\AdmissionApplicationController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CarreraController;
+use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CuotaController;
 use App\Http\Controllers\DashboardController;
@@ -25,6 +27,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\UserController;
+use App\Models\Carrera;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
@@ -40,9 +43,18 @@ Route::get('/', function () {
             'teachers' => Teacher::count(),
             'subjects' => Subject::count(),
         ],
-        'subjects' => Subject::orderBy('name')->limit(6)->get(['name', 'description']),
+        'carreras' => Carrera::orderBy('name')->get(['name', 'code', 'total_ciclos']),
     ]);
 });
+
+Route::post('/contacto', [ContactMessageController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('contacto.store');
+
+Route::get('/admision', [AdmissionApplicationController::class, 'create'])->name('admision.create');
+Route::post('/admision', [AdmissionApplicationController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('admision.store');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
