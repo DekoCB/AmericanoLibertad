@@ -27,11 +27,10 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     private const CARRERAS = [
-        ['name' => 'Enfermería Técnica', 'code' => 'ENF'],
-        ['name' => 'Farmacia Técnica', 'code' => 'FAR'],
-        ['name' => 'Administración de Empresas', 'code' => 'ADM'],
-        ['name' => 'Contabilidad', 'code' => 'CON'],
-        ['name' => 'Auxiliar en Educación', 'code' => 'AED'],
+        ['name' => 'Enfermería', 'code' => 'ENF'],
+        ['name' => 'Farmacia', 'code' => 'FAR'],
+        ['name' => 'Administración', 'code' => 'ADM'],
+        ['name' => 'Fisioterapia y Rehabilitación', 'code' => 'FIS'],
     ];
 
     /**
