@@ -556,43 +556,26 @@ export default function AdmisionIndex({
                                                         errors.carrera_id
                                                     }
                                                 >
-                                                    <select
-                                                        required
-                                                        className={
-                                                            inputClass
-                                                        }
+                                                    <SelectMenu
                                                         value={
                                                             data.carrera_id
                                                         }
-                                                        onChange={(e) =>
+                                                        onChange={(value) =>
                                                             setData(
                                                                 'carrera_id',
-                                                                e.target
-                                                                    .value,
+                                                                value,
                                                             )
                                                         }
-                                                    >
-                                                        <option value="">
-                                                            Selecciona una
-                                                            carrera
-                                                        </option>
-                                                        {carreras.map(
-                                                            (carrera) => (
-                                                                <option
-                                                                    key={
-                                                                        carrera.id
-                                                                    }
-                                                                    value={
-                                                                        carrera.id
-                                                                    }
-                                                                >
-                                                                    {
-                                                                        carrera.name
-                                                                    }
-                                                                </option>
-                                                            ),
+                                                        placeholder="Selecciona una carrera"
+                                                        options={carreras.map(
+                                                            (carrera) => ({
+                                                                value: String(
+                                                                    carrera.id,
+                                                                ),
+                                                                label: carrera.name,
+                                                            }),
                                                         )}
-                                                    </select>
+                                                    />
                                                 </Field>
                                                 <Field label="Turno preferido" required>
                                                     <SelectMenu
