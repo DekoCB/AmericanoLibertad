@@ -3,7 +3,7 @@ import DateInput from '@/Components/DateInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SelectMenu from '@/Components/SelectMenu';
 import ThemeToggleButton from '@/Components/ThemeToggleButton';
-import { CheckIcon } from '@/Components/Icons';
+import { CheckIcon, ChevronLeftIcon } from '@/Components/Icons';
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
     cloneElement,
@@ -266,6 +266,14 @@ export default function AdmisionIndex({
                 </div>
 
                 <div className="mx-auto max-w-4xl px-6 py-12">
+                    <Link
+                        href="/"
+                        className="mb-4 flex items-center gap-1 text-sm text-brand-muted transition hover:text-brand-navy"
+                    >
+                        <ChevronLeftIcon className="size-4" />
+                        Volver a inicio
+                    </Link>
+
                     <p className="text-sm font-semibold uppercase tracking-widest text-brand-navy">
                         Admisión {new Date().getFullYear()}
                     </p>

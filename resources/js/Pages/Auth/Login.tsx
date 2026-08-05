@@ -127,6 +127,14 @@ export default function Login({
 
             {!selectedOption ? (
                 <>
+                    <Link
+                        href="/"
+                        className="mb-4 flex items-center gap-1 text-sm text-brand-muted transition hover:text-brand-navy"
+                    >
+                        <ChevronLeftIcon className="size-4" />
+                        Volver a inicio
+                    </Link>
+
                     <h2 className="mb-1 text-lg font-bold text-brand-ink-strong">
                         Iniciar sesión
                     </h2>
