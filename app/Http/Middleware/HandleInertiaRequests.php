@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\UserRole;
+use App\Models\AdmissionApplication;
 use App\Models\Carrera;
 use App\Models\Course;
 use App\Models\Egreso;
@@ -51,6 +52,7 @@ class HandleInertiaRequests extends Middleware
                     'subjects' => $user->can('viewAny', Subject::class),
                     'courses' => $user->can('viewAny', Course::class),
                     'carreras' => $user->can('viewAny', Carrera::class) && $user->role !== UserRole::Estudiante,
+                    'admisiones' => $user->can('viewAny', AdmissionApplication::class),
                     'matriculas' => $user->can('viewAny', Matricula::class),
                     'caja' => $user->can('viewAny', Egreso::class),
                     'reportes' => $user->can('viewAny', Egreso::class),

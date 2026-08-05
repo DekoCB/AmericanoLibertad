@@ -585,3 +585,15 @@ export function ScaleIcon(props: IconProps) {
         </Base>
     );
 }
+
+export function InboxIcon(props: IconProps) {
+    return (
+        <Base {...props}>
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25M3 8.25l2.489-4.978A1.5 1.5 0 0 1 6.809 2.5h10.382a1.5 1.5 0 0 1 1.32.772L21 8.25M3 8.25h18M8.25 8.25v3a3.75 3.75 0 0 0 7.5 0v-3"
+            />
+        </Base>
+    );
+}

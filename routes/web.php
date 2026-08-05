@@ -66,6 +66,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('users', UserController::class)->except('show');
     Route::resource('carreras', CarreraController::class)->except('show');
 
+    Route::get('admisiones', [AdmissionApplicationController::class, 'index'])->name('admisiones.index');
+    Route::patch('admisiones/{admissionApplication}/estado', [AdmissionApplicationController::class, 'updateEstado'])->name('admisiones.estado');
+    Route::delete('admisiones/{admissionApplication}', [AdmissionApplicationController::class, 'destroy'])->name('admisiones.destroy');
+    Route::get('admisiones/{admissionApplication}/documentos/{campo}', [AdmissionApplicationController::class, 'descargarDocumento'])->name('admisiones.documentos');
+
     Route::resource('matriculas', MatriculaController::class)->except('edit');
     Route::post('matriculas/{matricula}/cuotas', [CuotaController::class, 'store'])->name('matriculas.cuotas.store');
     Route::delete('matriculas/{matricula}/cuotas/{cuota}', [CuotaController::class, 'destroy'])->name('matriculas.cuotas.destroy');

@@ -23,6 +23,7 @@ export interface NavPermissions {
     subjects: boolean;
     courses: boolean;
     carreras: boolean;
+    admisiones: boolean;
     matriculas: boolean;
     caja: boolean;
     reportes: boolean;

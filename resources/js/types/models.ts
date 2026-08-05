@@ -9,6 +9,41 @@ export interface Carrera {
     subjects_count?: number;
 }
 
+export interface AdmissionApplication {
+    id: number;
+    apellido_paterno: string;
+    apellido_materno: string;
+    nombres: string;
+    dni: string;
+    sexo: 'masculino' | 'femenino';
+    fecha_nacimiento: string | null;
+    telefono: string | null;
+    correo: string | null;
+    carrera_id: number;
+    turno: Turno;
+    colegio_procedencia: string | null;
+    lugar_procedencia: string | null;
+    apoderado_nombres: string | null;
+    apoderado_dni: string | null;
+    apoderado_parentesco: string | null;
+    apoderado_telefono: string | null;
+    apoderado_correo: string | null;
+    documento_dni_path: string | null;
+    documento_certificado_path: string | null;
+    documento_partida_path: string | null;
+    documento_foto_path: string | null;
+    estado: 'pendiente' | 'revisado' | 'aceptado' | 'rechazado';
+    created_at: string;
+    carrera?: Carrera;
+}
+
+export const admisionEstadoLabels: Record<AdmissionApplication['estado'], string> = {
+    pendiente: 'Pendiente',
+    revisado: 'Revisado',
+    aceptado: 'Aceptado',
+    rechazado: 'Rechazado',
+};
+
 export interface Student {
     id: number;
     document_number: string;

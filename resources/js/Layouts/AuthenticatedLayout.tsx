@@ -23,6 +23,7 @@ import {
     CreditCardIcon,
     DocumentTextIcon,
     HomeIcon,
+    InboxIcon,
     MoonIcon,
     QrCodeIcon,
     QuestionMarkCircleIcon,
@@ -174,6 +175,7 @@ function SidebarNav({
             nav?.subjects ||
             nav?.courses ||
             nav?.carreras ||
+            nav?.admisiones ||
             nav?.horarios ||
             nav?.asistencias ||
             nav?.aulaVirtual,
@@ -230,6 +232,16 @@ function SidebarNav({
                             icon={<AcademicCapIcon />}
                         >
                             Carreras
+                        </SidebarLink>
+                    )}
+                    {nav?.admisiones && (
+                        <SidebarLink
+                            href={route('admisiones.index')}
+                            active={route().current('admisiones.*')}
+                            collapsed={collapsed}
+                            icon={<InboxIcon />}
+                        >
+                            Solicitudes de admisión
                         </SidebarLink>
                     )}
                     {nav?.subjects && (
