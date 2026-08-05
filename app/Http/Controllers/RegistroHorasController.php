@@ -70,9 +70,13 @@ class RegistroHorasController extends Controller
             'registros' => $registros,
             'pendientesPorDocente' => $pendientesPorDocente,
             'teachers' => $user->hasRole(UserRole::Docente) ? [] : Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'courses' => $user->hasRole(UserRole::Docente)
-                ? Course::where('teacher_id', $user->teacher_id)->orderBy('name')->get(['id', 'name'])
-                : Course::orderBy('name')->get(['id', 'name']),
+            'courses' => Course::with('subject:id,name,ciclo')
+                ->when(
+                    $user->hasRole(UserRole::Docente),
+                    fn ($query) => $query->where('teacher_id', $user->teacher_id)
+                )
+                ->orderBy('name')
+                ->get(['id', 'name', 'subject_id', 'teacher_id']),
             'filters' => $request->only('teacher_id'),
             'can' => [
                 'generarPago' => $user->can('generarPago', RegistroHoras::class),

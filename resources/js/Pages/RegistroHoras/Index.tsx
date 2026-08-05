@@ -118,7 +118,7 @@ export default function Index({
     registros: Paginated<RegistroHoras>;
     pendientesPorDocente: Pendiente[];
     teachers: Pick<Teacher, 'id' | 'first_name' | 'last_name'>[];
-    courses: Pick<Course, 'id' | 'name'>[];
+    courses: Pick<Course, 'id' | 'name' | 'teacher_id' | 'subject'>[];
     filters: { teacher_id?: string };
     can: { generarPago: boolean };
 }) {
@@ -135,6 +135,23 @@ export default function Index({
         minutos_tardanza: '0',
         nota: '',
     });
+
+    const seccionOptions = useMemo(() => {
+        const cursosDelDocente = isDocente
+            ? courses
+            : courses.filter(
+                  (course) => String(course.teacher_id) === data.teacher_id,
+              );
+
+        return cursosDelDocente.map((course) => ({
+            value: String(course.id),
+            label: `${course.subject?.name ?? 'Sin curso'} — ${course.name}${
+                course.subject?.ciclo
+                    ? ` (Ciclo ${course.subject.ciclo})`
+                    : ''
+            }`,
+        }));
+    }, [courses, isDocente, data.teacher_id]);
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -244,7 +261,10 @@ export default function Index({
                                         id="teacher_id"
                                         className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                         value={data.teacher_id}
-                                        onChange={(e) => setData('teacher_id', e.target.value)}
+                                        onChange={(e) => {
+                                            setData('teacher_id', e.target.value);
+                                            setData('course_id', '');
+                                        }}
                                     >
                                         <option value="">Seleccionar...</option>
                                         {teachers.map((teacher) => (
@@ -258,19 +278,21 @@ export default function Index({
                             )}
                             <div>
                                 <InputLabel htmlFor="course_id" value="Sección (opcional)" />
-                                <select
-                                    id="course_id"
-                                    className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                                    value={data.course_id}
-                                    onChange={(e) => setData('course_id', e.target.value)}
-                                >
-                                    <option value="">Sin especificar</option>
-                                    {courses.map((course) => (
-                                        <option key={course.id} value={course.id}>
-                                            {course.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="mt-1">
+                                    <SearchableSelect
+                                        value={data.course_id}
+                                        onChange={(value) =>
+                                            setData('course_id', value)
+                                        }
+                                        placeholder={
+                                            !isDocente && !data.teacher_id
+                                                ? 'Selecciona un docente primero'
+                                                : 'Buscar sección...'
+                                        }
+                                        allLabel="Sin especificar"
+                                        options={seccionOptions}
+                                    />
+                                </div>
                             </div>
                             <div>
                                 <InputLabel htmlFor="fecha" value="Fecha" />
