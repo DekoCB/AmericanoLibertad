@@ -1,12 +1,13 @@
 import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import { Course, Evaluation } from '@/types/models';
+import { Course, Evaluation, evaluationTypeLabels } from '@/types/models';
 
 export default function Form({
     course,
@@ -57,22 +58,21 @@ export default function Form({
 
                 <div>
                     <InputLabel htmlFor="type" value="Tipo" />
-                    <select
-                        id="type"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.type}
-                        onChange={(e) =>
-                            setData(
-                                'type',
-                                e.target.value as Evaluation['type'],
-                            )
-                        }
-                    >
-                        <option value="exam">Examen</option>
-                        <option value="quiz">Quiz</option>
-                        <option value="homework">Tarea</option>
-                        <option value="project">Proyecto</option>
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="type"
+                            value={data.type}
+                            onChange={(value) =>
+                                setData(
+                                    'type',
+                                    value as Evaluation['type'],
+                                )
+                            }
+                            options={Object.entries(evaluationTypeLabels).map(
+                                ([value, label]) => ({ value, label }),
+                            )}
+                        />
+                    </div>
                     <InputError message={errors.type} className="mt-2" />
                 </div>
 

@@ -51,7 +51,7 @@ class MatriculaController extends Controller
             'can' => [
                 'create' => $request->user()->can('create', Matricula::class),
                 'delete' => $request->user()->hasRole(UserRole::Gerencia),
-                'manage' => $request->user()->hasRole(UserRole::Gerencia, UserRole::Administrativo),
+                'manage' => $request->user()->hasRole(UserRole::Gerencia),
                 'registerPayment' => $request->user()->can('create', Pago::class),
             ],
         ]);

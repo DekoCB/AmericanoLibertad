@@ -312,7 +312,7 @@
 
         <div class="info-adicional">
             <p><strong>Información adicional</strong></p>
-            <p><strong>Vendedor:</strong> Administración</p>
+            <p><strong>Vendedor:</strong> {{ $egreso->registradoPor?->name ?? '-' }}</p>
         </div>
 
         <p class="footer">Gracias por su servicio</p>

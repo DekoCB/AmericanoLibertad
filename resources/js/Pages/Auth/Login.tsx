@@ -32,7 +32,7 @@ const roleOptions: {
     },
     {
         value: 'administrativo',
-        label: 'Administrativo',
+        label: 'Secretaría',
         description: 'Gestión financiera y matrículas',
         icon: BriefcaseIcon,
     },

@@ -3,11 +3,11 @@ import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import { ChevronDownIcon, TrashIcon } from '@/Components/Icons';
-import { Disclosure, Transition } from '@headlessui/react';
+import { TrashIcon } from '@/Components/Icons';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent, useMemo, useRef, useState } from 'react';
 import {
@@ -33,8 +33,19 @@ const evaluacionBadge: Record<Evaluation['type'], string> = {
     project: 'bg-violet-100 text-violet-800',
 };
 
-const SIN_SEMANA = 'sin-semana';
 const TOTAL_SEMANAS = 16;
+
+interface ResumenSemana {
+    semana: number | 'general';
+    total: number;
+}
+
+interface AlertaRecurso {
+    id: number;
+    titulo: string;
+    fecha_entrega: string;
+    semana: number | null;
+}
 
 function parseFechaLocal(fecha: string): Date {
     const [y, m, d] = fecha.slice(0, 10).split('-').map(Number);
@@ -123,18 +134,16 @@ function RecursoForm({
                 </div>
                 <div>
                     <InputLabel htmlFor="tipo" value="Tipo" />
-                    <select
-                        id="tipo"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.tipo}
-                        onChange={(e) => setData('tipo', e.target.value)}
-                    >
-                        {Object.entries(recursoTipoLabels).map(([value, label]) => (
-                            <option key={value} value={value}>
-                                {label}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="tipo"
+                            value={data.tipo}
+                            onChange={(value) => setData('tipo', value)}
+                            options={Object.entries(recursoTipoLabels).map(
+                                ([value, label]) => ({ value, label }),
+                            )}
+                        />
+                    </div>
                 </div>
                 <div className="sm:col-span-2">
                     <InputLabel htmlFor="titulo" value="Título" />
@@ -243,18 +252,13 @@ function RecursoItem({
     recurso,
     canManage,
     onDelete,
-    anchorId,
 }: {
     recurso: RecursoAula;
     canManage: boolean;
     onDelete: (id: number) => void;
-    anchorId?: string;
 }) {
     return (
-        <li
-            id={anchorId}
-            className="scroll-mt-20 rounded-md border border-brand-border p-4"
-        >
+        <li className="rounded-md border border-brand-border p-4">
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -459,91 +463,73 @@ function EvaluacionItem({
     );
 }
 
-function NavegacionSemanas({
-    porSemana,
+function SemanasNav({
+    course,
+    resumenSemanas,
+    semanaActual,
 }: {
-    porSemana: [number | typeof SIN_SEMANA, RecursoAula[]][];
+    course: Course;
+    resumenSemanas: ResumenSemana[];
+    semanaActual: number | null;
 }) {
     return (
         <div className="space-y-3">
             <h3 className="text-lg font-bold text-brand-ink-strong">
                 Contenido de la sección
             </h3>
-            <div className="divide-y divide-brand-border-faint rounded-[20px] border border-brand-border bg-brand-card">
-                {porSemana.map(([semana, items]) => (
-                    <Disclosure
-                        key={semana}
-                        as="div"
-                        defaultOpen
-                        className="p-4"
-                    >
-                        {({ open }) => (
-                            <>
-                                <div className="flex items-center gap-2">
-                                    <Disclosure.Button
-                                        className="rounded p-0.5 text-brand-ink-strong transition hover:bg-brand-hover"
-                                        aria-label={
-                                            open
-                                                ? 'Contraer'
-                                                : 'Expandir'
-                                        }
+            <ul className="max-h-[70vh] divide-y divide-brand-border-faint overflow-y-auto rounded-[20px] border border-brand-border bg-brand-card">
+                {resumenSemanas.map(({ semana, total }) => {
+                    const isActive =
+                        semana === 'general'
+                            ? semanaActual === null
+                            : semanaActual === semana;
+
+                    return (
+                        <li key={semana}>
+                            <Link
+                                href={route('aula-virtual.show', {
+                                    course: course.id,
+                                    semana,
+                                })}
+                                preserveScroll
+                                className={`flex items-center justify-between px-4 py-2.5 text-sm transition ${
+                                    isActive
+                                        ? 'bg-brand-navy font-semibold text-white'
+                                        : 'text-brand-ink hover:bg-brand-hover'
+                                }`}
+                            >
+                                <span>
+                                    {semana === 'general'
+                                        ? 'General'
+                                        : `Semana ${semana}`}
+                                </span>
+                                {total > 0 && (
+                                    <span
+                                        className={`rounded-full px-2 py-0.5 text-xs ${
+                                            isActive
+                                                ? 'bg-white/20'
+                                                : 'bg-brand-cream text-brand-muted'
+                                        }`}
                                     >
-                                        <ChevronDownIcon
-                                            className={`size-4 shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-                                        />
-                                    </Disclosure.Button>
-                                    <a
-                                        href={`#semana-${semana}`}
-                                        className="font-medium text-brand-ink-strong hover:text-brand-link hover:underline"
-                                    >
-                                        {semana === SIN_SEMANA
-                                            ? 'General'
-                                            : `Semana ${semana}`}
-                                    </a>
-                                </div>
-                                <Transition
-                                    as="div"
-                                    show={open}
-                                    enter="transition-all duration-300 ease-out"
-                                    enterFrom="opacity-0 max-h-0"
-                                    enterTo="opacity-100 max-h-96"
-                                    leave="transition-all duration-200 ease-in"
-                                    leaveFrom="opacity-100 max-h-96"
-                                    leaveTo="opacity-0 max-h-0"
-                                    className="overflow-hidden"
-                                >
-                                    <Disclosure.Panel static>
-                                        <ul className="ml-6 mt-2 space-y-1 border-l border-brand-border-faint pl-3">
-                                            {items.map((recurso) => (
-                                                <li key={recurso.id}>
-                                                    <a
-                                                        href={`#recurso-${recurso.id}`}
-                                                        className="text-sm text-brand-muted hover:text-brand-link hover:underline"
-                                                    >
-                                                        {recurso.titulo}
-                                                    </a>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </Disclosure.Panel>
-                                </Transition>
-                            </>
-                        )}
-                    </Disclosure>
-                ))}
-            </div>
+                                        {total}
+                                    </span>
+                                )}
+                            </Link>
+                        </li>
+                    );
+                })}
+            </ul>
         </div>
     );
 }
 
-function AlertasPanel({ recursos }: { recursos: RecursoAula[] }) {
+function AlertasPanel({ recursos }: { recursos: AlertaRecurso[] }) {
     const alertas = useMemo(
         () =>
             recursos
-                .filter((r) => r.entregable && r.fecha_entrega)
                 .map((r) => ({
                     recurso: r,
-                    dias: diasRestantes(r.fecha_entrega as string),
+                    dias: diasRestantes(r.fecha_entrega),
                 }))
                 .sort((a, b) => a.dias - b.dias),
         [recursos],
@@ -583,18 +569,21 @@ export default function Show({
     course,
     recursos,
     evaluaciones,
+    alertas,
+    resumenSemanas,
+    semanaActual,
     can,
     isStudent,
 }: {
     course: Course;
     recursos: RecursoAula[];
     evaluaciones: Evaluation[];
+    alertas: AlertaRecurso[];
+    resumenSemanas: ResumenSemana[];
+    semanaActual: number | null;
     can: { manage: boolean };
     isStudent: boolean;
 }) {
-    const [addingTo, setAddingTo] = useState<number | typeof SIN_SEMANA | null>(
-        null,
-    );
     const [addModalOpen, setAddModalOpen] = useState(false);
     const { delete: destroy } = useForm();
 
@@ -603,35 +592,13 @@ export default function Show({
         destroy(route('aula-virtual.destroy', [course.id, recursoId]));
     };
 
-    const porSemana = useMemo(() => {
-        const grupos = new Map<number | typeof SIN_SEMANA, RecursoAula[]>();
-        grupos.set(SIN_SEMANA, []);
-        for (let semana = 1; semana <= TOTAL_SEMANAS; semana++) {
-            grupos.set(semana, []);
-        }
+    const tituloSemana =
+        semanaActual === null ? 'General' : `Semana ${semanaActual}`;
 
-        recursos.forEach((recurso) => {
-            const key = recurso.semana ?? SIN_SEMANA;
-            if (!grupos.has(key)) grupos.set(key, []);
-            grupos.get(key)!.push(recurso);
-        });
-
-        return Array.from(grupos.entries()).sort(([a], [b]) => {
-            if (a === SIN_SEMANA) return -1;
-            if (b === SIN_SEMANA) return 1;
-            return (a as number) - (b as number);
-        });
-    }, [recursos]);
-
-    const evaluacionesPorSemana = useMemo(() => {
-        const grupos = new Map<number, Evaluation[]>();
-        evaluaciones.forEach((evaluacion) => {
-            if (evaluacion.semana == null) return;
-            if (!grupos.has(evaluacion.semana)) grupos.set(evaluacion.semana, []);
-            grupos.get(evaluacion.semana)!.push(evaluacion);
-        });
-        return grupos;
-    }, [evaluaciones]);
+    const indice = semanaActual ?? 0;
+    const semanaAnterior = indice > 1 ? indice - 1 : indice === 1 ? 'general' : null;
+    const semanaSiguiente =
+        semanaActual === null ? 1 : indice < TOTAL_SEMANAS ? indice + 1 : null;
 
     return (
         <AuthenticatedLayout
@@ -649,78 +616,90 @@ export default function Show({
                 </div>
             }
         >
-            <Head title={`Aula virtual — ${course.name}`} />
+            <Head title={`Aula virtual — ${course.name} — ${tituloSemana}`} />
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
                     <div className="flex flex-col gap-6 lg:flex-row">
                         <div className="flex-1 space-y-6">
-                            {porSemana.map(([semana, items]) => {
-                                const evaluacionesSemana =
-                                    semana === SIN_SEMANA
-                                        ? []
-                                        : (evaluacionesPorSemana.get(semana) ??
-                                          []);
-
-                                return (
-                                <div
-                                    key={semana}
-                                    id={`semana-${semana}`}
-                                    className="scroll-mt-20 rounded-[20px] border border-brand-border bg-brand-card p-6"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-bold text-brand-ink-strong">
-                                            {semana === SIN_SEMANA
-                                                ? 'General'
-                                                : `Semana ${semana}`}
-                                        </h3>
-                                        {can.manage && (
-                                            <SecondaryButton
-                                                onClick={() => {
-                                                    setAddingTo(semana);
-                                                    setAddModalOpen(true);
-                                                }}
-                                            >
-                                                Agregar recurso
-                                            </SecondaryButton>
-                                        )}
-                                    </div>
-                                    <ul className="mt-4 space-y-4">
-                                        {items.map((recurso) => (
-                                            <RecursoItem
-                                                key={recurso.id}
-                                                recurso={recurso}
-                                                canManage={can.manage}
-                                                onDelete={deleteRecurso}
-                                                anchorId={`recurso-${recurso.id}`}
-                                            />
-                                        ))}
-                                        {evaluacionesSemana.map((evaluacion) => (
-                                            <EvaluacionItem
-                                                key={`evaluacion-${evaluacion.id}`}
-                                                evaluacion={evaluacion}
-                                                isStudent={isStudent}
-                                                canManage={can.manage}
-                                            />
-                                        ))}
-                                        {items.length === 0 &&
-                                            evaluacionesSemana.length === 0 && (
-                                                <li className="py-2 text-sm text-brand-muted">
-                                                    Sin recursos para esta
-                                                    semana.
-                                                </li>
-                                            )}
-                                    </ul>
+                            <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-bold text-brand-ink-strong">
+                                        {tituloSemana}
+                                    </h3>
+                                    {can.manage && (
+                                        <SecondaryButton
+                                            onClick={() =>
+                                                setAddModalOpen(true)
+                                            }
+                                        >
+                                            Agregar recurso
+                                        </SecondaryButton>
+                                    )}
                                 </div>
-                                );
-                            })}
+                                <ul className="mt-4 space-y-4">
+                                    {recursos.map((recurso) => (
+                                        <RecursoItem
+                                            key={recurso.id}
+                                            recurso={recurso}
+                                            canManage={can.manage}
+                                            onDelete={deleteRecurso}
+                                        />
+                                    ))}
+                                    {evaluaciones.map((evaluacion) => (
+                                        <EvaluacionItem
+                                            key={`evaluacion-${evaluacion.id}`}
+                                            evaluacion={evaluacion}
+                                            isStudent={isStudent}
+                                            canManage={can.manage}
+                                        />
+                                    ))}
+                                    {recursos.length === 0 &&
+                                        evaluaciones.length === 0 && (
+                                            <li className="py-2 text-sm text-brand-muted">
+                                                Sin recursos para esta semana.
+                                            </li>
+                                        )}
+                                </ul>
+
+                                <div className="mt-6 flex items-center justify-between border-t border-brand-border-faint pt-4">
+                                    {semanaAnterior !== null ? (
+                                        <Link
+                                            href={route('aula-virtual.show', {
+                                                course: course.id,
+                                                semana: semanaAnterior,
+                                            })}
+                                            preserveScroll
+                                            className="text-sm text-brand-link hover:underline"
+                                        >
+                                            ← Anterior
+                                        </Link>
+                                    ) : (
+                                        <span />
+                                    )}
+                                    {semanaSiguiente !== null && (
+                                        <Link
+                                            href={route('aula-virtual.show', {
+                                                course: course.id,
+                                                semana: semanaSiguiente,
+                                            })}
+                                            preserveScroll
+                                            className="text-sm text-brand-link hover:underline"
+                                        >
+                                            Siguiente →
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         <div className="w-full space-y-6 lg:w-72 lg:shrink-0">
-                            {isStudent && (
-                                <AlertasPanel recursos={recursos} />
-                            )}
-                            <NavegacionSemanas porSemana={porSemana} />
+                            {isStudent && <AlertasPanel recursos={alertas} />}
+                            <SemanasNav
+                                course={course}
+                                resumenSemanas={resumenSemanas}
+                                semanaActual={semanaActual}
+                            />
                         </div>
                     </div>
                 </div>
@@ -733,19 +712,11 @@ export default function Show({
                 >
                     <div className="p-6">
                         <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
-                            Nuevo recurso
-                            {addingTo !== null &&
-                                addingTo !== SIN_SEMANA &&
-                                ` — Semana ${addingTo}`}
+                            Nuevo recurso — {tituloSemana}
                         </h2>
                         <RecursoForm
-                            key={addingTo ?? 'closed'}
                             course={course}
-                            defaultSemana={
-                                addingTo !== null && addingTo !== SIN_SEMANA
-                                    ? addingTo
-                                    : null
-                            }
+                            defaultSemana={semanaActual}
                             onDone={() => setAddModalOpen(false)}
                         />
                     </div>

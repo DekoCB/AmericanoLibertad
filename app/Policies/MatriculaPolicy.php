@@ -34,7 +34,7 @@ class MatriculaPolicy
 
     public function update(User $user, Matricula $matricula): bool
     {
-        return $this->create($user);
+        return $user->hasRole(UserRole::Gerencia);
     }
 
     public function delete(User $user, Matricula $matricula): bool

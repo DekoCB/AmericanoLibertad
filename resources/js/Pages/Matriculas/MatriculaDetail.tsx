@@ -2,6 +2,7 @@ import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -65,17 +66,19 @@ function PagoForm({ cuota, onDone }: { cuota: Cuota; onDone: () => void }) {
 
                 <div>
                     <InputLabel htmlFor="medio" value="Modalidad de pago" />
-                    <select
-                        id="medio"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.medio}
-                        onChange={(e) => setData('medio', e.target.value)}
-                    >
-                        <option value="efectivo">Efectivo</option>
-                        <option value="yape">Yape</option>
-                        <option value="plin">Plin</option>
-                        <option value="tarjeta">Tarjeta</option>
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="medio"
+                            value={data.medio}
+                            onChange={(value) => setData('medio', value)}
+                            options={[
+                                { value: 'efectivo', label: medioPagoLabels.efectivo },
+                                { value: 'yape', label: medioPagoLabels.yape },
+                                { value: 'plin', label: medioPagoLabels.plin },
+                                { value: 'tarjeta', label: medioPagoLabels.tarjeta },
+                            ]}
+                        />
+                    </div>
                     <InputError message={errors.medio} className="mt-1" />
                 </div>
 
@@ -289,21 +292,21 @@ function EditMatriculaForm({
 
                 <div>
                     <InputLabel htmlFor="turno" value="Turno" />
-                    <select
-                        id="turno"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.turno}
-                        onChange={(e) =>
-                            setData(
-                                'turno',
-                                e.target.value as Matricula['turno'],
-                            )
-                        }
-                    >
-                        <option value="mañana">Mañana</option>
-                        <option value="tarde">Tarde</option>
-                        <option value="noche">Noche</option>
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="turno"
+                            value={data.turno}
+                            onChange={(value) =>
+                                setData(
+                                    'turno',
+                                    value as Matricula['turno'],
+                                )
+                            }
+                            options={Object.entries(turnoLabels).map(
+                                ([value, label]) => ({ value, label }),
+                            )}
+                        />
+                    </div>
                     <InputError message={errors.turno} className="mt-1" />
                 </div>
 

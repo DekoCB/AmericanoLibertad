@@ -56,6 +56,12 @@ class HandleInertiaRequests extends Middleware
                     'matriculas' => $user->can('viewAny', Matricula::class),
                     'caja' => $user->can('viewAny', Egreso::class),
                     'reportes' => $user->can('viewAny', Egreso::class),
+                    'notas' => $user->hasRole(
+                        UserRole::Docente,
+                        UserRole::Gerencia,
+                        UserRole::Coordinador,
+                        UserRole::Academico,
+                    ),
                     'horarios' => $user->can('viewAny', Course::class) || $user->role === UserRole::Estudiante,
                     'asistencias' => $user->can('viewAny', Course::class) || $user->role === UserRole::Estudiante,
                     'aulaVirtual' => true,

@@ -7,7 +7,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import { egresoCategoriaLabels } from '@/types/models';
+import { ingresoManualCategoriaLabels } from '@/types/models';
 
 export default function Form({
     onSuccess,
@@ -18,14 +18,14 @@ export default function Form({
 }) {
     const { data, setData, post, processing, errors } = useForm({
         concepto: '',
-        categoria: 'operativo',
+        categoria: 'otro',
         monto: '',
         fecha: new Date().toISOString().slice(0, 10),
     });
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        post(route('egresos.store'), { onSuccess });
+        post(route('ingresos-manuales.store'), { onSuccess });
     };
 
     return (
@@ -36,7 +36,7 @@ export default function Form({
                     <TextInput
                         id="concepto"
                         className="mt-1 block w-full"
-                        placeholder="Pago de servicios, planilla docente, etc."
+                        placeholder="Donación, alquiler de auditorio, etc."
                         value={data.concepto}
                         onChange={(e) =>
                             setData('concepto', e.target.value)
@@ -55,9 +55,9 @@ export default function Form({
                             onChange={(value) =>
                                 setData('categoria', value)
                             }
-                            options={Object.entries(egresoCategoriaLabels).map(
-                                ([value, label]) => ({ value, label }),
-                            )}
+                            options={Object.entries(
+                                ingresoManualCategoriaLabels,
+                            ).map(([value, label]) => ({ value, label }))}
                         />
                     </div>
                     <InputError
@@ -94,7 +94,7 @@ export default function Form({
 
             <div className="flex items-center gap-4">
                 <PrimaryButton disabled={processing}>
-                    Registrar egreso
+                    Registrar ingreso
                 </PrimaryButton>
                 <SecondaryButton type="button" onClick={onCancel}>
                     Cancelar

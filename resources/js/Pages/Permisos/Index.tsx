@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import Pagination from '@/Components/Pagination';
@@ -81,36 +82,33 @@ export default function Index({
                             {!isDocente && (
                                 <div>
                                     <InputLabel htmlFor="teacher_id" value="Docente" />
-                                    <select
-                                        id="teacher_id"
-                                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                                        value={data.teacher_id}
-                                        onChange={(e) => setData('teacher_id', e.target.value)}
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {teachers.map((teacher) => (
-                                            <option key={teacher.id} value={teacher.id}>
-                                                {teacher.first_name} {teacher.last_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="mt-1">
+                                        <SelectMenu
+                                            id="teacher_id"
+                                            value={data.teacher_id}
+                                            onChange={(value) => setData('teacher_id', value)}
+                                            placeholder="Seleccionar..."
+                                            options={teachers.map((teacher) => ({
+                                                value: String(teacher.id),
+                                                label: `${teacher.first_name} ${teacher.last_name}`,
+                                            }))}
+                                        />
+                                    </div>
                                     <InputError message={errors.teacher_id} className="mt-1" />
                                 </div>
                             )}
                             <div>
                                 <InputLabel htmlFor="tipo" value="Tipo" />
-                                <select
-                                    id="tipo"
-                                    className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                                    value={data.tipo}
-                                    onChange={(e) => setData('tipo', e.target.value)}
-                                >
-                                    {Object.entries(permisoTipoLabels).map(([value, label]) => (
-                                        <option key={value} value={value}>
-                                            {label}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="mt-1">
+                                    <SelectMenu
+                                        id="tipo"
+                                        value={data.tipo}
+                                        onChange={(value) => setData('tipo', value)}
+                                        options={Object.entries(permisoTipoLabels).map(
+                                            ([value, label]) => ({ value, label }),
+                                        )}
+                                    />
+                                </div>
                             </div>
                             <div>
                                 <InputLabel htmlFor="fecha_inicio" value="Desde" />

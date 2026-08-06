@@ -1,13 +1,19 @@
 import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import UserAvatar from '@/Components/UserAvatar';
 import { useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import { Carrera, Student } from '@/types/models';
+import {
+    Carrera,
+    Student,
+    studentStatusLabels,
+    turnoLabels,
+} from '@/types/models';
 
 export default function Form({
     student,
@@ -79,21 +85,21 @@ export default function Form({
 
                 <div>
                     <InputLabel htmlFor="status" value="Estado" />
-                    <select
-                        id="status"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.status}
-                        onChange={(e) =>
-                            setData(
-                                'status',
-                                e.target.value as Student['status'],
-                            )
-                        }
-                    >
-                        <option value="active">Activo</option>
-                        <option value="inactive">Inactivo</option>
-                        <option value="graduated">Graduado</option>
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="status"
+                            value={data.status}
+                            onChange={(value) =>
+                                setData(
+                                    'status',
+                                    value as Student['status'],
+                                )
+                            }
+                            options={Object.entries(studentStatusLabels).map(
+                                ([value, label]) => ({ value, label }),
+                            )}
+                        />
+                    </div>
                     <InputError message={errors.status} className="mt-2" />
                 </div>
 
@@ -179,21 +185,22 @@ export default function Form({
 
                 <div>
                     <InputLabel htmlFor="carrera_id" value="Carrera" />
-                    <select
-                        id="carrera_id"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.carrera_id}
-                        onChange={(e) =>
-                            setData('carrera_id', e.target.value)
-                        }
-                    >
-                        <option value="">Sin asignar</option>
-                        {carreras.map((carrera) => (
-                            <option key={carrera.id} value={carrera.id}>
-                                {carrera.name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="carrera_id"
+                            value={data.carrera_id}
+                            onChange={(value) =>
+                                setData('carrera_id', value)
+                            }
+                            options={[
+                                { value: '', label: 'Sin asignar' },
+                                ...carreras.map((carrera) => ({
+                                    value: String(carrera.id),
+                                    label: carrera.name,
+                                })),
+                            ]}
+                        />
+                    </div>
                     <InputError
                         message={errors.carrera_id}
                         className="mt-2"
@@ -216,17 +223,19 @@ export default function Form({
 
                 <div>
                     <InputLabel htmlFor="turno" value="Turno" />
-                    <select
-                        id="turno"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.turno}
-                        onChange={(e) => setData('turno', e.target.value)}
-                    >
-                        <option value="">Sin asignar</option>
-                        <option value="mañana">Mañana</option>
-                        <option value="tarde">Tarde</option>
-                        <option value="noche">Noche</option>
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="turno"
+                            value={data.turno}
+                            onChange={(value) => setData('turno', value)}
+                            options={[
+                                { value: '', label: 'Sin asignar' },
+                                ...Object.entries(turnoLabels).map(
+                                    ([value, label]) => ({ value, label }),
+                                ),
+                            ]}
+                        />
+                    </div>
                     <InputError message={errors.turno} className="mt-2" />
                 </div>
             </div>

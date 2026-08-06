@@ -152,6 +152,7 @@ export interface Evaluation {
     max_score: number;
     course?: Course;
     grades_count?: number;
+    total_estudiantes?: number;
     preguntas_count?: number;
     mi_intento?: QuizIntento | null;
     mi_entrega?: EntregaEvaluacion | null;
@@ -232,7 +233,7 @@ export const studentStatusLabels: Record<Student['status'], string> = {
 
 export const userRoleLabels: Record<import('.').UserRole, string> = {
     gerencia: 'Gerencia',
-    administrativo: 'Administrativo',
+    administrativo: 'Secretaría',
     coordinador: 'Coordinador',
     academico: 'Académico',
     docente: 'Docente',
@@ -330,6 +331,21 @@ export const medioPagoLabels: Record<Pago['medio'], string> = {
 export const egresoCategoriaLabels: Record<Egreso['categoria'], string> = {
     pago_docente: 'Pago a docente',
     operativo: 'Operativo',
+    otro: 'Otro',
+};
+
+export interface IngresoManual {
+    id: number;
+    concepto: string;
+    categoria: 'donacion' | 'servicio' | 'otro';
+    monto: number;
+    fecha: string;
+    registrado_por: number | null;
+}
+
+export const ingresoManualCategoriaLabels: Record<IngresoManual['categoria'], string> = {
+    donacion: 'Donación',
+    servicio: 'Servicio',
     otro: 'Otro',
 };
 

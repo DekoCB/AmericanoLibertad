@@ -1,5 +1,6 @@
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -44,20 +45,19 @@ export default function Form({
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
                     <InputLabel htmlFor="subject_id" value="Curso" />
-                    <select
-                        id="subject_id"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.subject_id}
-                        onChange={(e) =>
-                            setData('subject_id', Number(e.target.value))
-                        }
-                    >
-                        {subjects.map((subject) => (
-                            <option key={subject.id} value={subject.id}>
-                                {subject.name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="subject_id"
+                            value={String(data.subject_id)}
+                            onChange={(value) =>
+                                setData('subject_id', Number(value))
+                            }
+                            options={subjects.map((subject) => ({
+                                value: String(subject.id),
+                                label: subject.name,
+                            }))}
+                        />
+                    </div>
                     <InputError
                         message={errors.subject_id}
                         className="mt-2"
@@ -66,21 +66,22 @@ export default function Form({
 
                 <div>
                     <InputLabel htmlFor="teacher_id" value="Profesor" />
-                    <select
-                        id="teacher_id"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.teacher_id}
-                        onChange={(e) =>
-                            setData('teacher_id', e.target.value)
-                        }
-                    >
-                        <option value="">Sin asignar</option>
-                        {teachers.map((teacher) => (
-                            <option key={teacher.id} value={teacher.id}>
-                                {teacher.first_name} {teacher.last_name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="teacher_id"
+                            value={String(data.teacher_id)}
+                            onChange={(value) =>
+                                setData('teacher_id', value)
+                            }
+                            options={[
+                                { value: '', label: 'Sin asignar' },
+                                ...teachers.map((teacher) => ({
+                                    value: String(teacher.id),
+                                    label: `${teacher.first_name} ${teacher.last_name}`,
+                                })),
+                            ]}
+                        />
+                    </div>
                     <InputError
                         message={errors.teacher_id}
                         className="mt-2"

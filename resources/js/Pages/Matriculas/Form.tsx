@@ -1,12 +1,13 @@
 import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { useForm } from '@inertiajs/react';
 import { FormEvent, useMemo } from 'react';
-import { Carrera, Student } from '@/types/models';
+import { Carrera, Student, turnoLabels } from '@/types/models';
 
 type StudentOption = Pick<
     Student,
@@ -66,19 +67,18 @@ export default function Form({
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                     <InputLabel htmlFor="student_id" value="Estudiante" />
-                    <select
-                        id="student_id"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.student_id}
-                        onChange={(e) => onStudentChange(e.target.value)}
-                    >
-                        <option value="">Seleccionar...</option>
-                        {students.map((student) => (
-                            <option key={student.id} value={student.id}>
-                                {student.first_name} {student.last_name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="student_id"
+                            value={data.student_id}
+                            onChange={onStudentChange}
+                            placeholder="Seleccionar..."
+                            options={students.map((student) => ({
+                                value: String(student.id),
+                                label: `${student.first_name} ${student.last_name}`,
+                            }))}
+                        />
+                    </div>
                     <InputError
                         message={errors.student_id}
                         className="mt-2"
@@ -87,21 +87,20 @@ export default function Form({
 
                 <div>
                     <InputLabel htmlFor="carrera_id" value="Carrera" />
-                    <select
-                        id="carrera_id"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.carrera_id}
-                        onChange={(e) =>
-                            setData('carrera_id', e.target.value)
-                        }
-                    >
-                        <option value="">Seleccionar...</option>
-                        {carreras.map((carrera) => (
-                            <option key={carrera.id} value={carrera.id}>
-                                {carrera.name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="carrera_id"
+                            value={data.carrera_id}
+                            onChange={(value) =>
+                                setData('carrera_id', value)
+                            }
+                            placeholder="Seleccionar..."
+                            options={carreras.map((carrera) => ({
+                                value: String(carrera.id),
+                                label: carrera.name,
+                            }))}
+                        />
+                    </div>
                     <InputError
                         message={errors.carrera_id}
                         className="mt-2"
@@ -124,17 +123,17 @@ export default function Form({
 
                 <div>
                     <InputLabel htmlFor="turno" value="Turno" />
-                    <select
-                        id="turno"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.turno}
-                        onChange={(e) => setData('turno', e.target.value)}
-                    >
-                        <option value="">Seleccionar...</option>
-                        <option value="mañana">Mañana</option>
-                        <option value="tarde">Tarde</option>
-                        <option value="noche">Noche</option>
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="turno"
+                            value={data.turno}
+                            onChange={(value) => setData('turno', value)}
+                            placeholder="Seleccionar..."
+                            options={Object.entries(turnoLabels).map(
+                                ([value, label]) => ({ value, label }),
+                            )}
+                        />
+                    </div>
                     <InputError message={errors.turno} className="mt-2" />
                 </div>
 

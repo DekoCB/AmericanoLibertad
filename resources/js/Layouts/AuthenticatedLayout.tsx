@@ -16,6 +16,7 @@ import {
     BookOpenIcon,
     BriefcaseIcon,
     CalendarDaysIcon,
+    CheckBadgeIcon,
     ChevronLeftIcon,
     ClockIcon,
     Cog6ToothIcon,
@@ -262,6 +263,19 @@ function SidebarNav({
                             icon={<RectangleStackIcon />}
                         >
                             Secciones
+                        </SidebarLink>
+                    )}
+                    {nav?.notas && (
+                        <SidebarLink
+                            href={route('grades.index')}
+                            active={
+                                route().current('grades.*') ||
+                                route().current('evaluations.grades.*')
+                            }
+                            collapsed={collapsed}
+                            icon={<CheckBadgeIcon />}
+                        >
+                            Notas
                         </SidebarLink>
                     )}
                     {nav?.horarios && (

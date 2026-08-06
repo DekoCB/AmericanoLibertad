@@ -15,6 +15,7 @@ use App\Http\Controllers\EntregaEvaluacionController;
 use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HorarioController;
+use App\Http\Controllers\IngresoManualController;
 use App\Http\Controllers\MatriculaController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\PermisoDocenteController;
@@ -87,6 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ingresos', [PagoController::class, 'index'])->name('ingresos.index');
 
     Route::resource('egresos', EgresoController::class)->except(['show', 'edit', 'update']);
+    Route::resource('ingresos-manuales', IngresoManualController::class)->except(['show', 'edit', 'update', 'create']);
     Route::get('caja', [CajaController::class, 'index'])->name('caja.index');
 
     Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');
@@ -101,6 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('evaluations/{evaluation}', [EvaluationController::class, 'update'])->name('evaluations.update');
     Route::delete('evaluations/{evaluation}', [EvaluationController::class, 'destroy'])->name('evaluations.destroy');
 
+    Route::get('notas', [GradeController::class, 'index'])->name('grades.index');
     Route::get('evaluations/{evaluation}/grades', [GradeController::class, 'edit'])->name('evaluations.grades.edit');
     Route::put('evaluations/{evaluation}/grades', [GradeController::class, 'update'])->name('evaluations.grades.update');
 

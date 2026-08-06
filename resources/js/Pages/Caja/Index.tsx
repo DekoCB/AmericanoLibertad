@@ -3,7 +3,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import PageTitle from '@/Components/PageTitle';
 import { BanknotesIcon, ArrowTrendingUpIcon } from '@/Components/Icons';
 import { Head, Link } from '@inertiajs/react';
-import { Egreso, Pago, medioPagoLabels } from '@/types/models';
+import { Egreso } from '@/types/models';
 import { formatDate } from '@/utils/date';
 
 interface ResumenMes {
@@ -17,6 +17,14 @@ interface Stats {
     egresosHoy: number;
     ingresosMes: number;
     egresosMes: number;
+}
+
+interface IngresoReciente {
+    tipo: 'pago' | 'manual';
+    id: number;
+    fecha: string;
+    descripcion: string;
+    monto: number;
 }
 
 function StatCard({
@@ -65,7 +73,7 @@ export default function Index({
 }: {
     stats: Stats;
     resumenMensual: ResumenMes[];
-    ultimosIngresos: Pago[];
+    ultimosIngresos: IngresoReciente[];
     ultimosEgresos: Egreso[];
 }) {
     return (
@@ -84,6 +92,9 @@ export default function Index({
                         </Link>
                         <Link href={route('egresos.index')}>
                             <PrimaryButton>Ver egresos</PrimaryButton>
+                        </Link>
+                        <Link href={route('ingresos-manuales.index')}>
+                            <PrimaryButton>Otros ingresos</PrimaryButton>
                         </Link>
                     </div>
 
@@ -171,24 +182,29 @@ export default function Index({
                                 Últimos ingresos
                             </h3>
                             <ul className="divide-y divide-brand-border-faint">
-                                {ultimosIngresos.map((pago) => (
-                                    <li key={pago.id} className="py-2">
+                                {ultimosIngresos.map((ingreso) => (
+                                    <li
+                                        key={`${ingreso.tipo}-${ingreso.id}`}
+                                        className="py-2"
+                                    >
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-brand-ink-strong">
-                                                {pago.student
-                                                    ? `${pago.student.first_name} ${pago.student.last_name}`
-                                                    : '—'}
+                                                {ingreso.descripcion}
                                             </span>
                                             <span
                                                 className="font-medium"
                                                 style={{ color: 'var(--money-in)' }}
                                             >
-                                                S/ {Number(pago.monto).toFixed(2)}
+                                                S/{' '}
+                                                {Number(ingreso.monto).toFixed(
+                                                    2,
+                                                )}
                                             </span>
                                         </div>
                                         <div className="text-xs text-brand-muted">
-                                            {formatDate(pago.fecha)} ·{' '}
-                                            {medioPagoLabels[pago.medio]}
+                                            {formatDate(ingreso.fecha)}
+                                            {ingreso.tipo === 'manual' &&
+                                                ' · Otro ingreso'}
                                         </div>
                                     </li>
                                 ))}

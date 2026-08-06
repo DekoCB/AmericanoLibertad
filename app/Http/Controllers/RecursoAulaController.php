@@ -14,6 +14,8 @@ use Inertia\Response;
 
 class RecursoAulaController extends Controller
 {
+    private const TOTAL_SEMANAS = 16;
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -46,36 +48,71 @@ class RecursoAulaController extends Controller
         $user = $request->user();
         $isStudent = $user->hasRole(UserRole::Estudiante);
 
-        $evaluaciones = $course->evaluations()
-            ->whereNotNull('semana')
-            ->orderBy('semana')
-            ->get()
-            ->map(function ($evaluation) use ($user, $isStudent) {
-                $data = $evaluation->toArray();
+        $semanaParam = $request->query('semana', 'general');
+        $semanaActual = $semanaParam === 'general' ? null : (int) $semanaParam;
 
-                if ($evaluation->type === 'quiz') {
-                    $data['preguntas_count'] = $evaluation->quizPreguntas()->count();
+        $evaluaciones = $semanaActual === null
+            ? collect()
+            : $course->evaluations()
+                ->where('semana', $semanaActual)
+                ->orderBy('date')
+                ->get()
+                ->map(function ($evaluation) use ($user, $isStudent) {
+                    $data = $evaluation->toArray();
 
-                    if ($isStudent && $user->student_id) {
-                        $data['mi_intento'] = $evaluation->quizIntentos()
+                    if ($evaluation->type === 'quiz') {
+                        $data['preguntas_count'] = $evaluation->quizPreguntas()->count();
+
+                        if ($isStudent && $user->student_id) {
+                            $data['mi_intento'] = $evaluation->quizIntentos()
+                                ->where('student_id', $user->student_id)
+                                ->first();
+                        }
+                    }
+
+                    if (in_array($evaluation->type, ['homework', 'project'], true) && $isStudent && $user->student_id) {
+                        $data['mi_entrega'] = $evaluation->entregas()
                             ->where('student_id', $user->student_id)
                             ->first();
                     }
-                }
 
-                if (in_array($evaluation->type, ['homework', 'project'], true) && $isStudent && $user->student_id) {
-                    $data['mi_entrega'] = $evaluation->entregas()
-                        ->where('student_id', $user->student_id)
-                        ->first();
-                }
+                    return $data;
+                });
 
-                return $data;
-            });
+        $recursosPorSemana = $course->recursosAula()
+            ->selectRaw('semana, count(*) as total')
+            ->groupBy('semana')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->semana ?? 'general' => $row->total]);
+
+        $evaluacionesPorSemana = $course->evaluations()
+            ->whereNotNull('semana')
+            ->selectRaw('semana, count(*) as total')
+            ->groupBy('semana')
+            ->pluck('total', 'semana');
+
+        $resumenSemanas = collect(['general', ...range(1, self::TOTAL_SEMANAS)])
+            ->map(fn ($semana) => [
+                'semana' => $semana,
+                'total' => ($recursosPorSemana[$semana] ?? 0)
+                    + ($semana === 'general' ? 0 : ($evaluacionesPorSemana[$semana] ?? 0)),
+            ]);
+
+        $alertas = $isStudent
+            ? $course->recursosAula()
+                ->where('entregable', true)
+                ->whereNotNull('fecha_entrega')
+                ->orderBy('fecha_entrega')
+                ->get(['id', 'titulo', 'fecha_entrega', 'semana'])
+            : collect();
 
         return Inertia::render('AulaVirtual/Show', [
             'course' => $course->load(['subject', 'teacher']),
-            'recursos' => $course->recursosAula()->orderBy('semana')->latest()->get(),
+            'recursos' => $course->recursosAula()->where('semana', $semanaActual)->latest()->get(),
             'evaluaciones' => $evaluaciones,
+            'alertas' => $alertas,
+            'resumenSemanas' => $resumenSemanas,
+            'semanaActual' => $semanaActual,
             'can' => [
                 'manage' => $request->user()->can('manage', [RecursoAula::class, $course]),
             ],
@@ -114,7 +151,9 @@ class RecursoAulaController extends Controller
             'creado_por' => $request->user()->id,
         ]);
 
-        return redirect()->route('aula-virtual.show', $course)->with('success', 'Recurso publicado correctamente.');
+        return redirect()
+            ->route('aula-virtual.show', ['course' => $course, 'semana' => $validated['semana'] ?? 'general'])
+            ->with('success', 'Recurso publicado correctamente.');
     }
 
     public function destroy(Course $course, RecursoAula $recurso): RedirectResponse
@@ -125,8 +164,11 @@ class RecursoAulaController extends Controller
             Storage::disk('public')->delete($recurso->archivo);
         }
 
+        $semana = $recurso->semana ?? 'general';
         $recurso->delete();
 
-        return redirect()->route('aula-virtual.show', $course)->with('success', 'Recurso eliminado correctamente.');
+        return redirect()
+            ->route('aula-virtual.show', ['course' => $course, 'semana' => $semana])
+            ->with('success', 'Recurso eliminado correctamente.');
     }
 }

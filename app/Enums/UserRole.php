@@ -15,7 +15,7 @@ enum UserRole: string
     {
         return match ($this) {
             self::Gerencia => 'Gerencia',
-            self::Administrativo => 'Administrativo',
+            self::Administrativo => 'Secretaría',
             self::Coordinador => 'Coordinador',
             self::Academico => 'Académico',
             self::Docente => 'Docente',

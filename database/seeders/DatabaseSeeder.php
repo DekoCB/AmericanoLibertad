@@ -108,7 +108,7 @@ class DatabaseSeeder extends Seeder
         $this->seedPagosDocentes($teachers);
 
         $this->createDemoUser('Gerencia Demo', 'test@example.com', UserRole::Gerencia);
-        $this->createDemoUser('Administrativo Demo', 'administrativo@ejemplo.com', UserRole::Administrativo);
+        $this->createDemoUser('Secretaría Demo', 'administrativo@ejemplo.com', UserRole::Administrativo);
         $this->createDemoUser('Coordinador Demo', 'coordinador@ejemplo.com', UserRole::Coordinador);
         $this->createDemoUser('Académico Demo', 'academico@ejemplo.com', UserRole::Academico);
         $this->createDemoUser('Docente Demo', 'docente@ejemplo.com', UserRole::Docente, teacherId: $demoTeacher?->id);

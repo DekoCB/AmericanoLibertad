@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DateInput from '@/Components/DateInput';
 import InputLabel from '@/Components/InputLabel';
 import QrScanner from '@/Components/QrScanner';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -208,27 +209,24 @@ export default function Index({
                                             </span>
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                                            <select
-                                                className="rounded-md border-brand-border bg-brand-card text-xs shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                                                value={row.asistencia?.estado ?? ''}
-                                                onChange={(e) =>
-                                                    marcarEstado(
-                                                        row.student.id,
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            >
-                                                <option value="" disabled>
-                                                    Marcar...
-                                                </option>
-                                                {Object.entries(asistenciaEstadoLabels).map(
-                                                    ([value, label]) => (
-                                                        <option key={value} value={value}>
-                                                            {label}
-                                                        </option>
-                                                    ),
-                                                )}
-                                            </select>
+                                            <div className="ml-auto w-36">
+                                                <SelectMenu
+                                                    value={row.asistencia?.estado ?? ''}
+                                                    onChange={(value) =>
+                                                        marcarEstado(
+                                                            row.student.id,
+                                                            value,
+                                                        )
+                                                    }
+                                                    placeholder="Marcar..."
+                                                    options={Object.entries(
+                                                        asistenciaEstadoLabels,
+                                                    ).map(([value, label]) => ({
+                                                        value,
+                                                        label,
+                                                    }))}
+                                                />
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

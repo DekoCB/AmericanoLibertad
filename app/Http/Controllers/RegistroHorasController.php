@@ -165,6 +165,8 @@ class RegistroHorasController extends Controller
     {
         abort_unless($egreso->categoria === 'pago_docente', 404);
 
+        $egreso->load('registradoPor');
+
         $registros = $egreso->registrosHoras()
             ->with(['teacher', 'course.subject'])
             ->orderBy('fecha')

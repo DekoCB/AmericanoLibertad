@@ -1,5 +1,6 @@
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -76,20 +77,19 @@ export default function Form({
 
                 <div>
                     <InputLabel htmlFor="role" value="Rol" />
-                    <select
-                        id="role"
-                        className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                        value={data.role}
-                        onChange={(e) =>
-                            setData('role', e.target.value as UserRole)
-                        }
-                    >
-                        {roles.map((role) => (
-                            <option key={role} value={role}>
-                                {userRoleLabels[role]}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="mt-1">
+                        <SelectMenu
+                            id="role"
+                            value={data.role}
+                            onChange={(value) =>
+                                setData('role', value as UserRole)
+                            }
+                            options={roles.map((role) => ({
+                                value: role,
+                                label: userRoleLabels[role],
+                            }))}
+                        />
+                    </div>
                     <InputError message={errors.role} className="mt-2" />
                 </div>
 
@@ -132,21 +132,21 @@ export default function Form({
                             htmlFor="teacher_id"
                             value="Profesor vinculado"
                         />
-                        <select
+                        <SelectMenu
                             id="teacher_id"
-                            className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                            className="mt-1"
                             value={data.teacher_id}
-                            onChange={(e) =>
-                                setData('teacher_id', e.target.value)
+                            onChange={(value) =>
+                                setData('teacher_id', value)
                             }
-                        >
-                            <option value="">Sin vincular</option>
-                            {teachers.map((teacher) => (
-                                <option key={teacher.id} value={teacher.id}>
-                                    {teacher.first_name} {teacher.last_name}
-                                </option>
-                            ))}
-                        </select>
+                            options={[
+                                { value: '', label: 'Sin vincular' },
+                                ...teachers.map((teacher) => ({
+                                    value: String(teacher.id),
+                                    label: `${teacher.first_name} ${teacher.last_name}`,
+                                })),
+                            ]}
+                        />
                         <InputError
                             message={errors.teacher_id}
                             className="mt-2"
@@ -160,21 +160,21 @@ export default function Form({
                             htmlFor="student_id"
                             value="Estudiante vinculado"
                         />
-                        <select
+                        <SelectMenu
                             id="student_id"
-                            className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                            className="mt-1"
                             value={data.student_id}
-                            onChange={(e) =>
-                                setData('student_id', e.target.value)
+                            onChange={(value) =>
+                                setData('student_id', value)
                             }
-                        >
-                            <option value="">Sin vincular</option>
-                            {students.map((student) => (
-                                <option key={student.id} value={student.id}>
-                                    {student.first_name} {student.last_name}
-                                </option>
-                            ))}
-                        </select>
+                            options={[
+                                { value: '', label: 'Sin vincular' },
+                                ...students.map((student) => ({
+                                    value: String(student.id),
+                                    label: `${student.first_name} ${student.last_name}`,
+                                })),
+                            ]}
+                        />
                         <InputError
                             message={errors.student_id}
                             className="mt-2"

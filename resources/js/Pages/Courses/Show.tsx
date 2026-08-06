@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SelectMenu from '@/Components/SelectMenu';
 import { PencilIcon } from '@/Components/Icons';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent, useState } from 'react';
@@ -148,26 +149,25 @@ export default function Show({
                                     onSubmit={submitEnroll}
                                     className="mb-4 flex gap-2"
                                 >
-                                    <select
-                                        className="block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
-                                        value={enrollForm.data.student_id}
-                                        onChange={(e) =>
-                                            enrollForm.setData(
-                                                'student_id',
-                                                Number(e.target.value),
-                                            )
-                                        }
-                                    >
-                                        {availableStudents.map((student) => (
-                                            <option
-                                                key={student.id}
-                                                value={student.id}
-                                            >
-                                                {student.first_name}{' '}
-                                                {student.last_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="flex-1">
+                                        <SelectMenu
+                                            value={String(
+                                                enrollForm.data.student_id,
+                                            )}
+                                            onChange={(value) =>
+                                                enrollForm.setData(
+                                                    'student_id',
+                                                    Number(value),
+                                                )
+                                            }
+                                            options={availableStudents.map(
+                                                (student) => ({
+                                                    value: String(student.id),
+                                                    label: `${student.first_name} ${student.last_name}`,
+                                                }),
+                                            )}
+                                        />
+                                    </div>
                                     <PrimaryButton
                                         type="submit"
                                         disabled={enrollForm.processing}

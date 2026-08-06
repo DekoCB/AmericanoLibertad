@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import QrScanner from '@/Components/QrScanner';
+import SelectMenu from '@/Components/SelectMenu';
 import StudentQrCode from '@/Components/StudentQrCode';
 import PageTitle from '@/Components/PageTitle';
 import { QrCodeIcon } from '@/Components/Icons';
@@ -108,21 +109,17 @@ export default function Estudiante({
                             </p>
                         ) : (
                             <div className="mt-4 space-y-4">
-                                <select
-                                    className="block w-full rounded-xl border-brand-border bg-brand-input shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                <SelectMenu
                                     value={courseId}
-                                    onChange={(e) => {
-                                        setCourseId(e.target.value);
+                                    onChange={(value) => {
+                                        setCourseId(value);
                                         setFeedback(null);
                                     }}
-                                >
-                                    {courses.map((course) => (
-                                        <option key={course.id} value={course.id}>
-                                            {course.name} —{' '}
-                                            {course.subject?.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    options={courses.map((course) => ({
+                                        value: String(course.id),
+                                        label: `${course.name} — ${course.subject?.name}`,
+                                    }))}
+                                />
 
                                 {!scanning ? (
                                     <PrimaryButton
