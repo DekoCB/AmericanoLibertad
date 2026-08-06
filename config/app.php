@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Deploy Setup Token
+    |--------------------------------------------------------------------------
+    |
+    | Token de un solo uso para ejecutar la ruta de instalación en hosting
+    | compartido sin acceso a SSH (ver DeploySetupController). Solo tiene
+    | efecto si se define en el .env del servidor; déjalo vacío para
+    | desactivar la ruta por completo.
+    |
+    */
+
+    'deploy_setup_token' => env('DEPLOY_SETUP_TOKEN'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

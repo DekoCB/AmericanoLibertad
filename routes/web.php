@@ -8,6 +8,7 @@ use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CuotaController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeploySetupController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\EntregaEvaluacionController;
@@ -55,6 +56,12 @@ Route::get('/admision', [AdmissionApplicationController::class, 'create'])->name
 Route::post('/admision', [AdmissionApplicationController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('admision.store');
+
+// Ruta de instalación para hosting sin SSH (ver DeploySetupController). Sin
+// DEPLOY_SETUP_TOKEN definido en el .env del servidor, responde 404.
+Route::get('/deploy-setup/{token}', [DeploySetupController::class, 'run'])
+    ->middleware('throttle:5,1')
+    ->name('deploy-setup.run');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
