@@ -1110,22 +1110,6 @@ export default function Welcome({
                                         Solicita tu admisión
                                     </Link>
                                 )}
-                                <Link
-                                    href={
-                                        auth.user
-                                            ? route('dashboard')
-                                            : route('login')
-                                    }
-                                    className={
-                                        auth.user
-                                            ? 'rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-navy-dark shadow-sm transition hover:bg-blue-50'
-                                            : 'rounded-xl border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10'
-                                    }
-                                >
-                                    {auth.user
-                                        ? 'Ir al sistema'
-                                        : 'Iniciar sesión'}
-                                </Link>
                                 <a
                                     href="#contacto"
                                     className="text-sm font-semibold text-blue-200 underline-offset-4 transition hover:text-white hover:underline"
