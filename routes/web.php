@@ -104,6 +104,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('evaluations/{evaluation}', [EvaluationController::class, 'destroy'])->name('evaluations.destroy');
 
     Route::get('notas', [GradeController::class, 'index'])->name('grades.index');
+    Route::get('notas/{course}', [GradeController::class, 'show'])->name('grades.show');
     Route::get('evaluations/{evaluation}/grades', [GradeController::class, 'edit'])->name('evaluations.grades.edit');
     Route::put('evaluations/{evaluation}/grades', [GradeController::class, 'update'])->name('evaluations.grades.update');
 
@@ -142,6 +143,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('aula-virtual', [RecursoAulaController::class, 'index'])->name('aula-virtual.index');
     Route::get('aula-virtual/{course}', [RecursoAulaController::class, 'show'])->name('aula-virtual.show');
     Route::post('aula-virtual/{course}', [RecursoAulaController::class, 'store'])->name('aula-virtual.store');
+    Route::patch('aula-virtual/{course}/info', [RecursoAulaController::class, 'updateInfo'])->name('aula-virtual.info.update');
     Route::delete('aula-virtual/{course}/{recurso}', [RecursoAulaController::class, 'destroy'])->name('aula-virtual.destroy');
 
     // Panel del docente: pagos y permisos

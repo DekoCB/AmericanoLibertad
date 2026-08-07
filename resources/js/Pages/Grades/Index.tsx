@@ -1,36 +1,63 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import SearchableSelect from '@/Components/SearchableSelect';
 import PageTitle from '@/Components/PageTitle';
-import TextInput from '@/Components/TextInput';
 import { CheckBadgeIcon } from '@/Components/Icons';
 import { Head, Link, router } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
-import { Evaluation, evaluationTypeLabels } from '@/types/models';
-
-const tipoBadge: Record<Evaluation['type'], string> = {
-    exam: 'bg-rose-100 text-rose-800',
-    quiz: 'bg-amber-100 text-amber-800',
-    homework: 'bg-sky-100 text-sky-800',
-    project: 'bg-violet-100 text-violet-800',
-};
+import { Course } from '@/types/models';
+import { useMemo } from 'react';
 
 export default function Index({
-    evaluations,
-    filters,
+    courses,
     isDocente,
 }: {
-    evaluations: Evaluation[];
-    filters: { search?: string };
+    courses: Course[];
     isDocente: boolean;
 }) {
-    const [search, setSearch] = useState(filters.search ?? '');
+    const porCarrera = useMemo(() => {
+        type SubjectGroup = {
+            key: string;
+            subjectName: string;
+            ciclo: number | null;
+            courses: Course[];
+        };
 
-    const submitSearch = (e: FormEvent) => {
-        e.preventDefault();
-        router.get(
-            route('grades.index'),
-            { search },
-            { preserveState: true, replace: true },
-        );
+        const byCarrera = new Map<string, Map<string, SubjectGroup>>();
+
+        courses.forEach((course) => {
+            const carreraName = course.subject?.carrera?.name ?? 'Sin carrera';
+            const subjectName = course.subject?.name ?? 'Sin curso';
+            const ciclo = course.subject?.ciclo ?? null;
+            const key = `${subjectName}__${ciclo ?? ''}`;
+
+            if (!byCarrera.has(carreraName)) {
+                byCarrera.set(carreraName, new Map());
+            }
+            const bySubject = byCarrera.get(carreraName)!;
+
+            if (!bySubject.has(key)) {
+                bySubject.set(key, { key, subjectName, ciclo, courses: [] });
+            }
+            bySubject.get(key)!.courses.push(course);
+        });
+
+        return Array.from(byCarrera.entries())
+            .map(
+                ([carreraName, bySubject]) =>
+                    [
+                        carreraName,
+                        Array.from(bySubject.values()).sort(
+                            (a, b) =>
+                                a.subjectName.localeCompare(b.subjectName) ||
+                                (a.ciclo ?? 0) - (b.ciclo ?? 0),
+                        ),
+                    ] as const,
+            )
+            .sort(([a], [b]) => a.localeCompare(b));
+    }, [courses]);
+
+    const irAlCurso = (courseId: string) => {
+        if (!courseId) return;
+        router.visit(route('grades.show', courseId));
     };
 
     return (
@@ -44,114 +71,92 @@ export default function Index({
             <Head title="Notas" />
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
-                <div className="mx-auto max-w-5xl space-y-4 sm:px-6 lg:px-8">
-                    <form onSubmit={submitSearch} className="max-w-sm">
-                        <TextInput
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Buscar por evaluación, curso o sección..."
-                            className="w-full"
-                        />
-                    </form>
+                <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
+                    <div className="max-w-sm">
+                        <SearchableSelect
+                            value=""
+                            onChange={irAlCurso}
+                            placeholder="Buscar por curso o sección..."
+                            allLabel="Selecciona una sección"
+                            options={[...courses]
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((course) => {
+                                    const docente = course.teacher
+                                        ? `${course.teacher.first_name} ${course.teacher.last_name}`
+                                        : 'Sin docente';
 
-                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
-                        <table className="min-w-full divide-y divide-brand-border-faint">
-                            <thead className="bg-brand-thead">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Evaluación
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Curso — Sección
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Fecha
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Calificadas
-                                    </th>
-                                    <th className="px-4 py-3" />
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-brand-border-faint">
-                                {evaluations.map((evaluation) => (
-                                    <tr key={evaluation.id}>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm">
+                                    return {
+                                        value: String(course.id),
+                                        label: `${course.name} — ${course.subject?.name ?? ''} · ${docente}`,
+                                        searchText: `${course.name} ${course.subject?.name ?? ''} ${docente}`,
+                                    };
+                                })}
+                        />
+                    </div>
+
+                    <div className="space-y-10">
+                        {porCarrera.map(([carreraName, subjects]) => (
+                            <div key={carreraName} className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <h3 className="text-lg font-bold text-brand-ink-strong">
+                                        {carreraName}
+                                    </h3>
+                                    <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                        {subjects.reduce(
+                                            (sum, group) =>
+                                                sum + group.courses.length,
+                                            0,
+                                        )}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    {subjects.map((group) => (
+                                        <div
+                                            key={group.key}
+                                            className="rounded-[20px] border border-brand-border bg-brand-card p-5 shadow-sm"
+                                        >
                                             <div className="flex items-center gap-2">
-                                                <span
-                                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${tipoBadge[evaluation.type]}`}
-                                                >
-                                                    {
-                                                        evaluationTypeLabels[
-                                                            evaluation.type
-                                                        ]
-                                                    }
-                                                </span>
-                                                <span className="font-medium text-brand-ink-strong">
-                                                    {evaluation.name}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            <div className="flex items-center gap-2">
-                                                {evaluation.course?.subject
-                                                    ?.name}{' '}
-                                                —{' '}
-                                                {evaluation.course?.name}
-                                                {evaluation.course?.subject
-                                                    ?.ciclo && (
+                                                <p className="font-medium text-brand-ink-strong">
+                                                    {group.subjectName}
+                                                </p>
+                                                {group.ciclo && (
                                                     <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
-                                                        Ciclo{' '}
-                                                        {
-                                                            evaluation.course
-                                                                .subject.ciclo
-                                                        }
+                                                        Ciclo {group.ciclo}
                                                     </span>
                                                 )}
                                             </div>
-                                            {!isDocente && (
-                                                <div className="mt-0.5 text-xs text-brand-muted">
-                                                    {evaluation.course?.teacher
-                                                        ? `${evaluation.course.teacher.first_name} ${evaluation.course.teacher.last_name}`
-                                                        : 'Sin docente'}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {new Date(
-                                                evaluation.date,
-                                            ).toLocaleDateString('es-PE')}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {evaluation.grades_count ?? 0} /{' '}
-                                            {evaluation.total_estudiantes ??
-                                                0}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                                            <Link
-                                                href={route(
-                                                    'evaluations.grades.edit',
-                                                    evaluation.id,
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                {group.courses.map(
+                                                    (course) => (
+                                                        <Link
+                                                            key={course.id}
+                                                            href={route(
+                                                                'grades.show',
+                                                                course.id,
+                                                            )}
+                                                            className="flex items-center gap-1.5 rounded-full border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
+                                                        >
+                                                            {course.name}
+                                                            <span className="text-brand-muted">
+                                                                ·{' '}
+                                                                {course.evaluations_count ??
+                                                                    0}
+                                                            </span>
+                                                        </Link>
+                                                    ),
                                                 )}
-                                                className="text-brand-link hover:underline"
-                                            >
-                                                Calificar
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {evaluations.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={5}
-                                            className="px-4 py-6 text-center text-sm text-brand-muted"
-                                        >
-                                            No se encontraron evaluaciones.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                        {porCarrera.length === 0 && (
+                            <div className="rounded-lg bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
+                                No tienes secciones con evaluaciones disponibles.
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

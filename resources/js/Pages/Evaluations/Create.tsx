@@ -105,7 +105,7 @@ export default function Create({ course }: { course: Course }) {
                                         id="semana"
                                         type="number"
                                         min={1}
-                                        max={16}
+                                        max={20}
                                         required
                                         className="mt-1 block w-full"
                                         value={data.semana}

@@ -66,7 +66,7 @@ class EvaluationController extends Controller
             'type' => ['required', 'in:exam,quiz,homework,project'],
             'weight' => ['required', 'numeric', 'min:0', 'max:100'],
             'date' => ['required', 'date'],
-            'semana' => ['required', 'integer', 'min:1', 'max:16'],
+            'semana' => ['required', 'integer', 'min:1', 'max:20'],
             'max_score' => ['required', 'integer', 'min:1', 'max:20'],
         ]);
     }

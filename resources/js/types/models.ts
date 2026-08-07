@@ -96,10 +96,20 @@ export interface Course {
     schedule: string | null;
     turno: Turno | null;
     capacity: number;
+    objetivo_general: string | null;
+    mensaje_bienvenida: string | null;
+    modalidad: string | null;
+    sistema_evaluacion: string | null;
+    requisitos: string | null;
+    competencia_general: string | null;
+    competencias_especificas: string | null;
+    resultados_aprendizaje: string | null;
+    normas_curso: string | null;
     subject?: Subject;
     teacher?: Teacher | null;
     enrollments_count?: number;
     recursos_aula_count?: number;
+    evaluations_count?: number;
 }
 
 export type DiaSemana =

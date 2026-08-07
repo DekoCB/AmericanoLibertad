@@ -20,6 +20,15 @@ class Course extends Model
         'schedule',
         'turno',
         'capacity',
+        'objetivo_general',
+        'mensaje_bienvenida',
+        'modalidad',
+        'sistema_evaluacion',
+        'requisitos',
+        'competencia_general',
+        'competencias_especificas',
+        'resultados_aprendizaje',
+        'normas_curso',
     ];
 
     public function subject(): BelongsTo

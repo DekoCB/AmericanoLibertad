@@ -14,7 +14,7 @@ use Inertia\Response;
 
 class RecursoAulaController extends Controller
 {
-    private const TOTAL_SEMANAS = 16;
+    private const TOTAL_SEMANAS = 20;
 
     public function index(Request $request): Response
     {
@@ -125,7 +125,7 @@ class RecursoAulaController extends Controller
         $this->authorize('manage', [RecursoAula::class, $course]);
 
         $validated = $request->validate([
-            'semana' => ['nullable', 'integer', 'min:1', 'max:16'],
+            'semana' => ['nullable', 'integer', 'min:1', 'max:' . self::TOTAL_SEMANAS],
             'titulo' => ['required', 'string', 'max:150'],
             'tipo' => ['required', Rule::in(['enlace', 'archivo', 'anuncio'])],
             'entregable' => ['boolean'],
@@ -154,6 +154,29 @@ class RecursoAulaController extends Controller
         return redirect()
             ->route('aula-virtual.show', ['course' => $course, 'semana' => $validated['semana'] ?? 'general'])
             ->with('success', 'Recurso publicado correctamente.');
+    }
+
+    public function updateInfo(Request $request, Course $course): RedirectResponse
+    {
+        $this->authorize('manage', [RecursoAula::class, $course]);
+
+        $validated = $request->validate([
+            'objetivo_general' => ['nullable', 'string', 'max:2000'],
+            'mensaje_bienvenida' => ['nullable', 'string', 'max:2000'],
+            'modalidad' => ['nullable', 'string', 'max:100'],
+            'sistema_evaluacion' => ['nullable', 'string', 'max:2000'],
+            'requisitos' => ['nullable', 'string', 'max:2000'],
+            'competencia_general' => ['nullable', 'string', 'max:2000'],
+            'competencias_especificas' => ['nullable', 'string', 'max:2000'],
+            'resultados_aprendizaje' => ['nullable', 'string', 'max:2000'],
+            'normas_curso' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $course->update($validated);
+
+        return redirect()
+            ->route('aula-virtual.show', ['course' => $course, 'semana' => 'general'])
+            ->with('success', 'Información del curso actualizada correctamente.');
     }
 
     public function destroy(Course $course, RecursoAula $recurso): RedirectResponse
