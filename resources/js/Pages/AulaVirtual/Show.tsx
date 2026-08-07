@@ -7,7 +7,20 @@ import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import { PencilIcon, TrashIcon } from '@/Components/Icons';
+import {
+    AcademicCapIcon,
+    ArrowDownTrayIcon,
+    BeakerIcon,
+    DocumentTextIcon,
+    FlagIcon,
+    LinkIcon,
+    PencilIcon,
+    PhotoIcon,
+    QuestionMarkCircleIcon,
+    RectangleStackIcon,
+    TrashIcon,
+    VideoCameraIcon,
+} from '@/Components/Icons';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent, useMemo, useRef, useState } from 'react';
 import {
@@ -34,6 +47,51 @@ const evaluacionBadge: Record<Evaluation['type'], string> = {
     homework: 'bg-sky-100 text-sky-800',
     project: 'bg-violet-100 text-violet-800',
 };
+
+const evaluacionIcon: Record<Evaluation['type'], typeof AcademicCapIcon> = {
+    exam: AcademicCapIcon,
+    quiz: QuestionMarkCircleIcon,
+    homework: DocumentTextIcon,
+    project: BeakerIcon,
+};
+
+type TipoContenido =
+    | 'anuncio'
+    | 'video'
+    | 'imagen'
+    | 'presentacion'
+    | 'pdf'
+    | 'enlace'
+    | 'archivo';
+
+const contenidoIcon: Record<TipoContenido, typeof AcademicCapIcon> = {
+    anuncio: FlagIcon,
+    video: VideoCameraIcon,
+    imagen: PhotoIcon,
+    presentacion: RectangleStackIcon,
+    pdf: DocumentTextIcon,
+    enlace: LinkIcon,
+    archivo: ArrowDownTrayIcon,
+};
+
+function inferirTipoContenido(recurso: RecursoAula): TipoContenido {
+    if (recurso.tipo === 'anuncio') return 'anuncio';
+
+    if (recurso.tipo === 'enlace') {
+        const url = recurso.url?.toLowerCase() ?? '';
+        if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com')) {
+            return 'video';
+        }
+        return 'enlace';
+    }
+
+    const nombre = recurso.archivo_nombre?.toLowerCase() ?? '';
+    if (/\.(mp4|mov|avi|webm|mkv)$/.test(nombre)) return 'video';
+    if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/.test(nombre)) return 'imagen';
+    if (/\.(ppt|pptx|key|odp)$/.test(nombre)) return 'presentacion';
+    if (/\.pdf$/.test(nombre)) return 'pdf';
+    return 'archivo';
+}
 
 const TOTAL_SEMANAS = 20;
 
@@ -282,14 +340,17 @@ export function RecursoItem({
     canManage: boolean;
     onDelete: (id: number) => void;
 }) {
+    const Icono = contenidoIcon[inferirTipoContenido(recurso)];
+
     return (
         <li className="rounded-md border border-brand-border p-4">
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${tipoBadge[recurso.tipo]}`}
+                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tipoBadge[recurso.tipo]}`}
                         >
+                            <Icono className="size-3.5" />
                             {recursoTipoLabels[recurso.tipo]}
                         </span>
                         {recurso.es_principal && (
@@ -446,12 +507,15 @@ export function EvaluacionItem({
     isStudent: boolean;
     canManage: boolean;
 }) {
+    const Icono = evaluacionIcon[evaluacion.type];
+
     return (
         <li className="rounded-md border border-brand-border p-4">
             <div className="flex flex-wrap items-center gap-2">
                 <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${evaluacionBadge[evaluacion.type]}`}
+                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${evaluacionBadge[evaluacion.type]}`}
                 >
+                    <Icono className="size-3.5" />
                     Evaluación · {evaluationTypeLabels[evaluacion.type]}
                 </span>
                 {isStudent && evaluacion.estado && (
