@@ -1,11 +1,17 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
 import PageTitle from '@/Components/PageTitle';
-import { PencilIcon, TrashIcon, UsersIcon } from '@/Components/Icons';
-import { Head, router, useForm } from '@inertiajs/react';
+import {
+    ArrowUpTrayIcon,
+    PencilIcon,
+    TrashIcon,
+    UsersIcon,
+} from '@/Components/Icons';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import {
     Carrera,
@@ -126,9 +132,19 @@ export default function Index({
                         </div>
 
                         {can.create && (
-                            <PrimaryButton onClick={() => setCreating(true)}>
-                                Nuevo estudiante
-                            </PrimaryButton>
+                            <div className="flex shrink-0 items-center gap-3">
+                                <Link href={route('students.import')}>
+                                    <SecondaryButton className="inline-flex items-center gap-2">
+                                        <ArrowUpTrayIcon className="size-4" />
+                                        Importar desde Excel
+                                    </SecondaryButton>
+                                </Link>
+                                <PrimaryButton
+                                    onClick={() => setCreating(true)}
+                                >
+                                    Nuevo estudiante
+                                </PrimaryButton>
+                            </div>
                         )}
                     </div>
 

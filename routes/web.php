@@ -27,6 +27,7 @@ use App\Http\Controllers\RecursoAulaController;
 use App\Http\Controllers\RegistroHorasController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentImportController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\UserController;
@@ -68,6 +69,8 @@ Route::get('/deploy-setup/{token}', [DeploySetupController::class, 'run'])
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::get('students/import', [StudentImportController::class, 'create'])->name('students.import');
+    Route::post('students/import', [StudentImportController::class, 'store'])->name('students.import.store');
     Route::resource('students', StudentController::class)->except('show');
     Route::resource('teachers', TeacherController::class)->except('show');
     Route::resource('subjects', SubjectController::class)->except('show');
