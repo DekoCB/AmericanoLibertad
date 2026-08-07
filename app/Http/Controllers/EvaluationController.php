@@ -26,7 +26,7 @@ class EvaluationController extends Controller
 
         $course->evaluations()->create($this->validateEvaluation($request));
 
-        return redirect()->route('courses.show', $course)->with('success', 'Evaluación creada correctamente.');
+        return back()->with('success', 'Evaluación creada correctamente.');
     }
 
     public function edit(Evaluation $evaluation): Response
@@ -68,6 +68,7 @@ class EvaluationController extends Controller
             'date' => ['required', 'date'],
             'semana' => ['required', 'integer', 'min:1', 'max:20'],
             'max_score' => ['required', 'integer', 'min:1', 'max:20'],
+            'intentos_permitidos' => ['required', 'integer', 'min:1', 'max:10'],
         ]);
     }
 }

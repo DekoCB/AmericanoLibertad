@@ -17,13 +17,27 @@ class QuizIntentoController extends Controller
 
         $user = $request->user();
 
-        $yaResuelto = $evaluation->quizIntentos()
+        $intentosEnviados = $evaluation->quizIntentos()
             ->where('student_id', $user->student_id)
-            ->exists();
+            ->whereNotNull('enviado_at')
+            ->count();
 
-        if ($yaResuelto) {
+        if ($intentosEnviados >= $evaluation->intentos_permitidos) {
             return redirect()->route('aula-virtual.show', $evaluation->course_id)
-                ->with('error', 'Ya respondiste este cuestionario.');
+                ->with('error', 'Ya usaste todos tus intentos disponibles para este cuestionario.');
+        }
+
+        $intentoEnProgreso = $evaluation->quizIntentos()
+            ->where('student_id', $user->student_id)
+            ->whereNull('enviado_at')
+            ->first();
+
+        if (! $intentoEnProgreso) {
+            $evaluation->quizIntentos()->create([
+                'student_id' => $user->student_id,
+                'puntaje' => 0,
+                'enviado_at' => null,
+            ]);
         }
 
         return Inertia::render('Evaluations/ResolverQuiz', [
@@ -46,9 +60,14 @@ class QuizIntentoController extends Controller
 
         $user = $request->user();
 
-        if ($evaluation->quizIntentos()->where('student_id', $user->student_id)->exists()) {
+        $intento = $evaluation->quizIntentos()
+            ->where('student_id', $user->student_id)
+            ->whereNull('enviado_at')
+            ->first();
+
+        if (! $intento) {
             return redirect()->route('aula-virtual.show', $evaluation->course_id)
-                ->with('error', 'Ya respondiste este cuestionario.');
+                ->with('error', 'No tienes un intento en curso para este cuestionario.');
         }
 
         $preguntas = $evaluation->quizPreguntas()->with('opciones')->get();
@@ -64,12 +83,6 @@ class QuizIntentoController extends Controller
         ]);
 
         $respuestasPorPregunta = collect($validated['respuestas']);
-
-        $intento = $evaluation->quizIntentos()->create([
-            'student_id' => $user->student_id,
-            'puntaje' => 0,
-            'enviado_at' => now(),
-        ]);
 
         $correctas = 0;
 
@@ -91,11 +104,16 @@ class QuizIntentoController extends Controller
 
         $puntaje = (int) round(($correctas / $preguntas->count()) * $evaluation->max_score);
 
-        $intento->update(['puntaje' => $puntaje]);
+        $intento->update(['puntaje' => $puntaje, 'enviado_at' => now()]);
+
+        $mejorPuntaje = $evaluation->quizIntentos()
+            ->where('student_id', $user->student_id)
+            ->whereNotNull('enviado_at')
+            ->max('puntaje');
 
         $evaluation->grades()->updateOrCreate(
             ['student_id' => $user->student_id],
-            ['score' => $puntaje, 'comments' => 'Calificación automática (cuestionario)']
+            ['score' => $mejorPuntaje, 'comments' => 'Calificación automática (cuestionario, mejor intento)']
         );
 
         return redirect()->route('aula-virtual.show', $evaluation->course_id)

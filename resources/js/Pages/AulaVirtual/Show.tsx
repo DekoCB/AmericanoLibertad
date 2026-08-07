@@ -14,10 +14,12 @@ import {
     DocumentTextIcon,
     FlagIcon,
     LinkIcon,
+    MusicalNoteIcon,
     PencilIcon,
     PhotoIcon,
     QuestionMarkCircleIcon,
     RectangleStackIcon,
+    TextIcon,
     TrashIcon,
     VideoCameraIcon,
 } from '@/Components/Icons';
@@ -40,6 +42,7 @@ const tipoBadge: Record<RecursoAula['tipo'], string> = {
     anuncio: 'bg-blue-100 text-blue-800',
     enlace: 'bg-purple-100 text-purple-800',
     archivo: 'bg-emerald-100 text-emerald-800',
+    texto: 'bg-slate-100 text-slate-800',
 };
 
 const evaluacionBadge: Record<Evaluation['type'], string> = {
@@ -58,7 +61,9 @@ const evaluacionIcon: Record<Evaluation['type'], typeof AcademicCapIcon> = {
 
 type TipoContenido =
     | 'anuncio'
+    | 'texto'
     | 'video'
+    | 'audio'
     | 'imagen'
     | 'presentacion'
     | 'pdf'
@@ -67,7 +72,9 @@ type TipoContenido =
 
 const contenidoIcon: Record<TipoContenido, typeof AcademicCapIcon> = {
     anuncio: FlagIcon,
+    texto: TextIcon,
     video: VideoCameraIcon,
+    audio: MusicalNoteIcon,
     imagen: PhotoIcon,
     presentacion: RectangleStackIcon,
     pdf: DocumentTextIcon,
@@ -77,6 +84,7 @@ const contenidoIcon: Record<TipoContenido, typeof AcademicCapIcon> = {
 
 function inferirTipoContenido(recurso: RecursoAula): TipoContenido {
     if (recurso.tipo === 'anuncio') return 'anuncio';
+    if (recurso.tipo === 'texto') return 'texto';
 
     if (recurso.tipo === 'enlace') {
         const url = recurso.url?.toLowerCase() ?? '';
@@ -88,6 +96,7 @@ function inferirTipoContenido(recurso: RecursoAula): TipoContenido {
 
     const nombre = recurso.archivo_nombre?.toLowerCase() ?? '';
     if (/\.(mp4|mov|avi|webm|mkv)$/.test(nombre)) return 'video';
+    if (/\.(mp3|wav|ogg|m4a|aac)$/.test(nombre)) return 'audio';
     if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/.test(nombre)) return 'imagen';
     if (/\.(ppt|pptx|key|odp)$/.test(nombre)) return 'presentacion';
     if (/\.pdf$/.test(nombre)) return 'pdf';
@@ -152,6 +161,7 @@ function RecursoForm({
         tipo: string;
         entregable: boolean;
         es_principal: boolean;
+        es_complementario: boolean;
         fecha_entrega: string;
         descripcion: string;
         url: string;
@@ -162,6 +172,7 @@ function RecursoForm({
         tipo: 'anuncio',
         entregable: false,
         es_principal: false,
+        es_complementario: false,
         fecha_entrega: '',
         descripcion: '',
         url: '',
@@ -219,7 +230,7 @@ function RecursoForm({
                     />
                     <InputError message={errors.titulo} className="mt-1" />
                 </div>
-                {data.tipo !== 'anuncio' && (
+                {data.tipo !== 'anuncio' && data.tipo !== 'texto' && (
                     <div className="sm:col-span-2">
                         <InputLabel htmlFor="url" value="URL" />
                         <TextInput
@@ -292,6 +303,29 @@ function RecursoForm({
                         </label>
                     </div>
                 )}
+                {data.semana !== '' && (
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                        <input
+                            id="es_complementario"
+                            type="checkbox"
+                            checked={data.es_complementario}
+                            onChange={(e) =>
+                                setData(
+                                    'es_complementario',
+                                    e.target.checked,
+                                )
+                            }
+                            className="rounded border-brand-border text-brand-navy focus:ring-brand-navy"
+                        />
+                        <label
+                            htmlFor="es_complementario"
+                            className="text-sm font-medium text-brand-ink-strong"
+                        >
+                            Es un recurso complementario (opcional, no
+                            obligatorio)
+                        </label>
+                    </div>
+                )}
                 {data.entregable && (
                     <div className="sm:col-span-2">
                         <InputLabel
@@ -311,10 +345,17 @@ function RecursoForm({
                     </div>
                 )}
                 <div className="sm:col-span-2">
-                    <InputLabel htmlFor="descripcion" value="Descripción" />
+                    <InputLabel
+                        htmlFor="descripcion"
+                        value={
+                            data.tipo === 'texto'
+                                ? 'Contenido del texto'
+                                : 'Descripción'
+                        }
+                    />
                     <textarea
                         id="descripcion"
-                        rows={3}
+                        rows={data.tipo === 'texto' ? 6 : 3}
                         className="mt-1 block w-full rounded-xl border-brand-border bg-brand-card shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                         value={data.descripcion}
                         onChange={(e) => setData('descripcion', e.target.value)}
@@ -361,6 +402,11 @@ export function RecursoItem({
                         {recurso.es_principal && (
                             <span className="rounded-full bg-brand-navy px-2 py-0.5 text-xs font-medium text-white">
                                 Contenido principal
+                            </span>
+                        )}
+                        {recurso.es_complementario && (
+                            <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                Complementario
                             </span>
                         )}
                         {recurso.entregable && (
@@ -508,6 +554,7 @@ const estadoActividadBadge: Record<
     string
 > = {
     pendiente: 'bg-gray-100 text-gray-700',
+    en_progreso: 'bg-amber-100 text-amber-800',
     entregado: 'bg-sky-100 text-sky-800',
     calificado: 'bg-emerald-100 text-emerald-800',
     vencido: 'bg-red-100 text-red-800',
@@ -515,10 +562,60 @@ const estadoActividadBadge: Record<
 
 const estadoActividadLabel: Record<NonNullable<Evaluation['estado']>, string> = {
     pendiente: 'Pendiente',
+    en_progreso: 'En progreso',
     entregado: 'Entregado',
     calificado: 'Calificado',
     vencido: 'Vencido',
 };
+
+function QuizAccion({ evaluacion }: { evaluacion: Evaluation }) {
+    const intentosUsados = evaluacion.intentos_usados ?? 0;
+    const intentosPermitidos = evaluacion.intentos_permitidos;
+    const intentosRestantes = intentosPermitidos - intentosUsados;
+    const enProgreso = evaluacion.estado === 'en_progreso';
+    const tienePreguntas = (evaluacion.preguntas_count ?? 0) > 0;
+
+    if (!tienePreguntas) {
+        return (
+            <p className="mt-2 text-sm text-brand-muted">
+                El docente aún no publicó las preguntas.
+            </p>
+        );
+    }
+
+    return (
+        <div className="mt-2 text-sm">
+            {intentosUsados > 0 && evaluacion.mi_intento && (
+                <p className="text-brand-muted">
+                    Mejor puntaje: {evaluacion.mi_intento.puntaje}/
+                    {evaluacion.max_score} · Intentos: {intentosUsados}/
+                    {intentosPermitidos}
+                </p>
+            )}
+            {enProgreso ? (
+                <Link
+                    href={route('evaluations.resolver', evaluacion.id)}
+                    className="text-brand-link hover:underline"
+                >
+                    Continuar cuestionario
+                </Link>
+            ) : intentosRestantes > 0 ? (
+                <Link
+                    href={route('evaluations.resolver', evaluacion.id)}
+                    className="text-brand-link hover:underline"
+                >
+                    {intentosUsados === 0
+                        ? 'Resolver cuestionario'
+                        : `Reintentar cuestionario (${intentosRestantes} intento${intentosRestantes === 1 ? '' : 's'} disponible${intentosRestantes === 1 ? '' : 's'})`}
+                </Link>
+            ) : (
+                <span className="text-brand-muted">
+                    Sin intentos disponibles.
+                </span>
+            )}
+        </div>
+    );
+}
 
 export function EvaluacionItem({
     evaluacion,
@@ -572,28 +669,7 @@ export function EvaluacionItem({
                 )}
 
             {evaluacion.type === 'quiz' && isStudent && (
-                <p className="mt-2 text-sm">
-                    {evaluacion.mi_intento ? (
-                        <span className="text-brand-muted">
-                            Ya resuelto · Puntaje: {evaluacion.mi_intento.puntaje}/
-                            {evaluacion.max_score}
-                        </span>
-                    ) : (evaluacion.preguntas_count ?? 0) > 0 ? (
-                        <Link
-                            href={route(
-                                'evaluations.resolver',
-                                evaluacion.id,
-                            )}
-                            className="text-brand-link hover:underline"
-                        >
-                            Resolver cuestionario
-                        </Link>
-                    ) : (
-                        <span className="text-brand-muted">
-                            El docente aún no publicó las preguntas.
-                        </span>
-                    )}
-                </p>
+                <QuizAccion evaluacion={evaluacion} />
             )}
 
             {evaluacion.type === 'quiz' && canManage && (
@@ -1302,7 +1378,7 @@ export default function Show({
     alertas: AlertaRecurso[];
     resumenSemanas: ResumenSemana[];
     semanaActual: number | null;
-    can: { manage: boolean };
+    can: { manage: boolean; manageEvaluations: boolean };
     isStudent: boolean;
 }) {
     const [addModalOpen, setAddModalOpen] = useState(false);
@@ -1381,6 +1457,7 @@ export default function Show({
                                     foroTemas={foroTemas}
                                     progresoSemana={progresoSemana}
                                     canManage={can.manage}
+                                    canManageEvaluations={can.manageEvaluations}
                                     isStudent={isStudent}
                                     onDeleteRecurso={deleteRecurso}
                                     onToggleVisto={toggleVisto}

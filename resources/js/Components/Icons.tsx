@@ -650,3 +650,37 @@ export function LinkIcon(props: IconProps) {
         </Base>
     );
 }
+
+export function TextIcon(props: IconProps) {
+    return (
+        <Base {...props}>
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 6.75h16M4 12h16M4 17.25h10"
+            />
+        </Base>
+    );
+}
+
+export function MusicalNoteIcon(props: IconProps) {
+    return (
+        <Base {...props}>
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 18V5l12-2v13"
+            />
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3Z"
+            />
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3Z"
+            />
+        </Base>
+    );
+}

@@ -15,7 +15,7 @@ class EvaluationPolicy
             return $user->teacher_id !== null && $user->teacher_id === $course->teacher_id;
         }
 
-        return $user->hasRole(UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico);
+        return $user->hasRole(UserRole::Coordinador, UserRole::Academico);
     }
 
     public function update(User $user, Evaluation $evaluation): bool
@@ -24,7 +24,7 @@ class EvaluationPolicy
             return $user->teacher_id !== null && $user->teacher_id === $evaluation->course->teacher_id;
         }
 
-        return $user->hasRole(UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico);
+        return $user->hasRole(UserRole::Coordinador, UserRole::Academico);
     }
 
     public function delete(User $user, Evaluation $evaluation): bool

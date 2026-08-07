@@ -20,6 +20,7 @@ class Evaluation extends Model
         'date',
         'semana',
         'max_score',
+        'intentos_permitidos',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class Evaluation extends Model
         return [
             'date' => 'date',
             'max_score' => 'integer',
+            'intentos_permitidos' => 'integer',
         ];
     }
 

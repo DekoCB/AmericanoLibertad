@@ -160,13 +160,15 @@ export interface Evaluation {
     date: string;
     semana: number | null;
     max_score: number;
+    intentos_permitidos: number;
     course?: Course;
     grades_count?: number;
     total_estudiantes?: number;
     preguntas_count?: number;
+    intentos_usados?: number;
     mi_intento?: QuizIntento | null;
     mi_entrega?: EntregaEvaluacion | null;
-    estado?: 'pendiente' | 'entregado' | 'calificado' | 'vencido';
+    estado?: 'pendiente' | 'entregado' | 'en_progreso' | 'calificado' | 'vencido';
 }
 
 export interface Tema {
@@ -412,9 +414,10 @@ export interface RecursoAula {
     course_id: number;
     semana: number | null;
     titulo: string;
-    tipo: 'enlace' | 'archivo' | 'anuncio';
+    tipo: 'enlace' | 'archivo' | 'anuncio' | 'texto';
     entregable: boolean;
     es_principal: boolean;
+    es_complementario: boolean;
     fecha_entrega: string | null;
     descripcion: string | null;
     url: string | null;
@@ -451,6 +454,7 @@ export const recursoTipoLabels: Record<RecursoAula['tipo'], string> = {
     enlace: 'Enlace',
     archivo: 'Archivo',
     anuncio: 'Anuncio',
+    texto: 'Texto',
 };
 
 export interface RegistroHoras {

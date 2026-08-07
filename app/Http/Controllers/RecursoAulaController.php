@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Course;
 use App\Models\EntregaEvaluacion;
+use App\Models\Evaluation;
 use App\Models\Grade;
 use App\Models\QuizIntento;
 use App\Models\RecursoAula;
@@ -57,8 +58,9 @@ class RecursoAulaController extends Controller
         $semanaActual = $semanaParam === 'general' ? null : (int) $semanaParam;
 
         // Estado de cada evaluación de la sección desde la perspectiva del estudiante
-        // (calificado / entregado / vencido / pendiente), usado para el badge de cada
-        // actividad, el indicador de "pendientes" por semana en el menú, y el progreso.
+        // (calificado / entregado / en_progreso / vencido / pendiente), usado para el
+        // badge de cada actividad, el indicador de "pendientes" por semana en el menú,
+        // y el progreso.
         $estadoPorEvaluacion = [];
         $todasEvaluaciones = collect();
 
@@ -75,16 +77,23 @@ class RecursoAulaController extends Controller
             $entregadas = EntregaEvaluacion::whereIn('evaluation_id', $evaluationIds)
                 ->where('student_id', $user->student_id)
                 ->pluck('evaluation_id')->all();
-            $intentadas = QuizIntento::whereIn('evaluation_id', $evaluationIds)
+
+            $intentosQuiz = QuizIntento::whereIn('evaluation_id', $evaluationIds)
                 ->where('student_id', $user->student_id)
-                ->pluck('evaluation_id')->all();
+                ->get(['evaluation_id', 'enviado_at']);
+            $intentosEnviadosPorEvaluacion = $intentosQuiz->whereNotNull('enviado_at')->countBy('evaluation_id');
+            $evaluacionesEnProgreso = $intentosQuiz->whereNull('enviado_at')->pluck('evaluation_id')->unique();
 
             $hoy = now()->toDateString();
 
             foreach ($todasEvaluaciones as $evaluacion) {
+                $enProgreso = $evaluacion->type === 'quiz' && $evaluacionesEnProgreso->contains($evaluacion->id);
+                $intentosUsados = $intentosEnviadosPorEvaluacion->get($evaluacion->id, 0);
+
                 $estadoPorEvaluacion[$evaluacion->id] = match (true) {
+                    $enProgreso => 'en_progreso',
                     in_array($evaluacion->id, $calificadas, true) => 'calificado',
-                    in_array($evaluacion->id, $entregadas, true) || in_array($evaluacion->id, $intentadas, true) => 'entregado',
+                    in_array($evaluacion->id, $entregadas, true) || $intentosUsados > 0 => 'entregado',
                     (string) $evaluacion->date < $hoy => 'vencido',
                     default => 'pendiente',
                 };
@@ -114,8 +123,15 @@ class RecursoAulaController extends Controller
                         $data['preguntas_count'] = $evaluation->quizPreguntas()->count();
 
                         if ($isStudent && $user->student_id) {
+                            $data['intentos_usados'] = $evaluation->quizIntentos()
+                                ->where('student_id', $user->student_id)
+                                ->whereNotNull('enviado_at')
+                                ->count();
+
                             $data['mi_intento'] = $evaluation->quizIntentos()
                                 ->where('student_id', $user->student_id)
+                                ->whereNotNull('enviado_at')
+                                ->orderByDesc('puntaje')
                                 ->first();
                         }
                     }
@@ -218,6 +234,7 @@ class RecursoAulaController extends Controller
             'semanaActual' => $semanaActual,
             'can' => [
                 'manage' => $request->user()->can('manage', [RecursoAula::class, $course]),
+                'manageEvaluations' => $request->user()->can('create', [Evaluation::class, $course]),
             ],
             'isStudent' => $isStudent,
         ]);
@@ -230,9 +247,10 @@ class RecursoAulaController extends Controller
         $validated = $request->validate([
             'semana' => ['nullable', 'integer', 'min:1', 'max:' . self::TOTAL_SEMANAS],
             'titulo' => ['required', 'string', 'max:150'],
-            'tipo' => ['required', Rule::in(['enlace', 'archivo', 'anuncio'])],
+            'tipo' => ['required', Rule::in(['enlace', 'archivo', 'anuncio', 'texto'])],
             'entregable' => ['boolean'],
             'es_principal' => ['boolean'],
+            'es_complementario' => ['boolean'],
             'fecha_entrega' => ['nullable', 'date', 'required_if:entregable,1'],
             'descripcion' => ['nullable', 'string', 'max:2000'],
             'url' => ['nullable', 'url', 'max:500'],

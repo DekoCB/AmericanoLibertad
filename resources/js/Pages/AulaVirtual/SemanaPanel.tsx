@@ -17,6 +17,8 @@ import {
 } from '@/types/models';
 import { EvaluacionItem, listaDesdeTexto, RecursoItem } from './Show';
 import ForoPanel from './ForoPanel';
+import EvaluationForm from '../Evaluations/Form';
+import { formatDate } from '@/utils/date';
 
 interface TemaFormItem {
     titulo: string;
@@ -344,6 +346,53 @@ function ChecklistSemana({
     );
 }
 
+function RecordatorioEntregas({
+    recursos,
+    evaluaciones,
+}: {
+    recursos: RecursoAula[];
+    evaluaciones: Evaluation[];
+}) {
+    const recordatorios = [
+        ...recursos
+            .filter((r) => r.entregable && r.fecha_entrega)
+            .map((r) => ({
+                titulo: r.titulo,
+                fecha: r.fecha_entrega as string,
+            })),
+        ...evaluaciones
+            .filter((e) =>
+                ['pendiente', 'vencido', 'en_progreso'].includes(
+                    e.estado ?? '',
+                ),
+            )
+            .map((e) => ({ titulo: e.name, fecha: e.date })),
+    ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    if (recordatorios.length === 0) return null;
+
+    return (
+        <div className="mt-4 border-t border-brand-border-faint pt-4">
+            <p className="text-sm font-medium text-brand-ink-strong">
+                Recordatorio de entregas
+            </p>
+            <ul className="mt-2 space-y-1">
+                {recordatorios.map((item, i) => (
+                    <li
+                        key={i}
+                        className="flex items-center justify-between text-sm text-brand-ink"
+                    >
+                        <span>{item.titulo}</span>
+                        <span className="text-brand-muted">
+                            {formatDate(item.fecha)}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
 function ProgresoBar({ progreso }: { progreso: number }) {
     return (
         <div className="mt-4">
@@ -370,6 +419,7 @@ export default function SemanaPanel({
     foroTemas,
     progresoSemana,
     canManage,
+    canManageEvaluations,
     isStudent,
     onDeleteRecurso,
     onToggleVisto,
@@ -385,6 +435,7 @@ export default function SemanaPanel({
     foroTemas: ForoTema[];
     progresoSemana: number | null;
     canManage: boolean;
+    canManageEvaluations: boolean;
     isStudent: boolean;
     onDeleteRecurso: (id: number) => void;
     onToggleVisto: (id: number) => void;
@@ -393,6 +444,7 @@ export default function SemanaPanel({
     semanaSiguiente: number | 'general' | null;
 }) {
     const [editing, setEditing] = useState(false);
+    const [creatingEvaluation, setCreatingEvaluation] = useState(false);
 
     const resultados = listaDesdeTexto(
         contenidoSemana?.resultados_aprendizaje ?? null,
@@ -401,7 +453,12 @@ export default function SemanaPanel({
     const temas = contenidoSemana?.temas ?? [];
 
     const recursoPrincipal = recursos.find((r) => r.es_principal);
-    const materiales = recursos.filter((r) => !r.es_principal);
+    const materiales = recursos.filter(
+        (r) => !r.es_principal && !r.es_complementario,
+    );
+    const complementarios = recursos.filter(
+        (r) => !r.es_principal && r.es_complementario,
+    );
 
     return (
         <div className="space-y-6">
@@ -543,12 +600,59 @@ export default function SemanaPanel({
                 </ul>
             </div>
 
+            {/* 3.9 Recursos complementarios */}
+            {(complementarios.length > 0 || canManage) && (
+                <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-brand-ink-strong">
+                            Recursos complementarios
+                        </h3>
+                        {canManage && (
+                            <SecondaryButton onClick={onAddRecurso}>
+                                Agregar recurso
+                            </SecondaryButton>
+                        )}
+                    </div>
+                    <p className="mt-1 text-sm text-brand-muted">
+                        Lecturas adicionales, videos recomendados, enlaces y
+                        ejercicios opcionales.
+                    </p>
+                    <ul className="mt-4 space-y-4">
+                        {complementarios.map((recurso) => (
+                            <RecursoItem
+                                key={recurso.id}
+                                recurso={recurso}
+                                canManage={canManage}
+                                onDelete={onDeleteRecurso}
+                                isStudent={isStudent}
+                                onToggleVisto={onToggleVisto}
+                            />
+                        ))}
+                        {complementarios.length === 0 && (
+                            <li className="py-2 text-sm text-brand-muted">
+                                Aún no se publicaron recursos complementarios
+                                para esta semana.
+                            </li>
+                        )}
+                    </ul>
+                </div>
+            )}
+
             {/* 3.6 + 3.7 Actividades de la semana */}
             {(evaluaciones.length > 0 || canManage) && (
                 <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
-                    <h3 className="text-lg font-bold text-brand-ink-strong">
-                        Actividades de la semana
-                    </h3>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-brand-ink-strong">
+                            Actividades de la semana
+                        </h3>
+                        {canManageEvaluations && (
+                            <SecondaryButton
+                                onClick={() => setCreatingEvaluation(true)}
+                            >
+                                Nueva evaluación
+                            </SecondaryButton>
+                        )}
+                    </div>
                     <ul className="mt-4 space-y-4">
                         {evaluaciones.map((evaluacion) => (
                             <EvaluacionItem
@@ -610,6 +714,13 @@ export default function SemanaPanel({
                     )
                 )}
 
+                {isStudent && (
+                    <RecordatorioEntregas
+                        recursos={recursos}
+                        evaluaciones={evaluaciones}
+                    />
+                )}
+
                 <div className="mt-6 flex items-center justify-between border-t border-brand-border-faint pt-4">
                     {semanaAnterior !== null ? (
                         <Link
@@ -651,6 +762,25 @@ export default function SemanaPanel({
                             semana={semana}
                             contenidoSemana={contenidoSemana}
                             onDone={() => setEditing(false)}
+                        />
+                    </div>
+                </Modal>
+            )}
+
+            {canManageEvaluations && (
+                <Modal
+                    show={creatingEvaluation}
+                    onClose={() => setCreatingEvaluation(false)}
+                >
+                    <div className="p-6">
+                        <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                            Nueva evaluación — Semana {semana}
+                        </h2>
+                        <EvaluationForm
+                            course={course}
+                            defaultSemana={semana}
+                            onSuccess={() => setCreatingEvaluation(false)}
+                            onCancel={() => setCreatingEvaluation(false)}
                         />
                     </div>
                 </Modal>

@@ -12,11 +12,13 @@ import { Course, Evaluation, evaluationTypeLabels } from '@/types/models';
 export default function Form({
     course,
     evaluation,
+    defaultSemana,
     onSuccess,
     onCancel,
 }: {
     course: Course;
     evaluation?: Evaluation;
+    defaultSemana?: number;
     onSuccess: () => void;
     onCancel: () => void;
 }) {
@@ -25,8 +27,13 @@ export default function Form({
         type: evaluation?.type ?? 'exam',
         weight: evaluation?.weight ?? 20,
         date: evaluation?.date ?? '',
-        semana: evaluation?.semana ? String(evaluation.semana) : '',
+        semana: evaluation?.semana
+            ? String(evaluation.semana)
+            : defaultSemana
+              ? String(defaultSemana)
+              : '',
         max_score: evaluation?.max_score ?? 20,
+        intentos_permitidos: evaluation?.intentos_permitidos ?? 1,
     });
 
     const submit = (e: FormEvent) => {
@@ -142,6 +149,33 @@ export default function Form({
                         className="mt-2"
                     />
                 </div>
+
+                {data.type === 'quiz' && (
+                    <div>
+                        <InputLabel
+                            htmlFor="intentos_permitidos"
+                            value="Intentos permitidos"
+                        />
+                        <TextInput
+                            id="intentos_permitidos"
+                            type="number"
+                            min={1}
+                            max={10}
+                            className="mt-1 block w-full"
+                            value={data.intentos_permitidos}
+                            onChange={(e) =>
+                                setData(
+                                    'intentos_permitidos',
+                                    Number(e.target.value),
+                                )
+                            }
+                        />
+                        <InputError
+                            message={errors.intentos_permitidos}
+                            className="mt-2"
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center gap-4">
