@@ -10,11 +10,13 @@ import { FormEvent, useState } from 'react';
 import {
     Course,
     Evaluation,
+    ForoTema,
     RecursoAula,
     SemanaContenido,
     Tema,
 } from '@/types/models';
 import { EvaluacionItem, listaDesdeTexto, RecursoItem } from './Show';
+import ForoPanel from './ForoPanel';
 
 interface TemaFormItem {
     titulo: string;
@@ -276,6 +278,72 @@ function SemanaContenidoForm({
     );
 }
 
+function ChecklistSemana({
+    recursos,
+    evaluaciones,
+}: {
+    recursos: RecursoAula[];
+    evaluaciones: Evaluation[];
+}) {
+    const items: { label: string; hecho: boolean }[] = [];
+
+    if (recursos.length > 0) {
+        items.push({
+            label: 'Material revisado',
+            hecho: recursos.every((r) => r.visto),
+        });
+    }
+
+    if (evaluaciones.length > 0) {
+        items.push({
+            label: 'Actividad entregada',
+            hecho: evaluaciones.every(
+                (e) => e.estado === 'entregado' || e.estado === 'calificado',
+            ),
+        });
+
+        const pendiente = evaluaciones.some(
+            (e) => e.estado === 'pendiente' || e.estado === 'vencido',
+        );
+        items.push({
+            label: pendiente ? 'Evaluación pendiente' : 'Evaluación al día',
+            hecho: !pendiente,
+        });
+    }
+
+    if (items.length === 0) return null;
+
+    return (
+        <ul className="mt-3 space-y-1">
+            {items.map((item) => (
+                <li
+                    key={item.label}
+                    className="flex items-center gap-2 text-sm"
+                >
+                    <span
+                        className={
+                            item.hecho
+                                ? 'font-bold text-emerald-600'
+                                : 'text-brand-muted'
+                        }
+                    >
+                        {item.hecho ? '✓' : '○'}
+                    </span>
+                    <span
+                        className={
+                            item.hecho
+                                ? 'text-brand-ink'
+                                : 'text-brand-muted'
+                        }
+                    >
+                        {item.label}
+                    </span>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
 function ProgresoBar({ progreso }: { progreso: number }) {
     return (
         <div className="mt-4">
@@ -299,10 +367,12 @@ export default function SemanaPanel({
     contenidoSemana,
     recursos,
     evaluaciones,
+    foroTemas,
     progresoSemana,
     canManage,
     isStudent,
     onDeleteRecurso,
+    onToggleVisto,
     onAddRecurso,
     semanaAnterior,
     semanaSiguiente,
@@ -312,10 +382,12 @@ export default function SemanaPanel({
     contenidoSemana: SemanaContenido | null;
     recursos: RecursoAula[];
     evaluaciones: Evaluation[];
+    foroTemas: ForoTema[];
     progresoSemana: number | null;
     canManage: boolean;
     isStudent: boolean;
     onDeleteRecurso: (id: number) => void;
+    onToggleVisto: (id: number) => void;
     onAddRecurso: () => void;
     semanaAnterior: number | 'general' | null;
     semanaSiguiente: number | 'general' | null;
@@ -367,8 +439,16 @@ export default function SemanaPanel({
                         {contenidoSemana.objetivo}
                     </p>
                 )}
-                {isStudent && progresoSemana !== null && (
-                    <ProgresoBar progreso={progresoSemana} />
+                {isStudent && (
+                    <>
+                        <ChecklistSemana
+                            recursos={recursos}
+                            evaluaciones={evaluaciones}
+                        />
+                        {progresoSemana !== null && (
+                            <ProgresoBar progreso={progresoSemana} />
+                        )}
+                    </>
                 )}
             </div>
 
@@ -425,6 +505,8 @@ export default function SemanaPanel({
                             recurso={recursoPrincipal}
                             canManage={canManage}
                             onDelete={onDeleteRecurso}
+                            isStudent={isStudent}
+                            onToggleVisto={onToggleVisto}
                         />
                     </ul>
                 </div>
@@ -449,6 +531,8 @@ export default function SemanaPanel({
                             recurso={recurso}
                             canManage={canManage}
                             onDelete={onDeleteRecurso}
+                            isStudent={isStudent}
+                            onToggleVisto={onToggleVisto}
                         />
                     ))}
                     {materiales.length === 0 && (
@@ -482,6 +566,14 @@ export default function SemanaPanel({
                     </ul>
                 </div>
             )}
+
+            {/* 3.8 Foro / participación */}
+            <ForoPanel
+                course={course}
+                semana={semana}
+                foroTemas={foroTemas}
+                canManage={canManage}
+            />
 
             {/* 3.10 Cierre de la semana */}
             <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">

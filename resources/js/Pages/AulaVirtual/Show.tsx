@@ -21,13 +21,14 @@ import {
     TrashIcon,
     VideoCameraIcon,
 } from '@/Components/Icons';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useMemo, useRef, useState } from 'react';
 import {
     Course,
     EntregaEvaluacion,
     Evaluation,
     evaluationTypeLabels,
+    ForoTema,
     RecursoAula,
     recursoTipoLabels,
     SemanaContenido,
@@ -335,10 +336,14 @@ export function RecursoItem({
     recurso,
     canManage,
     onDelete,
+    isStudent,
+    onToggleVisto,
 }: {
     recurso: RecursoAula;
     canManage: boolean;
     onDelete: (id: number) => void;
+    isStudent?: boolean;
+    onToggleVisto?: (id: number) => void;
 }) {
     const Icono = contenidoIcon[inferirTipoContenido(recurso)];
 
@@ -397,6 +402,23 @@ export function RecursoItem({
                     <p className="mt-1 text-xs text-brand-muted-soft">
                         {formatDateTime(recurso.created_at)}
                     </p>
+                    {isStudent && onToggleVisto && (
+                        <label className="mt-2 flex w-fit cursor-pointer items-center gap-1.5 text-xs font-medium text-brand-muted hover:text-brand-navy">
+                            <input
+                                type="checkbox"
+                                checked={recurso.visto ?? false}
+                                onChange={() => onToggleVisto(recurso.id)}
+                                className="rounded border-brand-border text-brand-navy focus:ring-brand-navy"
+                            />
+                            {recurso.visto ? (
+                                <span className="text-emerald-600">
+                                    Material revisado
+                                </span>
+                            ) : (
+                                'Marcar como revisado'
+                            )}
+                        </label>
+                    )}
                 </div>
                 {canManage && (
                     <button
@@ -962,14 +984,18 @@ function BienvenidaPanel({
     course,
     recursos,
     canManage,
+    isStudent,
     onDeleteRecurso,
+    onToggleVisto,
     onAddRecurso,
     semanaSiguiente,
 }: {
     course: Course;
     recursos: RecursoAula[];
     canManage: boolean;
+    isStudent: boolean;
     onDeleteRecurso: (id: number) => void;
+    onToggleVisto: (id: number) => void;
     onAddRecurso: () => void;
     semanaSiguiente: number | 'general' | null;
 }) {
@@ -1209,6 +1235,8 @@ function BienvenidaPanel({
                             recurso={recurso}
                             canManage={canManage}
                             onDelete={onDeleteRecurso}
+                            isStudent={isStudent}
+                            onToggleVisto={onToggleVisto}
                         />
                     ))}
                     {recursos.length === 0 && (
@@ -1257,6 +1285,7 @@ export default function Show({
     recursos,
     evaluaciones,
     contenidoSemana,
+    foroTemas,
     progresoSemana,
     alertas,
     resumenSemanas,
@@ -1268,6 +1297,7 @@ export default function Show({
     recursos: RecursoAula[];
     evaluaciones: Evaluation[];
     contenidoSemana: SemanaContenido | null;
+    foroTemas: ForoTema[];
     progresoSemana: number | null;
     alertas: AlertaRecurso[];
     resumenSemanas: ResumenSemana[];
@@ -1281,6 +1311,14 @@ export default function Show({
     const deleteRecurso = (recursoId: number) => {
         if (!confirm('¿Eliminar este recurso?')) return;
         destroy(route('aula-virtual.destroy', [course.id, recursoId]));
+    };
+
+    const toggleVisto = (recursoId: number) => {
+        router.post(
+            route('aula-virtual.recursos.visto', recursoId),
+            {},
+            { preserveScroll: true },
+        );
     };
 
     const tituloSemana =
@@ -1327,7 +1365,9 @@ export default function Show({
                                     course={course}
                                     recursos={recursos}
                                     canManage={can.manage}
+                                    isStudent={isStudent}
                                     onDeleteRecurso={deleteRecurso}
+                                    onToggleVisto={toggleVisto}
                                     onAddRecurso={() => setAddModalOpen(true)}
                                     semanaSiguiente={semanaSiguiente}
                                 />
@@ -1338,10 +1378,12 @@ export default function Show({
                                     contenidoSemana={contenidoSemana}
                                     recursos={recursos}
                                     evaluaciones={evaluaciones}
+                                    foroTemas={foroTemas}
                                     progresoSemana={progresoSemana}
                                     canManage={can.manage}
                                     isStudent={isStudent}
                                     onDeleteRecurso={deleteRecurso}
+                                    onToggleVisto={toggleVisto}
                                     onAddRecurso={() => setAddModalOpen(true)}
                                     semanaAnterior={semanaAnterior}
                                     semanaSiguiente={semanaSiguiente}

@@ -70,4 +70,9 @@ class Course extends Model
     {
         return $this->hasMany(SemanaContenido::class);
     }
+
+    public function foroTemas(): HasMany
+    {
+        return $this->hasMany(ForoTema::class);
+    }
 }

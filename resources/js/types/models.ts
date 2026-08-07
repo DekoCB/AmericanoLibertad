@@ -423,6 +423,28 @@ export interface RecursoAula {
     archivo_url: string | null;
     creado_por: number | null;
     created_at: string;
+    visto?: boolean;
+}
+
+export interface ForoRespuesta {
+    id: number;
+    foro_tema_id: number;
+    user_id: number;
+    contenido: string;
+    created_at: string;
+    user?: { id: number; name: string };
+}
+
+export interface ForoTema {
+    id: number;
+    course_id: number;
+    semana: number;
+    titulo: string;
+    pregunta: string | null;
+    creado_por: number | null;
+    created_at: string;
+    autor?: { id: number; name: string };
+    respuestas?: ForoRespuesta[];
 }
 
 export const recursoTipoLabels: Record<RecursoAula['tipo'], string> = {

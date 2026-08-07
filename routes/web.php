@@ -13,6 +13,7 @@ use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\EntregaEvaluacionController;
 use App\Http\Controllers\EvaluationController;
+use App\Http\Controllers\ForoController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\IngresoManualController;
@@ -145,7 +146,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('aula-virtual/{course}', [RecursoAulaController::class, 'store'])->name('aula-virtual.store');
     Route::patch('aula-virtual/{course}/info', [RecursoAulaController::class, 'updateInfo'])->name('aula-virtual.info.update');
     Route::patch('aula-virtual/{course}/semana/{semana}/contenido', [RecursoAulaController::class, 'updateContenido'])->name('aula-virtual.contenido.update');
+    Route::post('aula-virtual/recursos/{recurso}/visto', [RecursoAulaController::class, 'toggleVisto'])->name('aula-virtual.recursos.visto');
     Route::delete('aula-virtual/{course}/{recurso}', [RecursoAulaController::class, 'destroy'])->name('aula-virtual.destroy');
+
+    // Foro por semana
+    Route::post('aula-virtual/{course}/semana/{semana}/foro', [ForoController::class, 'store'])->name('aula-virtual.foro.store');
+    Route::delete('aula-virtual/{course}/foro/{foroTema}', [ForoController::class, 'destroyTema'])->name('aula-virtual.foro.destroy');
+    Route::post('foro-temas/{foroTema}/respuestas', [ForoController::class, 'storeRespuesta'])->name('foro-temas.respuestas.store');
+    Route::delete('foro-respuestas/{respuesta}', [ForoController::class, 'destroyRespuesta'])->name('foro-respuestas.destroy');
 
     // Panel del docente: pagos y permisos
     Route::get('registros-horas', [RegistroHorasController::class, 'index'])->name('registros-horas.index');

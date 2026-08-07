@@ -8,6 +8,7 @@ use App\Models\EntregaEvaluacion;
 use App\Models\Grade;
 use App\Models\QuizIntento;
 use App\Models\RecursoAula;
+use App\Models\RecursoVisto;
 use App\Models\SemanaContenido;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -132,13 +133,46 @@ class RecursoAulaController extends Controller
                     return $data;
                 });
 
+        $recursos = $course->recursosAula()->where('semana', $semanaActual)->latest()->get();
+
+        if ($isStudent && $user->student_id && $recursos->isNotEmpty()) {
+            $vistoIds = RecursoVisto::whereIn('recurso_aula_id', $recursos->pluck('id'))
+                ->where('student_id', $user->student_id)
+                ->pluck('recurso_aula_id')
+                ->all();
+
+            $recursos = $recursos->map(function (RecursoAula $recurso) use ($vistoIds) {
+                $data = $recurso->toArray();
+                $data['visto'] = in_array($recurso->id, $vistoIds, true);
+
+                return $data;
+            });
+        }
+
         $progresoSemana = null;
 
-        if ($isStudent && $semanaActual !== null && $evaluaciones->isNotEmpty()) {
-            $totalSemana = $evaluaciones->count();
-            $completadasSemana = $evaluaciones->filter(fn ($e) => ($e['estado'] ?? null) === 'calificado')->count();
-            $progresoSemana = (int) round($completadasSemana / $totalSemana * 100);
+        if ($isStudent && $semanaActual !== null) {
+            $totalItems = $evaluaciones->count() + $recursos->count();
+
+            if ($totalItems > 0) {
+                $actividadesHechas = $evaluaciones->filter(
+                    fn ($e) => in_array($e['estado'] ?? null, ['entregado', 'calificado'], true)
+                )->count();
+                $materialesRevisados = $recursos->filter(
+                    fn ($r) => is_array($r) && ($r['visto'] ?? false)
+                )->count();
+
+                $progresoSemana = (int) round(($actividadesHechas + $materialesRevisados) / $totalItems * 100);
+            }
         }
+
+        $foroTemas = $semanaActual === null
+            ? collect()
+            : $course->foroTemas()
+                ->where('semana', $semanaActual)
+                ->with(['autor:id,name', 'respuestas.user:id,name'])
+                ->orderBy('created_at')
+                ->get();
 
         $recursosPorSemana = $course->recursosAula()
             ->selectRaw('semana, count(*) as total')
@@ -174,9 +208,10 @@ class RecursoAulaController extends Controller
 
         return Inertia::render('AulaVirtual/Show', [
             'course' => $course->load(['subject', 'teacher']),
-            'recursos' => $course->recursosAula()->where('semana', $semanaActual)->latest()->get(),
+            'recursos' => $recursos,
             'evaluaciones' => $evaluaciones,
             'contenidoSemana' => $contenidoSemana,
+            'foroTemas' => $foroTemas,
             'progresoSemana' => $progresoSemana,
             'alertas' => $alertas,
             'resumenSemanas' => $resumenSemanas,
@@ -274,6 +309,34 @@ class RecursoAulaController extends Controller
         return redirect()
             ->route('aula-virtual.show', ['course' => $course, 'semana' => $semana])
             ->with('success', 'Contenido de la semana actualizado correctamente.');
+    }
+
+    public function toggleVisto(Request $request, RecursoAula $recurso): RedirectResponse
+    {
+        $user = $request->user();
+
+        abort_unless($user->hasRole(UserRole::Estudiante) && $user->student_id, 403);
+
+        $inscrito = $recurso->course->enrollments()
+            ->where('student_id', $user->student_id)
+            ->exists();
+
+        abort_unless($inscrito, 403);
+
+        $visto = RecursoVisto::where('recurso_aula_id', $recurso->id)
+            ->where('student_id', $user->student_id)
+            ->first();
+
+        if ($visto) {
+            $visto->delete();
+        } else {
+            RecursoVisto::create([
+                'recurso_aula_id' => $recurso->id,
+                'student_id' => $user->student_id,
+            ]);
+        }
+
+        return back();
     }
 
     public function destroy(Course $course, RecursoAula $recurso): RedirectResponse
