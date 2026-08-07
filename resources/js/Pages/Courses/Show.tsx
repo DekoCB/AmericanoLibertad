@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import CalificarModal from '@/Components/CalificarModal';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SelectMenu from '@/Components/SelectMenu';
@@ -265,15 +266,21 @@ export default function Show({
                                         </div>
                                         {can.manageEvaluations && (
                                             <div className="flex items-center gap-3 text-sm">
-                                                <Link
-                                                    href={route(
-                                                        'evaluations.grades.edit',
-                                                        evaluation.id,
-                                                    )}
-                                                    className="text-brand-link hover:underline"
+                                                <CalificarModal
+                                                    evaluationId={
+                                                        evaluation.id
+                                                    }
                                                 >
-                                                    Calificar
-                                                </Link>
+                                                    {(open) => (
+                                                        <button
+                                                            type="button"
+                                                            onClick={open}
+                                                            className="text-brand-link hover:underline"
+                                                        >
+                                                            Calificar
+                                                        </button>
+                                                    )}
+                                                </CalificarModal>
                                                 <button
                                                     type="button"
                                                     onClick={() => {

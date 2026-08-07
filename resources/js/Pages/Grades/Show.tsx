@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import CalificarModal from '@/Components/CalificarModal';
 import { Head, Link } from '@inertiajs/react';
 import { Course, Evaluation, evaluationTypeLabels } from '@/types/models';
 import { formatDate } from '@/utils/date';
@@ -98,15 +99,19 @@ export default function Show({
                                                 0}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                                            <Link
-                                                href={route(
-                                                    'evaluations.grades.edit',
-                                                    evaluation.id,
-                                                )}
-                                                className="text-brand-link hover:underline"
+                                            <CalificarModal
+                                                evaluationId={evaluation.id}
                                             >
-                                                Calificar
-                                            </Link>
+                                                {(open) => (
+                                                    <button
+                                                        type="button"
+                                                        onClick={open}
+                                                        className="text-brand-link hover:underline"
+                                                    >
+                                                        Calificar
+                                                    </button>
+                                                )}
+                                            </CalificarModal>
                                         </td>
                                     </tr>
                                 ))}

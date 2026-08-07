@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Course;
 use App\Models\Evaluation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -76,7 +77,7 @@ class GradeController extends Controller
         ]);
     }
 
-    public function edit(Evaluation $evaluation): Response
+    public function edit(Evaluation $evaluation): JsonResponse
     {
         $this->authorize('update', $evaluation);
 
@@ -92,7 +93,7 @@ class GradeController extends Controller
         $grades = $evaluation->grades()->get()->keyBy('student_id');
         $entregas = $evaluation->entregas()->get()->keyBy('student_id');
 
-        return Inertia::render('Grades/Edit', [
+        return response()->json([
             'evaluation' => $evaluation,
             'students' => $students->map(function ($student) use ($grades, $entregas) {
                 $entrega = $entregas->get($student->id);
@@ -132,6 +133,6 @@ class GradeController extends Controller
             );
         }
 
-        return redirect()->route('courses.show', $evaluation->course_id)->with('success', 'Calificaciones guardadas correctamente.');
+        return back()->with('success', 'Calificaciones guardadas correctamente.');
     }
 }
