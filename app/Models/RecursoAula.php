@@ -21,6 +21,7 @@ class RecursoAula extends Model
         'titulo',
         'tipo',
         'entregable',
+        'es_principal',
         'fecha_entrega',
         'descripcion',
         'url',
@@ -35,6 +36,7 @@ class RecursoAula extends Model
     {
         return [
             'entregable' => 'boolean',
+            'es_principal' => 'boolean',
             'fecha_entrega' => 'date',
         ];
     }

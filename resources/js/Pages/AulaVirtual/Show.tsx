@@ -17,8 +17,10 @@ import {
     evaluationTypeLabels,
     RecursoAula,
     recursoTipoLabels,
+    SemanaContenido,
 } from '@/types/models';
 import { formatDate, formatDateTime } from '@/utils/date';
+import SemanaPanel from './SemanaPanel';
 
 const tipoBadge: Record<RecursoAula['tipo'], string> = {
     anuncio: 'bg-blue-100 text-blue-800',
@@ -38,6 +40,7 @@ const TOTAL_SEMANAS = 20;
 interface ResumenSemana {
     semana: number | 'general';
     total: number;
+    pendiente: boolean;
 }
 
 interface AlertaRecurso {
@@ -89,6 +92,7 @@ function RecursoForm({
         titulo: string;
         tipo: string;
         entregable: boolean;
+        es_principal: boolean;
         fecha_entrega: string;
         descripcion: string;
         url: string;
@@ -98,6 +102,7 @@ function RecursoForm({
         titulo: '',
         tipo: 'anuncio',
         entregable: false,
+        es_principal: false,
         fecha_entrega: '',
         descripcion: '',
         url: '',
@@ -208,6 +213,26 @@ function RecursoForm({
                         Es un entregable (los estudiantes verán una alerta)
                     </label>
                 </div>
+                {data.semana !== '' && (
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                        <input
+                            id="es_principal"
+                            type="checkbox"
+                            checked={data.es_principal}
+                            onChange={(e) =>
+                                setData('es_principal', e.target.checked)
+                            }
+                            className="rounded border-brand-border text-brand-navy focus:ring-brand-navy"
+                        />
+                        <label
+                            htmlFor="es_principal"
+                            className="text-sm font-medium text-brand-ink-strong"
+                        >
+                            Es el contenido principal de la semana (clase o
+                            recurso central)
+                        </label>
+                    </div>
+                )}
                 {data.entregable && (
                     <div className="sm:col-span-2">
                         <InputLabel
@@ -248,7 +273,7 @@ function RecursoForm({
     );
 }
 
-function RecursoItem({
+export function RecursoItem({
     recurso,
     canManage,
     onDelete,
@@ -267,6 +292,11 @@ function RecursoItem({
                         >
                             {recursoTipoLabels[recurso.tipo]}
                         </span>
+                        {recurso.es_principal && (
+                            <span className="rounded-full bg-brand-navy px-2 py-0.5 text-xs font-medium text-white">
+                                Contenido principal
+                            </span>
+                        )}
                         {recurso.entregable && (
                             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                                 Entregable
@@ -390,7 +420,24 @@ function EntregaUploader({
     );
 }
 
-function EvaluacionItem({
+const estadoActividadBadge: Record<
+    NonNullable<Evaluation['estado']>,
+    string
+> = {
+    pendiente: 'bg-gray-100 text-gray-700',
+    entregado: 'bg-sky-100 text-sky-800',
+    calificado: 'bg-emerald-100 text-emerald-800',
+    vencido: 'bg-red-100 text-red-800',
+};
+
+const estadoActividadLabel: Record<NonNullable<Evaluation['estado']>, string> = {
+    pendiente: 'Pendiente',
+    entregado: 'Entregado',
+    calificado: 'Calificado',
+    vencido: 'Vencido',
+};
+
+export function EvaluacionItem({
     evaluacion,
     isStudent,
     canManage,
@@ -407,6 +454,13 @@ function EvaluacionItem({
                 >
                     Evaluación · {evaluationTypeLabels[evaluacion.type]}
                 </span>
+                {isStudent && evaluacion.estado && (
+                    <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${estadoActividadBadge[evaluacion.estado]}`}
+                    >
+                        {estadoActividadLabel[evaluacion.estado]}
+                    </span>
+                )}
                 <p className="font-medium text-brand-ink-strong">
                     {evaluacion.name}
                 </p>
@@ -414,6 +468,13 @@ function EvaluacionItem({
             <p className="mt-1 text-sm text-brand-muted">
                 {formatDate(evaluacion.date)} · Ponderación{' '}
                 {evaluacion.weight}%
+                {!isStudent && evaluacion.grades_count !== undefined && (
+                    <>
+                        {' '}
+                        · Calificadas: {evaluacion.grades_count}/
+                        {evaluacion.total_estudiantes ?? 0}
+                    </>
+                )}
             </p>
 
             {(evaluacion.type === 'homework' || evaluacion.type === 'project') &&
@@ -478,7 +539,7 @@ function SemanasNav({
                 Contenido de la sección
             </h3>
             <ul className="max-h-[70vh] divide-y divide-brand-border-faint overflow-y-auto rounded-[20px] border border-brand-border bg-brand-card">
-                {resumenSemanas.map(({ semana, total }) => {
+                {resumenSemanas.map(({ semana, total, pendiente }) => {
                     const isActive =
                         semana === 'general'
                             ? semanaActual === null
@@ -498,7 +559,13 @@ function SemanasNav({
                                         : 'text-brand-ink hover:bg-brand-hover'
                                 }`}
                             >
-                                <span>
+                                <span className="flex items-center gap-1.5">
+                                    {pendiente && (
+                                        <span
+                                            className="size-1.5 shrink-0 rounded-full bg-amber-400"
+                                            title="Tienes actividades pendientes esta semana"
+                                        />
+                                    )}
                                     {semana === 'general'
                                         ? 'Bienvenida'
                                         : `Semana ${semana}`}
@@ -565,7 +632,7 @@ function AlertasPanel({ recursos }: { recursos: AlertaRecurso[] }) {
     );
 }
 
-function listaDesdeTexto(texto: string | null): string[] {
+export function listaDesdeTexto(texto: string | null): string[] {
     if (!texto) return [];
     return texto
         .split('\n')
@@ -1125,6 +1192,8 @@ export default function Show({
     course,
     recursos,
     evaluaciones,
+    contenidoSemana,
+    progresoSemana,
     alertas,
     resumenSemanas,
     semanaActual,
@@ -1134,6 +1203,8 @@ export default function Show({
     course: Course;
     recursos: RecursoAula[];
     evaluaciones: Evaluation[];
+    contenidoSemana: SemanaContenido | null;
+    progresoSemana: number | null;
     alertas: AlertaRecurso[];
     resumenSemanas: ResumenSemana[];
     semanaActual: number | null;
@@ -1197,82 +1268,20 @@ export default function Show({
                                     semanaSiguiente={semanaSiguiente}
                                 />
                             ) : (
-                                <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-bold text-brand-ink-strong">
-                                            {tituloSemana}
-                                        </h3>
-                                        {can.manage && (
-                                            <SecondaryButton
-                                                onClick={() =>
-                                                    setAddModalOpen(true)
-                                                }
-                                            >
-                                                Agregar recurso
-                                            </SecondaryButton>
-                                        )}
-                                    </div>
-                                    <ul className="mt-4 space-y-4">
-                                        {recursos.map((recurso) => (
-                                            <RecursoItem
-                                                key={recurso.id}
-                                                recurso={recurso}
-                                                canManage={can.manage}
-                                                onDelete={deleteRecurso}
-                                            />
-                                        ))}
-                                        {evaluaciones.map((evaluacion) => (
-                                            <EvaluacionItem
-                                                key={`evaluacion-${evaluacion.id}`}
-                                                evaluacion={evaluacion}
-                                                isStudent={isStudent}
-                                                canManage={can.manage}
-                                            />
-                                        ))}
-                                        {recursos.length === 0 &&
-                                            evaluaciones.length === 0 && (
-                                                <li className="py-2 text-sm text-brand-muted">
-                                                    Sin recursos para esta
-                                                    semana.
-                                                </li>
-                                            )}
-                                    </ul>
-
-                                    <div className="mt-6 flex items-center justify-between border-t border-brand-border-faint pt-4">
-                                        {semanaAnterior !== null ? (
-                                            <Link
-                                                href={route(
-                                                    'aula-virtual.show',
-                                                    {
-                                                        course: course.id,
-                                                        semana: semanaAnterior,
-                                                    },
-                                                )}
-                                                preserveScroll
-                                                className="text-sm text-brand-link hover:underline"
-                                            >
-                                                ← Anterior
-                                            </Link>
-                                        ) : (
-                                            <span />
-                                        )}
-                                        {semanaSiguiente !== null && (
-                                            <Link
-                                                href={route(
-                                                    'aula-virtual.show',
-                                                    {
-                                                        course: course.id,
-                                                        semana: semanaSiguiente,
-                                                    },
-                                                )}
-                                                preserveScroll
-                                                className="text-sm text-brand-link hover:underline"
-                                            >
-                                                Siguiente →
-                                            </Link>
-                                        )}
-                                    </div>
-                                </div>
+                                <SemanaPanel
+                                    course={course}
+                                    semana={semanaActual}
+                                    contenidoSemana={contenidoSemana}
+                                    recursos={recursos}
+                                    evaluaciones={evaluaciones}
+                                    progresoSemana={progresoSemana}
+                                    canManage={can.manage}
+                                    isStudent={isStudent}
+                                    onDeleteRecurso={deleteRecurso}
+                                    onAddRecurso={() => setAddModalOpen(true)}
+                                    semanaAnterior={semanaAnterior}
+                                    semanaSiguiente={semanaSiguiente}
+                                />
                             )}
                         </div>
                     </div>

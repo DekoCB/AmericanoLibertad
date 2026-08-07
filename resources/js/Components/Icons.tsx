@@ -597,3 +597,15 @@ export function InboxIcon(props: IconProps) {
         </Base>
     );
 }
+
+export function PlusIcon(props: IconProps) {
+    return (
+        <Base {...props}>
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 4.5v15m7.5-7.5h-15"
+            />
+        </Base>
+    );
+}

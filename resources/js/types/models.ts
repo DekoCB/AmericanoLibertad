@@ -166,6 +166,24 @@ export interface Evaluation {
     preguntas_count?: number;
     mi_intento?: QuizIntento | null;
     mi_entrega?: EntregaEvaluacion | null;
+    estado?: 'pendiente' | 'entregado' | 'calificado' | 'vencido';
+}
+
+export interface Tema {
+    titulo: string;
+    subtemas: string[];
+}
+
+export interface SemanaContenido {
+    id: number;
+    course_id: number;
+    semana: number;
+    titulo: string | null;
+    descripcion: string | null;
+    objetivo: string | null;
+    resultados_aprendizaje: string | null;
+    temas: Tema[] | null;
+    cierre_resumen: string | null;
 }
 
 export interface QuizOpcion {
@@ -396,6 +414,7 @@ export interface RecursoAula {
     titulo: string;
     tipo: 'enlace' | 'archivo' | 'anuncio';
     entregable: boolean;
+    es_principal: boolean;
     fecha_entrega: string | null;
     descripcion: string | null;
     url: string | null;

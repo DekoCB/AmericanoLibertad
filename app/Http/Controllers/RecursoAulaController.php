@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\Course;
+use App\Models\EntregaEvaluacion;
+use App\Models\Grade;
+use App\Models\QuizIntento;
 use App\Models\RecursoAula;
+use App\Models\SemanaContenido;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -51,14 +55,59 @@ class RecursoAulaController extends Controller
         $semanaParam = $request->query('semana', 'general');
         $semanaActual = $semanaParam === 'general' ? null : (int) $semanaParam;
 
+        // Estado de cada evaluación de la sección desde la perspectiva del estudiante
+        // (calificado / entregado / vencido / pendiente), usado para el badge de cada
+        // actividad, el indicador de "pendientes" por semana en el menú, y el progreso.
+        $estadoPorEvaluacion = [];
+        $todasEvaluaciones = collect();
+
+        if ($isStudent && $user->student_id) {
+            $todasEvaluaciones = $course->evaluations()
+                ->whereNotNull('semana')
+                ->get(['id', 'semana', 'date', 'type']);
+
+            $evaluationIds = $todasEvaluaciones->pluck('id');
+
+            $calificadas = Grade::whereIn('evaluation_id', $evaluationIds)
+                ->where('student_id', $user->student_id)
+                ->pluck('evaluation_id')->all();
+            $entregadas = EntregaEvaluacion::whereIn('evaluation_id', $evaluationIds)
+                ->where('student_id', $user->student_id)
+                ->pluck('evaluation_id')->all();
+            $intentadas = QuizIntento::whereIn('evaluation_id', $evaluationIds)
+                ->where('student_id', $user->student_id)
+                ->pluck('evaluation_id')->all();
+
+            $hoy = now()->toDateString();
+
+            foreach ($todasEvaluaciones as $evaluacion) {
+                $estadoPorEvaluacion[$evaluacion->id] = match (true) {
+                    in_array($evaluacion->id, $calificadas, true) => 'calificado',
+                    in_array($evaluacion->id, $entregadas, true) || in_array($evaluacion->id, $intentadas, true) => 'entregado',
+                    (string) $evaluacion->date < $hoy => 'vencido',
+                    default => 'pendiente',
+                };
+            }
+        }
+
+        $semanasPendientes = $todasEvaluaciones
+            ->filter(fn ($evaluacion) => in_array($estadoPorEvaluacion[$evaluacion->id] ?? null, ['pendiente', 'vencido'], true))
+            ->pluck('semana')
+            ->unique()
+            ->values();
+
+        $totalEstudiantesActivos = $course->enrollments()->where('status', 'active')->count();
+
         $evaluaciones = $semanaActual === null
             ? collect()
             : $course->evaluations()
                 ->where('semana', $semanaActual)
+                ->withCount('grades')
                 ->orderBy('date')
                 ->get()
-                ->map(function ($evaluation) use ($user, $isStudent) {
+                ->map(function ($evaluation) use ($user, $isStudent, $estadoPorEvaluacion, $totalEstudiantesActivos) {
                     $data = $evaluation->toArray();
+                    $data['total_estudiantes'] = $totalEstudiantesActivos;
 
                     if ($evaluation->type === 'quiz') {
                         $data['preguntas_count'] = $evaluation->quizPreguntas()->count();
@@ -76,8 +125,20 @@ class RecursoAulaController extends Controller
                             ->first();
                     }
 
+                    if ($isStudent) {
+                        $data['estado'] = $estadoPorEvaluacion[$evaluation->id] ?? 'pendiente';
+                    }
+
                     return $data;
                 });
+
+        $progresoSemana = null;
+
+        if ($isStudent && $semanaActual !== null && $evaluaciones->isNotEmpty()) {
+            $totalSemana = $evaluaciones->count();
+            $completadasSemana = $evaluaciones->filter(fn ($e) => ($e['estado'] ?? null) === 'calificado')->count();
+            $progresoSemana = (int) round($completadasSemana / $totalSemana * 100);
+        }
 
         $recursosPorSemana = $course->recursosAula()
             ->selectRaw('semana, count(*) as total')
@@ -96,6 +157,7 @@ class RecursoAulaController extends Controller
                 'semana' => $semana,
                 'total' => ($recursosPorSemana[$semana] ?? 0)
                     + ($semana === 'general' ? 0 : ($evaluacionesPorSemana[$semana] ?? 0)),
+                'pendiente' => $semana !== 'general' && $semanasPendientes->contains($semana),
             ]);
 
         $alertas = $isStudent
@@ -106,10 +168,16 @@ class RecursoAulaController extends Controller
                 ->get(['id', 'titulo', 'fecha_entrega', 'semana'])
             : collect();
 
+        $contenidoSemana = $semanaActual !== null
+            ? $course->semanaContenidos()->where('semana', $semanaActual)->first()
+            : null;
+
         return Inertia::render('AulaVirtual/Show', [
             'course' => $course->load(['subject', 'teacher']),
             'recursos' => $course->recursosAula()->where('semana', $semanaActual)->latest()->get(),
             'evaluaciones' => $evaluaciones,
+            'contenidoSemana' => $contenidoSemana,
+            'progresoSemana' => $progresoSemana,
             'alertas' => $alertas,
             'resumenSemanas' => $resumenSemanas,
             'semanaActual' => $semanaActual,
@@ -129,6 +197,7 @@ class RecursoAulaController extends Controller
             'titulo' => ['required', 'string', 'max:150'],
             'tipo' => ['required', Rule::in(['enlace', 'archivo', 'anuncio'])],
             'entregable' => ['boolean'],
+            'es_principal' => ['boolean'],
             'fecha_entrega' => ['nullable', 'date', 'required_if:entregable,1'],
             'descripcion' => ['nullable', 'string', 'max:2000'],
             'url' => ['nullable', 'url', 'max:500'],
@@ -177,6 +246,34 @@ class RecursoAulaController extends Controller
         return redirect()
             ->route('aula-virtual.show', ['course' => $course, 'semana' => 'general'])
             ->with('success', 'Información del curso actualizada correctamente.');
+    }
+
+    public function updateContenido(Request $request, Course $course, int $semana): RedirectResponse
+    {
+        $this->authorize('manage', [RecursoAula::class, $course]);
+
+        abort_unless($semana >= 1 && $semana <= self::TOTAL_SEMANAS, 404);
+
+        $validated = $request->validate([
+            'titulo' => ['nullable', 'string', 'max:150'],
+            'descripcion' => ['nullable', 'string', 'max:2000'],
+            'objetivo' => ['nullable', 'string', 'max:2000'],
+            'resultados_aprendizaje' => ['nullable', 'string', 'max:2000'],
+            'cierre_resumen' => ['nullable', 'string', 'max:2000'],
+            'temas' => ['nullable', 'array'],
+            'temas.*.titulo' => ['required', 'string', 'max:150'],
+            'temas.*.subtemas' => ['nullable', 'array'],
+            'temas.*.subtemas.*' => ['string', 'max:300'],
+        ]);
+
+        $course->semanaContenidos()->updateOrCreate(
+            ['semana' => $semana],
+            $validated,
+        );
+
+        return redirect()
+            ->route('aula-virtual.show', ['course' => $course, 'semana' => $semana])
+            ->with('success', 'Contenido de la semana actualizado correctamente.');
     }
 
     public function destroy(Course $course, RecursoAula $recurso): RedirectResponse

@@ -65,4 +65,9 @@ class Course extends Model
     {
         return $this->hasMany(RecursoAula::class);
     }
+
+    public function semanaContenidos(): HasMany
+    {
+        return $this->hasMany(SemanaContenido::class);
+    }
 }

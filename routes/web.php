@@ -144,6 +144,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('aula-virtual/{course}', [RecursoAulaController::class, 'show'])->name('aula-virtual.show');
     Route::post('aula-virtual/{course}', [RecursoAulaController::class, 'store'])->name('aula-virtual.store');
     Route::patch('aula-virtual/{course}/info', [RecursoAulaController::class, 'updateInfo'])->name('aula-virtual.info.update');
+    Route::patch('aula-virtual/{course}/semana/{semana}/contenido', [RecursoAulaController::class, 'updateContenido'])->name('aula-virtual.contenido.update');
     Route::delete('aula-virtual/{course}/{recurso}', [RecursoAulaController::class, 'destroy'])->name('aula-virtual.destroy');
 
     // Panel del docente: pagos y permisos
