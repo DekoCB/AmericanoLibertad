@@ -73,20 +73,25 @@ const carreraInfo: Record<
     string,
     { icon: ComponentType<{ className?: string }>; description: string }
 > = {
-    Enfermería: {
+    'Enfermería Técnica': {
         icon: HeartIcon,
         description:
             'Formamos profesionales en el cuidado integral del paciente, con práctica clínica real desde los primeros ciclos.',
     },
-    Farmacia: {
+    'Farmacia Técnica': {
         icon: BeakerIcon,
         description:
             'Aprende el manejo, dispensación y control de medicamentos en farmacias y establecimientos de salud.',
     },
-    Administración: {
+    'Administración de Empresas': {
         icon: BriefcaseIcon,
         description:
             'Desarrolla habilidades en gestión, finanzas y liderazgo para dirigir equipos y negocios.',
+    },
+    'Contabilidad Técnica': {
+        icon: BanknotesIcon,
+        description:
+            'Domina el registro, control y análisis financiero de empresas, desde la contabilidad general hasta la auditoría.',
     },
     'Fisioterapia y Rehabilitación': {
         icon: BoltIcon,
@@ -758,7 +763,7 @@ const contactInfo = [
     {
         icon: MapPinIcon,
         label: 'Dirección',
-        value: 'Block 11 – #1191, Tumán 14601',
+        value: 'Av. España S/N, Trujillo',
     },
     {
         icon: PhoneIcon,
@@ -836,7 +841,7 @@ function ContactSection() {
                         <div className="overflow-hidden rounded-[20px] border border-brand-border">
                             <iframe
                                 title="Ubicación del Instituto Americano Libertad"
-                                src="https://www.google.com/maps?q=Instituto+Libertad+Block+11+%231191+Tum%C3%A1n+14601&output=embed"
+                                src="https://www.google.com/maps?q=Av.+Espa%C3%B1a+S%2FN+Trujillo&output=embed"
                                 className="h-56 w-full"
                                 loading="lazy"
                                 referrerPolicy="no-referrer-when-downgrade"
@@ -1450,8 +1455,7 @@ export default function Welcome({
                             <div className="flex items-center gap-2">
                                 <MapPinIcon className="size-4 shrink-0" />
                                 <span>
-                                    Block 11 – #1191, Tumán 14601 · 900 512
-                                    553
+                                    Av. España S/N, Trujillo · 900 512 553
                                 </span>
                             </div>
                             {canLogin && (
