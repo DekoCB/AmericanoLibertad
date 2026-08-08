@@ -23,11 +23,11 @@ use Inertia\Response;
 class DashboardController extends Controller
 {
     /**
-     * Coordenadas de Huaraz, Áncash (sede del instituto).
+     * Coordenadas de Tumán, Chiclayo, Lambayeque (sede del instituto).
      */
-    private const CLIMA_LATITUD = -9.5277;
+    private const CLIMA_LATITUD = -6.7418;
 
-    private const CLIMA_LONGITUD = -77.5278;
+    private const CLIMA_LONGITUD = -79.7007;
 
     public function index(Request $request): Response
     {

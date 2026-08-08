@@ -25,6 +25,7 @@ interface CourseShowPermissions {
     manageCourse: boolean;
     deleteCourse: boolean;
     manageEvaluations: boolean;
+    grade: boolean;
 }
 
 export default function Show({
@@ -264,39 +265,44 @@ export default function Show({
                                                 notas registradas
                                             </div>
                                         </div>
-                                        {can.manageEvaluations && (
+                                        {(can.grade ||
+                                            can.manageEvaluations) && (
                                             <div className="flex items-center gap-3 text-sm">
-                                                <CalificarModal
-                                                    evaluationId={
-                                                        evaluation.id
-                                                    }
-                                                >
-                                                    {(open) => (
-                                                        <button
-                                                            type="button"
-                                                            onClick={open}
-                                                            className="text-brand-link hover:underline"
-                                                        >
-                                                            Calificar
-                                                        </button>
-                                                    )}
-                                                </CalificarModal>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setEditingEvaluation(
-                                                            evaluation,
-                                                        );
-                                                        setEditEvaluationModalOpen(
-                                                            true,
-                                                        );
-                                                    }}
-                                                    className="text-brand-muted hover:opacity-70"
-                                                    title="Editar"
-                                                    aria-label="Editar"
-                                                >
-                                                    <PencilIcon className="size-4" />
-                                                </button>
+                                                {can.grade && (
+                                                    <CalificarModal
+                                                        evaluationId={
+                                                            evaluation.id
+                                                        }
+                                                    >
+                                                        {(open) => (
+                                                            <button
+                                                                type="button"
+                                                                onClick={open}
+                                                                className="text-brand-link hover:underline"
+                                                            >
+                                                                Calificar
+                                                            </button>
+                                                        )}
+                                                    </CalificarModal>
+                                                )}
+                                                {can.manageEvaluations && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setEditingEvaluation(
+                                                                evaluation,
+                                                            );
+                                                            setEditEvaluationModalOpen(
+                                                                true,
+                                                            );
+                                                        }}
+                                                        className="text-brand-muted hover:opacity-70"
+                                                        title="Editar"
+                                                        aria-label="Editar"
+                                                    >
+                                                        <PencilIcon className="size-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </li>

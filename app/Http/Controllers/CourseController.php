@@ -131,6 +131,9 @@ class CourseController extends Controller
                 'manageCourse' => $request->user()->can('update', $course),
                 'deleteCourse' => $request->user()->can('delete', $course),
                 'manageEvaluations' => $request->user()->can('create', [Evaluation::class, $course]),
+                'grade' => $request->user()->hasRole(UserRole::Docente)
+                    ? $request->user()->teacher_id === $course->teacher_id
+                    : $request->user()->hasRole(UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico),
             ],
         ]);
     }

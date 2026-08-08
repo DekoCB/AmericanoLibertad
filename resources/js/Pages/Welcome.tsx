@@ -763,7 +763,7 @@ const contactInfo = [
     {
         icon: MapPinIcon,
         label: 'Dirección',
-        value: 'Av. España S/N, Trujillo',
+        value: 'Sector, Tumán 14601',
     },
     {
         icon: PhoneIcon,
@@ -841,7 +841,7 @@ function ContactSection() {
                         <div className="overflow-hidden rounded-[20px] border border-brand-border">
                             <iframe
                                 title="Ubicación del Instituto Americano Libertad"
-                                src="https://www.google.com/maps?q=Av.+Espa%C3%B1a+S%2FN+Trujillo&output=embed"
+                                src="https://www.google.com/maps?q=Sector+Tum%C3%A1n+14601&output=embed"
                                 className="h-56 w-full"
                                 loading="lazy"
                                 referrerPolicy="no-referrer-when-downgrade"
@@ -973,7 +973,7 @@ export default function Welcome({
     const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const logoUrl = `${siteUrl}/images/Logo.png`;
     const description =
-        'Instituto Superior Tecnológico Privado Americano Libertad: educación técnica superior en Enfermería, Farmacia, Administración y Fisioterapia y Rehabilitación. Horarios flexibles y formación práctica orientada al mercado laboral en Trujillo, Perú.';
+        'Instituto Superior Tecnológico Privado Americano Libertad: educación técnica superior en Enfermería, Farmacia, Administración y Fisioterapia y Rehabilitación. Horarios flexibles y formación práctica orientada al mercado laboral en Tumán, Perú.';
 
     return (
         <>
@@ -1014,8 +1014,8 @@ export default function Welcome({
                         logo: logoUrl,
                         address: {
                             '@type': 'PostalAddress',
-                            streetAddress: 'Av. España S/N',
-                            addressLocality: 'Trujillo',
+                            streetAddress: 'Sector, Tumán 14601',
+                            addressLocality: 'Tumán',
                             addressCountry: 'PE',
                         },
                         telephone: '+51900512553',
@@ -1439,7 +1439,7 @@ export default function Welcome({
                             <div className="flex items-center gap-2">
                                 <MapPinIcon className="size-4 shrink-0" />
                                 <span>
-                                    Av. España S/N, Trujillo · 900 512 553
+                                    Sector, Tumán 14601 · 900 512 553
                                 </span>
                             </div>
                             {canLogin && (

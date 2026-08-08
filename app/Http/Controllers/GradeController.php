@@ -79,7 +79,7 @@ class GradeController extends Controller
 
     public function edit(Evaluation $evaluation): JsonResponse
     {
-        $this->authorize('update', $evaluation);
+        $this->authorize('grade', $evaluation);
 
         $evaluation->load(['course.subject']);
 
@@ -113,7 +113,7 @@ class GradeController extends Controller
 
     public function update(Request $request, Evaluation $evaluation): RedirectResponse
     {
-        $this->authorize('update', $evaluation);
+        $this->authorize('grade', $evaluation);
 
         $validated = $request->validate([
             'grades' => ['required', 'array'],

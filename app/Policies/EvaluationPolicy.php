@@ -31,4 +31,13 @@ class EvaluationPolicy
     {
         return $this->update($user, $evaluation);
     }
+
+    public function grade(User $user, Evaluation $evaluation): bool
+    {
+        if ($user->hasRole(UserRole::Docente)) {
+            return $user->teacher_id !== null && $user->teacher_id === $evaluation->course->teacher_id;
+        }
+
+        return $user->hasRole(UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico);
+    }
 }
