@@ -151,6 +151,86 @@ class HorarioController extends Controller
         return redirect()->route('horarios.index')->with('success', "Aula \"{$validated['nombre']}\" registrada correctamente.");
     }
 
+    public function storeSlot(Request $request, Course $course): RedirectResponse
+    {
+        $user = $request->user();
+        $this->authorize('manage', Horario::class);
+        $this->assertOwnCourseIfDocente($user, $course);
+
+        $validated = $this->validateSlot($request);
+        $aula = $this->resolveAula($validated);
+
+        $course->horarios()->create([
+            'dia_semana' => $validated['dia_semana'],
+            'hora_inicio' => $validated['hora_inicio'],
+            'hora_fin' => $validated['hora_fin'],
+            'aula' => $aula->nombre,
+            'aula_id' => $aula->id,
+        ]);
+
+        return back()->with('success', 'Horario agregado correctamente.');
+    }
+
+    public function updateSlot(Request $request, Course $course, Horario $horario): RedirectResponse
+    {
+        $user = $request->user();
+        $this->authorize('manage', Horario::class);
+        $this->assertOwnCourseIfDocente($user, $course);
+        abort_unless($horario->course_id === $course->id, 404);
+
+        $validated = $this->validateSlot($request);
+        $aula = $this->resolveAula($validated);
+
+        $horario->update([
+            'dia_semana' => $validated['dia_semana'],
+            'hora_inicio' => $validated['hora_inicio'],
+            'hora_fin' => $validated['hora_fin'],
+            'aula' => $aula->nombre,
+            'aula_id' => $aula->id,
+        ]);
+
+        return back()->with('success', 'Horario actualizado correctamente.');
+    }
+
+    public function destroySlot(Request $request, Course $course, Horario $horario): RedirectResponse
+    {
+        $user = $request->user();
+        $this->authorize('manage', Horario::class);
+        $this->assertOwnCourseIfDocente($user, $course);
+        abort_unless($horario->course_id === $course->id, 404);
+
+        $horario->delete();
+
+        return back()->with('success', 'Horario eliminado correctamente.');
+    }
+
+    private function assertOwnCourseIfDocente(\App\Models\User $user, Course $course): void
+    {
+        if ($user->hasRole(UserRole::Docente) && $course->teacher_id !== $user->teacher_id) {
+            abort(403);
+        }
+    }
+
+    private function validateSlot(Request $request): array
+    {
+        return $request->validate([
+            'dia_semana' => ['required', Rule::in(array_keys(self::DIAS))],
+            'hora_inicio' => ['required', 'date_format:H:i'],
+            'hora_fin' => ['required', 'date_format:H:i', 'after:hora_inicio'],
+            'aula_id' => ['nullable', 'exists:aulas,id'],
+            'aula_nombre' => ['nullable', 'string', 'max:100', 'required_without:aula_id'],
+        ]);
+    }
+
+    private function resolveAula(array $validated): Aula
+    {
+        if (! empty($validated['aula_id'])) {
+            return Aula::findOrFail($validated['aula_id']);
+        }
+
+        return Aula::firstOrCreate(['nombre' => trim($validated['aula_nombre'])]);
+    }
+
     public function exportarAula(Request $request, string $aula): StreamedResponse
     {
         $this->authorize('viewAny', Course::class);

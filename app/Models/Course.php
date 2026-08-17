@@ -17,6 +17,7 @@ class Course extends Model
         'teacher_id',
         'name',
         'period',
+        'periodo_academico_id',
         'schedule',
         'turno',
         'capacity',
@@ -39,6 +40,11 @@ class Course extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(Teacher::class);
+    }
+
+    public function periodoAcademico(): BelongsTo
+    {
+        return $this->belongsTo(PeriodoAcademico::class);
     }
 
     public function enrollments(): HasMany

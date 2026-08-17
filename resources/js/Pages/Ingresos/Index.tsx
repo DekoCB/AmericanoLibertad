@@ -1,31 +1,43 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Modal from '@/Components/Modal';
 import Pagination from '@/Components/Pagination';
+import PrimaryButton from '@/Components/PrimaryButton';
 import SearchableSelect from '@/Components/SearchableSelect';
+import SecondaryButton from '@/Components/SecondaryButton';
 import { DocumentTextIcon } from '@/Components/Icons';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import { Paginated, Pago, Student, medioPagoLabels } from '@/types/models';
+import { Paginated, Pago, medioPagoLabels } from '@/types/models';
 import { formatDate } from '@/utils/date';
+import IngresoManualForm from '../IngresosManuales/Form';
 
 export default function Index({
     pagos,
-    allStudents,
+    conceptos,
     filters,
+    can,
+    pagosDeclaradosPendientes = [],
 }: {
     pagos: Paginated<Pago>;
-    allStudents: Pick<
-        Student,
-        'id' | 'first_name' | 'last_name' | 'document_number'
-    >[];
-    filters: { student_id?: string };
+    conceptos: { value: string; label: string }[];
+    filters: { concepto?: string };
+    can: { createIngresoManual: boolean; confirmarPagos: boolean };
+    pagosDeclaradosPendientes?: Pago[];
 }) {
-    const [studentId, setStudentId] = useState(filters.student_id ?? '');
+    const [concepto, setConcepto] = useState(filters.concepto ?? '');
+    const [creatingIngreso, setCreatingIngreso] = useState(false);
+    const confirmForm = useForm({});
 
-    const changeStudent = (nuevoStudentId: string) => {
-        setStudentId(nuevoStudentId);
+    const confirmarPago = (pago: Pago) => {
+        if (!confirm('¿Confirmar este pago en efectivo?')) return;
+        confirmForm.patch(route('pagos.confirmar', pago.id));
+    };
+
+    const changeConcepto = (nuevoConcepto: string) => {
+        setConcepto(nuevoConcepto);
         router.get(
             route('ingresos.index'),
-            { student_id: nuevoStudentId },
+            { concepto: nuevoConcepto },
             { preserveState: true, replace: true },
         );
     };
@@ -50,19 +62,71 @@ export default function Index({
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-5xl space-y-4 sm:px-6 lg:px-8">
-                    <div className="w-full max-w-sm">
-                        <SearchableSelect
-                            value={studentId}
-                            onChange={changeStudent}
-                            placeholder="Buscar por nombre o documento"
-                            allLabel="Todos los estudiantes"
-                            options={allStudents.map((student) => ({
-                                value: String(student.id),
-                                label: `${student.first_name} ${student.last_name}`,
-                                searchText: `${student.first_name} ${student.last_name} ${student.document_number}`,
-                            }))}
-                        />
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="w-full max-w-sm">
+                            <SearchableSelect
+                                value={concepto}
+                                onChange={changeConcepto}
+                                placeholder="Buscar por concepto"
+                                allLabel="Todos los conceptos"
+                                options={conceptos}
+                            />
+                        </div>
+                        {can.createIngresoManual && (
+                            <PrimaryButton
+                                onClick={() => setCreatingIngreso(true)}
+                            >
+                                Nuevo ingreso manual
+                            </PrimaryButton>
+                        )}
                     </div>
+
+                    {can.confirmarPagos &&
+                        pagosDeclaradosPendientes.length > 0 && (
+                            <div className="rounded-[20px] border border-amber-300 bg-amber-50 p-6">
+                                <h3 className="mb-4 text-lg font-bold text-amber-900">
+                                    Pagos en efectivo pendientes de confirmar
+                                </h3>
+                                <ul className="divide-y divide-amber-200">
+                                    {pagosDeclaradosPendientes.map((pago) => (
+                                        <li
+                                            key={pago.id}
+                                            className="flex items-center justify-between py-2"
+                                        >
+                                            <div className="text-sm">
+                                                <span className="font-medium text-amber-900">
+                                                    {pago.student
+                                                        ? `${pago.student.first_name} ${pago.student.last_name}`
+                                                        : '—'}
+                                                </span>{' '}
+                                                <span className="text-amber-800">
+                                                    · S/{' '}
+                                                    {Number(
+                                                        pago.monto,
+                                                    ).toFixed(2)}{' '}
+                                                    · límite{' '}
+                                                    {pago.fecha_limite_pago
+                                                        ? formatDate(
+                                                              pago.fecha_limite_pago,
+                                                          )
+                                                        : '—'}
+                                                </span>
+                                            </div>
+                                            <SecondaryButton
+                                                onClick={() =>
+                                                    confirmarPago(pago)
+                                                }
+                                                disabled={
+                                                    confirmForm.processing
+                                                }
+                                            >
+                                                Confirmar
+                                            </SecondaryButton>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
 
                     <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
                         <table className="min-w-full divide-y divide-brand-border-faint">
@@ -142,6 +206,21 @@ export default function Index({
                     <Pagination links={pagos.links} />
                 </div>
             </div>
+
+            <Modal
+                show={creatingIngreso}
+                onClose={() => setCreatingIngreso(false)}
+            >
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Nuevo ingreso manual
+                    </h2>
+                    <IngresoManualForm
+                        onSuccess={() => setCreatingIngreso(false)}
+                        onCancel={() => setCreatingIngreso(false)}
+                    />
+                </div>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

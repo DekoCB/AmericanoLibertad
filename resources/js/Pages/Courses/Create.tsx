@@ -1,14 +1,16 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
-import { Subject, Teacher } from '@/types/models';
+import { PeriodoAcademico, Subject, Teacher } from '@/types/models';
 import Form from './Form';
 
 export default function Create({
     subjects,
     teachers,
+    periodos,
 }: {
     subjects: Pick<Subject, 'id' | 'name'>[];
     teachers: Pick<Teacher, 'id' | 'first_name' | 'last_name'>[];
+    periodos: Pick<PeriodoAcademico, 'id' | 'nombre' | 'fecha_inicio' | 'fecha_fin'>[];
 }) {
     const goToIndex = () => router.visit(route('courses.index'));
 
@@ -28,6 +30,7 @@ export default function Create({
                         <Form
                             subjects={subjects}
                             teachers={teachers}
+                            periodos={periodos}
                             onSuccess={goToIndex}
                             onCancel={goToIndex}
                         />

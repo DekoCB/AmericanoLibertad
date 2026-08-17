@@ -41,9 +41,16 @@ class RecursoAulaController extends Controller
             ->orderBy('name')
             ->get();
 
+        $viewMode = match (true) {
+            $user->hasRole(UserRole::Estudiante) => 'estudiante',
+            $user->hasRole(UserRole::Docente) => 'docente',
+            default => 'staff',
+        };
+
         return Inertia::render('AulaVirtual/Index', [
             'courses' => $courses,
             'isStudent' => $user->hasRole(UserRole::Estudiante),
+            'viewMode' => $viewMode,
         ]);
     }
 
@@ -223,7 +230,7 @@ class RecursoAulaController extends Controller
             : null;
 
         return Inertia::render('AulaVirtual/Show', [
-            'course' => $course->load(['subject', 'teacher']),
+            'course' => $course->load(['subject', 'teacher', 'periodoAcademico']),
             'recursos' => $recursos,
             'evaluaciones' => $evaluaciones,
             'contenidoSemana' => $contenidoSemana,

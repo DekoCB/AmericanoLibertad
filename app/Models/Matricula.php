@@ -18,6 +18,7 @@ class Matricula extends Model
         'ciclo',
         'turno',
         'period',
+        'periodo_academico_id',
         'monto_matricula',
         'fecha_matricula',
         'estado',
@@ -39,6 +40,11 @@ class Matricula extends Model
     public function carrera(): BelongsTo
     {
         return $this->belongsTo(Carrera::class);
+    }
+
+    public function periodoAcademico(): BelongsTo
+    {
+        return $this->belongsTo(PeriodoAcademico::class);
     }
 
     public function cuotas(): HasMany

@@ -5,9 +5,13 @@ namespace App\Http\Middleware;
 use App\Enums\UserRole;
 use App\Models\AdmissionApplication;
 use App\Models\Carrera;
+use App\Models\ConfiguracionPago;
 use App\Models\Course;
+use App\Models\Cuota;
 use App\Models\Egreso;
 use App\Models\Matricula;
+use App\Models\Pago;
+use App\Models\PeriodoAcademico;
 use App\Models\PermisoDocente;
 use App\Models\RegistroHoras;
 use App\Models\Student;
@@ -68,12 +72,48 @@ class HandleInertiaRequests extends Middleware
                     'registrosHoras' => $user->can('viewAny', RegistroHoras::class),
                     'permisos' => $user->can('viewAny', PermisoDocente::class),
                     'users' => $user->role === UserRole::Gerencia,
+                    'misPagos' => $user->role === UserRole::Estudiante && $user->student_id !== null,
+                    'periodosAcademicos' => $user->can('viewAny', PeriodoAcademico::class),
+                    'configuracionPagos' => $user->can('view', ConfiguracionPago::class),
                 ] : null,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            'paymentAlert' => fn () => $this->paymentAlert($user),
+        ];
+    }
+
+    /**
+     * @return array{pendientes: int, efectivoPorConfirmar: array<int, array{id: int, monto: float, fecha_limite_pago: string|null}>}|null
+     */
+    private function paymentAlert($user): ?array
+    {
+        if (! $user || $user->role !== UserRole::Estudiante || $user->student_id === null) {
+            return null;
+        }
+
+        $pendientes = Cuota::whereHas(
+            'matricula',
+            fn ($q) => $q->where('student_id', $user->student_id),
+        )->whereIn('estado', ['pendiente', 'vencido', 'parcial'])->count();
+
+        $efectivoPorConfirmar = Pago::where('student_id', $user->student_id)
+            ->where('estado', 'declarado')
+            ->where('medio', 'efectivo')
+            ->whereNotNull('fecha_limite_pago')
+            ->get(['id', 'monto', 'fecha_limite_pago'])
+            ->map(fn (Pago $pago) => [
+                'id' => $pago->id,
+                'monto' => (float) $pago->monto,
+                'fecha_limite_pago' => $pago->fecha_limite_pago?->toDateString(),
+            ])
+            ->all();
+
+        return [
+            'pendientes' => $pendientes,
+            'efectivoPorConfirmar' => $efectivoPorConfirmar,
         ];
     }
 }

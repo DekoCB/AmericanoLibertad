@@ -34,6 +34,18 @@ export interface NavPermissions {
     registrosHoras: boolean;
     permisos: boolean;
     users: boolean;
+    misPagos: boolean;
+    periodosAcademicos: boolean;
+    configuracionPagos: boolean;
+}
+
+export interface PaymentAlert {
+    pendientes: number;
+    efectivoPorConfirmar: {
+        id: number;
+        monto: number;
+        fecha_limite_pago: string | null;
+    }[];
 }
 
 export type PageProps<
@@ -47,4 +59,5 @@ export type PageProps<
         success: string | null;
         error: string | null;
     };
+    paymentAlert: PaymentAlert | null;
 };

@@ -8,7 +8,7 @@ import PageTitle from '@/Components/PageTitle';
 import { PencilIcon, RectangleStackIcon, TrashIcon } from '@/Components/Icons';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { Course, Evaluation, Subject, Teacher } from '@/types/models';
+import { Course, Evaluation, PeriodoAcademico, Subject, Teacher } from '@/types/models';
 import Form from './Form';
 
 const SIN_MATERIA = 'Sin curso';
@@ -20,6 +20,7 @@ export default function Index({
     filters,
     subjects,
     teachers,
+    periodos,
     upcomingEvaluations,
     can,
 }: {
@@ -29,6 +30,7 @@ export default function Index({
     filters: { name?: string; carrera_name?: string };
     subjects: Pick<Subject, 'id' | 'name'>[];
     teachers: Pick<Teacher, 'id' | 'first_name' | 'last_name'>[];
+    periodos: Pick<PeriodoAcademico, 'id' | 'nombre' | 'fecha_inicio' | 'fecha_fin'>[];
     upcomingEvaluations: Evaluation[];
     can: { create: boolean; update: boolean; delete: boolean };
 }) {
@@ -229,6 +231,7 @@ export default function Index({
                     <Form
                         subjects={subjects}
                         teachers={teachers}
+                        periodos={periodos}
                         onSuccess={() => setCreating(false)}
                         onCancel={() => setCreating(false)}
                     />
@@ -248,6 +251,7 @@ export default function Index({
                             course={editingCourse}
                             subjects={subjects}
                             teachers={teachers}
+                            periodos={periodos}
                             onSuccess={() => setEditModalOpen(false)}
                             onCancel={() => setEditModalOpen(false)}
                         />

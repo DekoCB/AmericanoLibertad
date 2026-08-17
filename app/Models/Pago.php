@@ -21,6 +21,11 @@ class Pago extends Model
         'monto_yape',
         'fecha',
         'nota',
+        'estado',
+        'comprobante_path',
+        'confirmado_por',
+        'confirmado_at',
+        'fecha_limite_pago',
     ];
 
     protected function casts(): array
@@ -30,6 +35,8 @@ class Pago extends Model
             'monto' => 'float',
             'monto_efectivo' => 'float',
             'monto_yape' => 'float',
+            'confirmado_at' => 'datetime',
+            'fecha_limite_pago' => 'date',
         ];
     }
 
@@ -46,5 +53,10 @@ class Pago extends Model
     public function registradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'registrado_por');
+    }
+
+    public function confirmadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmado_por');
     }
 }

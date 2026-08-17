@@ -1,6 +1,8 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import Modal from '@/Components/Modal';
+import NotificationBell from '@/Components/NotificationBell';
+import PaymentAlertBanner from '@/Components/PaymentAlertBanner';
 import SidebarLink from '@/Components/SidebarLink';
 import UserAvatar from '@/Components/UserAvatar';
 import HelpContent from '@/Pages/Help/HelpContent';
@@ -179,10 +181,16 @@ function SidebarNav({
             nav?.admisiones ||
             nav?.horarios ||
             nav?.asistencias ||
-            nav?.aulaVirtual,
+            nav?.aulaVirtual ||
+            nav?.periodosAcademicos,
     );
     const financieroVisible = Boolean(
-        nav?.matriculas || nav?.caja || nav?.reportes || nav?.registrosHoras,
+        nav?.matriculas ||
+            nav?.caja ||
+            nav?.reportes ||
+            nav?.registrosHoras ||
+            nav?.misPagos ||
+            nav?.configuracionPagos,
     );
     const administracionVisible = Boolean(nav?.permisos || nav?.users);
 
@@ -311,6 +319,18 @@ function SidebarNav({
                             Aula virtual
                         </SidebarLink>
                     )}
+                    {nav?.periodosAcademicos && (
+                        <SidebarLink
+                            href={route('periodos-academicos.index')}
+                            active={route().current(
+                                'periodos-academicos.*',
+                            )}
+                            collapsed={collapsed}
+                            icon={<CalendarDaysIcon />}
+                        >
+                            Períodos académicos
+                        </SidebarLink>
+                    )}
                 </>
             )}
 
@@ -342,6 +362,18 @@ function SidebarNav({
                             Flujo de caja
                         </SidebarLink>
                     )}
+                    {nav?.configuracionPagos && (
+                        <SidebarLink
+                            href={route('configuracion-pagos.edit')}
+                            active={route().current(
+                                'configuracion-pagos.*',
+                            )}
+                            collapsed={collapsed}
+                            icon={<CreditCardIcon />}
+                        >
+                            Métodos de pago
+                        </SidebarLink>
+                    )}
                     {nav?.reportes && (
                         <SidebarLink
                             href={route('reportes.index')}
@@ -360,6 +392,16 @@ function SidebarNav({
                             icon={<ClockIcon />}
                         >
                             Horas y pagos
+                        </SidebarLink>
+                    )}
+                    {nav?.misPagos && (
+                        <SidebarLink
+                            href={route('mis-pagos.index')}
+                            active={route().current('mis-pagos.*')}
+                            collapsed={collapsed}
+                            icon={<CreditCardIcon />}
+                        >
+                            Mis pagos
                         </SidebarLink>
                     )}
                 </>
@@ -633,6 +675,10 @@ export default function Authenticated({
 
             {/* Main content */}
             <div className="flex flex-1 flex-col pt-16 lg:pt-0">
+                <div className="flex justify-end px-4 pt-3 sm:px-6 lg:px-8">
+                    <NotificationBell />
+                </div>
+
                 {header && (
                     <header
                         className="relative overflow-hidden border-b border-brand-border bg-brand-card bg-cover bg-center"
@@ -651,6 +697,7 @@ export default function Authenticated({
                 )}
 
                 <main className="relative flex-1 bg-starfield animate-drift-down">
+                    <PaymentAlertBanner />
                     <div key={url} className="relative animate-fade-in">
                         {children}
                     </div>

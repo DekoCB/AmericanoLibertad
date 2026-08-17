@@ -2,16 +2,21 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import CalificarModal from '@/Components/CalificarModal';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 import SelectMenu from '@/Components/SelectMenu';
-import { PencilIcon } from '@/Components/Icons';
+import { PencilIcon, TrashIcon } from '@/Components/Icons';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent, useState } from 'react';
 import {
+    Aula,
     Course,
+    diaSemanaLabels,
     Enrollment,
     enrollmentStatusLabels,
     Evaluation,
     evaluationTypeLabels,
+    Horario,
+    PeriodoAcademico,
     Student,
     Subject,
     Teacher,
@@ -19,6 +24,7 @@ import {
 import { formatDate } from '@/utils/date';
 import CourseForm from './Form';
 import EvaluationForm from '../Evaluations/Form';
+import SlotForm from '../Horarios/SlotForm';
 
 interface CourseShowPermissions {
     manageEnrollments: boolean;
@@ -26,6 +32,7 @@ interface CourseShowPermissions {
     deleteCourse: boolean;
     manageEvaluations: boolean;
     grade: boolean;
+    manageHorarios: boolean;
 }
 
 export default function Show({
@@ -35,6 +42,8 @@ export default function Show({
     availableStudents,
     subjects,
     teachers,
+    aulas,
+    periodos,
     can,
 }: {
     course: Course;
@@ -43,6 +52,8 @@ export default function Show({
     availableStudents: Pick<Student, 'id' | 'first_name' | 'last_name'>[];
     subjects: Pick<Subject, 'id' | 'name'>[];
     teachers: Pick<Teacher, 'id' | 'first_name' | 'last_name'>[];
+    aulas: Aula[];
+    periodos: Pick<PeriodoAcademico, 'id' | 'nombre' | 'fecha_inicio' | 'fecha_fin'>[];
     can: CourseShowPermissions;
 }) {
     const enrollForm = useForm({ student_id: availableStudents[0]?.id ?? '' });
@@ -52,6 +63,10 @@ export default function Show({
         useState<Evaluation | null>(null);
     const [editEvaluationModalOpen, setEditEvaluationModalOpen] =
         useState(false);
+    const [addingHorario, setAddingHorario] = useState(false);
+    const [editingHorario, setEditingHorario] = useState<Horario | null>(
+        null,
+    );
 
     const submitEnroll = (e: FormEvent) => {
         e.preventDefault();
@@ -316,6 +331,79 @@ export default function Show({
                             </ul>
                         </div>
                     </div>
+
+                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-brand-ink-strong">
+                                Horario de clases
+                            </h3>
+                            {can.manageHorarios && (
+                                <PrimaryButton
+                                    onClick={() => setAddingHorario(true)}
+                                >
+                                    Nuevo horario
+                                </PrimaryButton>
+                            )}
+                        </div>
+
+                        <ul className="divide-y divide-brand-border-faint">
+                            {(course.horarios ?? []).map((horario) => (
+                                <li
+                                    key={horario.id}
+                                    className="flex items-center justify-between py-2"
+                                >
+                                    <div className="text-sm text-brand-ink-strong">
+                                        {diaSemanaLabels[horario.dia_semana]}{' '}
+                                        <span className="text-brand-muted">
+                                            {horario.hora_inicio.slice(0, 5)}–
+                                            {horario.hora_fin.slice(0, 5)}
+                                        </span>{' '}
+                                        · {horario.aula_ref?.nombre ?? horario.aula ?? 'Sin aula'}
+                                    </div>
+                                    {can.manageHorarios && (
+                                        <div className="flex items-center gap-3 text-sm">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setEditingHorario(horario)
+                                                }
+                                                className="text-brand-muted hover:opacity-70"
+                                                title="Editar"
+                                                aria-label="Editar"
+                                            >
+                                                <PencilIcon className="size-4" />
+                                            </button>
+                                            <Link
+                                                as="button"
+                                                method="delete"
+                                                href={route(
+                                                    'courses.horarios.destroy',
+                                                    [course.id, horario.id],
+                                                )}
+                                                onBefore={() =>
+                                                    confirm(
+                                                        '¿Eliminar este horario?',
+                                                    )
+                                                }
+                                                preserveScroll
+                                                className="text-red-600 hover:opacity-70"
+                                                title="Eliminar"
+                                                aria-label="Eliminar"
+                                            >
+                                                <TrashIcon className="size-4" />
+                                            </Link>
+                                        </div>
+                                    )}
+                                </li>
+                            ))}
+                            {(course.horarios ?? []).length === 0 && (
+                                <li className="py-4 text-sm text-brand-muted">
+                                    Aún no hay horarios registrados para esta
+                                    sección.
+                                </li>
+                            )}
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -328,6 +416,7 @@ export default function Show({
                         course={course}
                         subjects={subjects}
                         teachers={teachers}
+                        periodos={periodos}
                         onSuccess={() => setEditingCourse(false)}
                         onCancel={() => setEditingCourse(false)}
                     />
@@ -364,6 +453,40 @@ export default function Show({
                             evaluation={editingEvaluation}
                             onSuccess={() => setEditEvaluationModalOpen(false)}
                             onCancel={() => setEditEvaluationModalOpen(false)}
+                        />
+                    )}
+                </div>
+            </Modal>
+
+            <Modal show={addingHorario} onClose={() => setAddingHorario(false)}>
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Nuevo horario
+                    </h2>
+                    <SlotForm
+                        course={course}
+                        aulas={aulas}
+                        onSuccess={() => setAddingHorario(false)}
+                        onCancel={() => setAddingHorario(false)}
+                    />
+                </div>
+            </Modal>
+
+            <Modal
+                show={editingHorario !== null}
+                onClose={() => setEditingHorario(null)}
+            >
+                <div className="p-6">
+                    <h2 className="mb-6 text-center text-lg font-bold uppercase text-brand-ink-strong">
+                        Editar horario
+                    </h2>
+                    {editingHorario && (
+                        <SlotForm
+                            course={course}
+                            horario={editingHorario}
+                            aulas={aulas}
+                            onSuccess={() => setEditingHorario(null)}
+                            onCancel={() => setEditingHorario(null)}
                         />
                     )}
                 </div>

@@ -4,6 +4,7 @@ use App\Http\Controllers\AdmissionApplicationController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CarreraController;
+use App\Http\Controllers\ConfiguracionPagoController;
 use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CuotaController;
@@ -18,7 +19,9 @@ use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\IngresoManualController;
 use App\Http\Controllers\MatriculaController;
+use App\Http\Controllers\MisPagosController;
 use App\Http\Controllers\PagoController;
+use App\Http\Controllers\PeriodoAcademicoController;
 use App\Http\Controllers\PermisoDocenteController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuizIntentoController;
@@ -84,12 +87,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('admisiones/{admissionApplication}/documentos/{campo}', [AdmissionApplicationController::class, 'descargarDocumento'])->name('admisiones.documentos');
 
     Route::resource('matriculas', MatriculaController::class)->except('edit');
+    Route::resource('periodos-academicos', PeriodoAcademicoController::class)->except(['show', 'edit', 'create']);
+    Route::get('configuracion-pagos', [ConfiguracionPagoController::class, 'edit'])->name('configuracion-pagos.edit');
+    Route::put('configuracion-pagos', [ConfiguracionPagoController::class, 'update'])->name('configuracion-pagos.update');
     Route::post('matriculas/{matricula}/cuotas', [CuotaController::class, 'store'])->name('matriculas.cuotas.store');
     Route::delete('matriculas/{matricula}/cuotas/{cuota}', [CuotaController::class, 'destroy'])->name('matriculas.cuotas.destroy');
     Route::post('cuotas/{cuota}/pagos', [PagoController::class, 'store'])->name('cuotas.pagos.store');
     Route::delete('cuotas/{cuota}/pagos/{pago}', [PagoController::class, 'destroy'])->name('cuotas.pagos.destroy');
+    Route::patch('pagos/{pago}/confirmar', [PagoController::class, 'confirmar'])->name('pagos.confirmar');
     Route::get('pagos/{pago}/comprobante', [PagoController::class, 'comprobante'])->name('pagos.comprobante');
+    Route::get('pagos/{pago}/comprobante-adjunto', [PagoController::class, 'comprobanteAdjunto'])->name('pagos.comprobante-adjunto');
     Route::get('ingresos', [PagoController::class, 'index'])->name('ingresos.index');
+    Route::get('mis-pagos', [MisPagosController::class, 'index'])->name('mis-pagos.index');
 
     Route::resource('egresos', EgresoController::class)->except(['show', 'edit', 'update']);
     Route::resource('ingresos-manuales', IngresoManualController::class)->except(['show', 'edit', 'update', 'create']);
@@ -100,6 +109,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('courses/{course}/enrollments', [EnrollmentController::class, 'store'])->name('courses.enrollments.store');
     Route::delete('courses/{course}/enrollments/{enrollment}', [EnrollmentController::class, 'destroy'])->name('courses.enrollments.destroy');
+
+    Route::patch('courses/{course}/periodo', [CourseController::class, 'updatePeriodoFechas'])->name('courses.periodo.update');
+
+    Route::post('courses/{course}/horarios', [HorarioController::class, 'storeSlot'])->name('courses.horarios.store');
+    Route::put('courses/{course}/horarios/{horario}', [HorarioController::class, 'updateSlot'])->name('courses.horarios.update');
+    Route::delete('courses/{course}/horarios/{horario}', [HorarioController::class, 'destroySlot'])->name('courses.horarios.destroy');
 
     Route::get('courses/{course}/evaluations/create', [EvaluationController::class, 'create'])->name('courses.evaluations.create');
     Route::post('courses/{course}/evaluations', [EvaluationController::class, 'store'])->name('courses.evaluations.store');

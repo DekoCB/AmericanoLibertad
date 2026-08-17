@@ -17,10 +17,16 @@ class Horario extends Model
         'hora_inicio',
         'hora_fin',
         'aula',
+        'aula_id',
     ];
 
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function aulaRef(): BelongsTo
+    {
+        return $this->belongsTo(Aula::class, 'aula_id');
     }
 }

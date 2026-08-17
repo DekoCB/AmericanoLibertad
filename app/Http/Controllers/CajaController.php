@@ -59,6 +59,38 @@ class CajaController extends Controller
         $hoy = now()->toDateString();
         $inicioMes = now()->startOfMonth()->toDateString();
 
+        $ingresosPorTipoCuota = Pago::query()
+            ->join('cuotas', 'cuotas.id', '=', 'pagos.cuota_id')
+            ->where('pagos.fecha', '>=', $inicioMes)
+            ->selectRaw('cuotas.tipo as tipo, SUM(pagos.monto) as total')
+            ->groupBy('cuotas.tipo')
+            ->pluck('total', 'tipo');
+
+        $ingresosManualesPorCategoria = IngresoManual::where('fecha', '>=', $inicioMes)
+            ->selectRaw('categoria, SUM(monto) as total')
+            ->groupBy('categoria')
+            ->pluck('total', 'categoria');
+
+        $egresosPorCategoria = Egreso::where('fecha', '>=', $inicioMes)
+            ->selectRaw('categoria, SUM(monto) as total')
+            ->groupBy('categoria')
+            ->pluck('total', 'categoria');
+
+        $categoriasMes = [
+            'ingresos' => [
+                'matricula' => (float) ($ingresosPorTipoCuota['matricula'] ?? 0),
+                'pension' => (float) ($ingresosPorTipoCuota['pension'] ?? 0),
+                'donacion' => (float) ($ingresosManualesPorCategoria['donacion'] ?? 0),
+                'servicio' => (float) ($ingresosManualesPorCategoria['servicio'] ?? 0),
+                'otro' => (float) ($ingresosManualesPorCategoria['otro'] ?? 0),
+            ],
+            'egresos' => [
+                'pago_docente' => (float) ($egresosPorCategoria['pago_docente'] ?? 0),
+                'operativo' => (float) ($egresosPorCategoria['operativo'] ?? 0),
+                'otro' => (float) ($egresosPorCategoria['otro'] ?? 0),
+            ],
+        ];
+
         $pagosRecientes = Pago::with('student')->latest('fecha')->limit(8)->get()
             ->map(fn (Pago $pago) => [
                 'tipo' => 'pago',
@@ -94,6 +126,7 @@ class CajaController extends Controller
                 'egresosMes' => (float) Egreso::where('fecha', '>=', $inicioMes)->sum('monto'),
             ],
             'resumenMensual' => $resumenMensual,
+            'categoriasMes' => $categoriasMes,
             'ultimosIngresos' => $ultimosIngresos,
             'ultimosEgresos' => Egreso::latest('fecha')->limit(8)->get(),
         ]);

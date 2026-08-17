@@ -1156,6 +1156,19 @@ function BienvenidaPanel({
                         </dt>
                         <dd className="text-sm text-brand-ink-strong">
                             {course.period}
+                            {course.periodo_academico && (
+                                <span className="text-brand-muted">
+                                    {' '}
+                                    ({formatDate(
+                                        course.periodo_academico.fecha_inicio,
+                                    )}
+                                    –
+                                    {formatDate(
+                                        course.periodo_academico.fecha_fin,
+                                    )}
+                                    )
+                                </span>
+                            )}
                         </dd>
                     </div>
                     {course.subject?.credit_hours != null && (

@@ -40,7 +40,7 @@ class IngresoManualController extends Controller
             'registrado_por' => $request->user()->id,
         ]);
 
-        return redirect()->route('ingresos-manuales.index')->with('success', 'Ingreso registrado correctamente.');
+        return back()->with('success', 'Ingreso registrado correctamente.');
     }
 
     public function destroy(IngresoManual $ingresoManual): RedirectResponse

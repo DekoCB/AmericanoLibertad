@@ -12,7 +12,7 @@ class EnrollmentController extends Controller
 {
     public function store(Request $request, Course $course): RedirectResponse
     {
-        $this->authorize('create', Enrollment::class);
+        $this->authorize('create', [Enrollment::class, $course]);
 
         $validated = $request->validate([
             'student_id' => [

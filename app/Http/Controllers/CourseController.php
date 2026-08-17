@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\Aula;
 use App\Models\Carrera;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Evaluation;
+use App\Models\Horario;
+use App\Models\PeriodoAcademico;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
@@ -69,6 +72,7 @@ class CourseController extends Controller
             'filters' => $request->only('name', 'carrera_name'),
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
             'teachers' => Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
+            'periodos' => PeriodoAcademico::orderByDesc('fecha_inicio')->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin']),
             'upcomingEvaluations' => $upcomingEvaluations,
             'can' => [
                 'create' => $request->user()->can('create', Course::class),
@@ -85,6 +89,7 @@ class CourseController extends Controller
         return Inertia::render('Courses/Create', [
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
             'teachers' => Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
+            'periodos' => PeriodoAcademico::orderByDesc('fecha_inicio')->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin']),
         ]);
     }
 
@@ -101,7 +106,7 @@ class CourseController extends Controller
     {
         $this->authorize('view', $course);
 
-        $course->load(['subject', 'teacher']);
+        $course->load(['subject', 'teacher', 'horarios.aulaRef']);
 
         $enrollments = $course->enrollments()
             ->with('student')
@@ -110,7 +115,7 @@ class CourseController extends Controller
 
         $evaluations = $course->evaluations()->withCount('grades')->orderBy('date')->get();
 
-        $canManageEnrollments = $request->user()->can('create', Enrollment::class);
+        $canManageEnrollments = $request->user()->can('create', [Enrollment::class, $course]);
 
         $availableStudents = $canManageEnrollments
             ? Student::whereNotIn('id', $enrollments->pluck('student_id'))
@@ -119,6 +124,9 @@ class CourseController extends Controller
                 ->get(['id', 'first_name', 'last_name'])
             : [];
 
+        $manageHorarios = $request->user()->can('manage', Horario::class)
+            && (! $request->user()->hasRole(UserRole::Docente) || $request->user()->teacher_id === $course->teacher_id);
+
         return Inertia::render('Courses/Show', [
             'course' => $course,
             'enrollments' => $enrollments,
@@ -126,6 +134,8 @@ class CourseController extends Controller
             'availableStudents' => $availableStudents,
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
             'teachers' => Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
+            'aulas' => Aula::orderBy('nombre')->get(['id', 'nombre']),
+            'periodos' => PeriodoAcademico::orderByDesc('fecha_inicio')->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin']),
             'can' => [
                 'manageEnrollments' => $canManageEnrollments,
                 'manageCourse' => $request->user()->can('update', $course),
@@ -134,6 +144,7 @@ class CourseController extends Controller
                 'grade' => $request->user()->hasRole(UserRole::Docente)
                     ? $request->user()->teacher_id === $course->teacher_id
                     : $request->user()->hasRole(UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico),
+                'manageHorarios' => $manageHorarios,
             ],
         ]);
     }
@@ -146,6 +157,7 @@ class CourseController extends Controller
             'course' => $course,
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
             'teachers' => Teacher::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
+            'periodos' => PeriodoAcademico::orderByDesc('fecha_inicio')->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin']),
         ]);
     }
 
@@ -167,6 +179,41 @@ class CourseController extends Controller
         return redirect()->route('courses.index')->with('success', 'Sección eliminada correctamente.');
     }
 
+    public function updatePeriodoFechas(Request $request, Course $course): RedirectResponse
+    {
+        $this->authorize('update', $course);
+
+        if (! $course->periodo_academico_id) {
+            return back()->with('error', 'Esta sección no tiene un período académico vinculado.');
+        }
+
+        $validated = $request->validate([
+            'fecha_inicio' => ['required', 'date'],
+            'fecha_fin' => ['required', 'date', 'after:fecha_inicio'],
+        ]);
+
+        $periodo = $course->periodoAcademico;
+        $periodo->update($validated);
+
+        $fueraDeRango = Evaluation::whereHas(
+            'course',
+            fn ($q) => $q->where('periodo_academico_id', $periodo->id),
+        )
+            ->where(function ($q) use ($validated) {
+                $q->whereDate('date', '<', $validated['fecha_inicio'])
+                    ->orWhereDate('date', '>', $validated['fecha_fin']);
+            })
+            ->count();
+
+        $mensaje = 'Fechas del período actualizadas correctamente.';
+
+        if ($fueraDeRango > 0) {
+            $mensaje .= " Aviso: {$fueraDeRango} evaluación(es) de este período tienen fecha fuera del nuevo rango — revísalas manualmente si corresponde.";
+        }
+
+        return back()->with('success', $mensaje);
+    }
+
     private function validateCourse(Request $request): array
     {
         return $request->validate([
@@ -174,6 +221,7 @@ class CourseController extends Controller
             'teacher_id' => ['nullable', 'exists:teachers,id'],
             'name' => ['required', 'string', 'max:150'],
             'period' => ['required', 'string', 'max:20'],
+            'periodo_academico_id' => ['nullable', 'exists:periodos_academicos,id'],
             'schedule' => ['nullable', 'string', 'max:255'],
             'capacity' => ['required', 'integer', 'min:1', 'max:200'],
         ]);

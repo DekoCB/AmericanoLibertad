@@ -12,6 +12,72 @@ interface ResumenMes {
     egresos: number;
 }
 
+interface CategoriasMes {
+    ingresos: {
+        matricula: number;
+        pension: number;
+        donacion: number;
+        servicio: number;
+        otro: number;
+    };
+    egresos: {
+        pago_docente: number;
+        operativo: number;
+        otro: number;
+    };
+}
+
+const ingresoCategoriaLabels: Record<
+    keyof CategoriasMes['ingresos'],
+    string
+> = {
+    matricula: 'Matrícula',
+    pension: 'Pensión',
+    donacion: 'Donación',
+    servicio: 'Servicio',
+    otro: 'Otro',
+};
+
+const egresoCategoriaLabelsCaja: Record<
+    keyof CategoriasMes['egresos'],
+    string
+> = {
+    pago_docente: 'Pago a docente',
+    operativo: 'Operativo',
+    otro: 'Otro',
+};
+
+function CategoriaBar({
+    label,
+    value,
+    max,
+    color,
+}: {
+    label: string;
+    value: number;
+    max: number;
+    color: string;
+}) {
+    const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+
+    return (
+        <div>
+            <div className="flex items-center justify-between text-sm">
+                <span className="text-brand-ink">{label}</span>
+                <span className="font-medium text-brand-ink-strong">
+                    S/ {value.toFixed(2)}
+                </span>
+            </div>
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-brand-hover">
+                <div
+                    className="h-full rounded-full"
+                    style={{ width: `${pct}%`, backgroundColor: color }}
+                />
+            </div>
+        </div>
+    );
+}
+
 interface Stats {
     ingresosHoy: number;
     egresosHoy: number;
@@ -68,14 +134,21 @@ function StatCard({
 export default function Index({
     stats,
     resumenMensual,
+    categoriasMes,
     ultimosIngresos,
     ultimosEgresos,
 }: {
     stats: Stats;
     resumenMensual: ResumenMes[];
+    categoriasMes: CategoriasMes;
     ultimosIngresos: IngresoReciente[];
     ultimosEgresos: Egreso[];
 }) {
+    const maxIngreso = Math.max(
+        1,
+        ...Object.values(categoriasMes.ingresos),
+    );
+    const maxEgreso = Math.max(1, ...Object.values(categoriasMes.egresos));
     return (
         <AuthenticatedLayout
             header={
@@ -173,6 +246,50 @@ export default function Index({
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
+                            Ingresos y egresos por categoría (mes actual)
+                        </h3>
+                        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                            <div className="space-y-4">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                                    Ingresos
+                                </div>
+                                {(
+                                    Object.keys(
+                                        ingresoCategoriaLabels,
+                                    ) as (keyof CategoriasMes['ingresos'])[]
+                                ).map((key) => (
+                                    <CategoriaBar
+                                        key={key}
+                                        label={ingresoCategoriaLabels[key]}
+                                        value={categoriasMes.ingresos[key]}
+                                        max={maxIngreso}
+                                        color="var(--money-in)"
+                                    />
+                                ))}
+                            </div>
+                            <div className="space-y-4">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                                    Egresos
+                                </div>
+                                {(
+                                    Object.keys(
+                                        egresoCategoriaLabelsCaja,
+                                    ) as (keyof CategoriasMes['egresos'])[]
+                                ).map((key) => (
+                                    <CategoriaBar
+                                        key={key}
+                                        label={egresoCategoriaLabelsCaja[key]}
+                                        value={categoriasMes.egresos[key]}
+                                        max={maxEgreso}
+                                        color="var(--money-out)"
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
 

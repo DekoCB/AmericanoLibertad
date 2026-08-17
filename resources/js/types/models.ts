@@ -9,6 +9,25 @@ export interface Carrera {
     subjects_count?: number;
 }
 
+export interface PeriodoAcademico {
+    id: number;
+    nombre: string;
+    fecha_inicio: string;
+    fecha_fin: string;
+    activo: boolean;
+    courses_count?: number;
+    matriculas_count?: number;
+}
+
+export interface ConfiguracionPago {
+    id: number;
+    yape_numero: string | null;
+    yape_qr_path: string | null;
+    plin_numero: string | null;
+    plin_qr_path: string | null;
+    cuenta_detalle: string | null;
+}
+
 export interface AdmissionApplication {
     id: number;
     apellido_paterno: string;
@@ -93,6 +112,7 @@ export interface Course {
     teacher_id: number | null;
     name: string;
     period: string;
+    periodo_academico_id: number | null;
     schedule: string | null;
     turno: Turno | null;
     capacity: number;
@@ -107,9 +127,16 @@ export interface Course {
     normas_curso: string | null;
     subject?: Subject;
     teacher?: Teacher | null;
+    periodo_academico?: PeriodoAcademico | null;
     enrollments_count?: number;
     recursos_aula_count?: number;
     evaluations_count?: number;
+    horarios?: Horario[];
+}
+
+export interface Aula {
+    id: number;
+    nombre: string;
 }
 
 export type DiaSemana =
@@ -138,6 +165,8 @@ export interface Horario {
     hora_inicio: string;
     hora_fin: string;
     aula: string | null;
+    aula_id: number | null;
+    aula_ref?: Aula | null;
     course?: Course;
 }
 
@@ -287,6 +316,11 @@ export interface Pago {
     monto_yape: number;
     fecha: string;
     nota: string | null;
+    estado: 'declarado' | 'confirmado';
+    comprobante_path: string | null;
+    confirmado_por: number | null;
+    confirmado_at: string | null;
+    fecha_limite_pago: string | null;
     student?: Student;
     cuota?: Cuota;
 }
@@ -322,11 +356,13 @@ export interface Matricula {
     ciclo: number;
     turno: Turno;
     period: string;
+    periodo_academico_id: number | null;
     monto_matricula: number;
     fecha_matricula: string;
     estado: 'pendiente' | 'parcial' | 'pagado' | 'vencido';
     student?: Student;
     carrera?: Carrera;
+    periodo_academico?: PeriodoAcademico | null;
     cuotas?: Cuota[];
     saldo_total?: number;
     pagado_total?: number;
@@ -356,6 +392,11 @@ export const medioPagoLabels: Record<Pago['medio'], string> = {
     plin: 'Plin',
     tarjeta: 'Tarjeta',
     mixto: 'Mixto',
+};
+
+export const pagoEstadoLabels: Record<Pago['estado'], string> = {
+    declarado: 'Esperando confirmación',
+    confirmado: 'Confirmado',
 };
 
 export const egresoCategoriaLabels: Record<Egreso['categoria'], string> = {
