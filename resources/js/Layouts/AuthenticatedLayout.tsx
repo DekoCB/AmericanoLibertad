@@ -145,7 +145,7 @@ function SidebarSectionLabel({
     children: ReactNode;
 }) {
     return (
-        <div className="relative mt-4 h-5 px-3 first:mt-0">
+        <div className="relative mt-4 h-5 shrink-0 px-3 first:mt-0">
             <div
                 className={`absolute inset-x-3 top-1/2 -translate-y-1/2 border-t transition-opacity duration-300 ease-in-out ${
                     collapsed ? 'opacity-100' : 'opacity-0'
@@ -195,7 +195,7 @@ function SidebarNav({
     const administracionVisible = Boolean(nav?.permisos || nav?.users);
 
     return (
-        <nav className="flex flex-1 flex-col justify-center gap-1 overflow-y-auto px-3 py-4">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
             <SidebarSectionLabel collapsed={collapsed}>
                 General
             </SidebarSectionLabel>
@@ -233,6 +233,42 @@ function SidebarNav({
                             Profesores
                         </SidebarLink>
                     )}
+                    {nav?.aulaVirtual && (
+                        <SidebarLink
+                            href={route('aula-virtual.index')}
+                            active={route().current('aula-virtual.*')}
+                            collapsed={collapsed}
+                            icon={<ComputerDesktopIcon />}
+                        >
+                            Aula virtual
+                        </SidebarLink>
+                    )}
+                    {nav?.notas && (
+                        <SidebarLink
+                            href={route('grades.index')}
+                            active={
+                                route().current('grades.*') ||
+                                route().current('evaluations.grades.*')
+                            }
+                            collapsed={collapsed}
+                            icon={<CheckBadgeIcon />}
+                        >
+                            Notas
+                        </SidebarLink>
+                    )}
+                    {nav?.asistencias && (
+                        <SidebarLink
+                            href={route('asistencias.index')}
+                            active={
+                                route().current('asistencias.*') ||
+                                route().current('courses.asistencias.*')
+                            }
+                            collapsed={collapsed}
+                            icon={<QrCodeIcon />}
+                        >
+                            Asistencia
+                        </SidebarLink>
+                    )}
                     {nav?.carreras && (
                         <SidebarLink
                             href={route('carreras.index')}
@@ -243,14 +279,16 @@ function SidebarNav({
                             Carreras
                         </SidebarLink>
                     )}
-                    {nav?.admisiones && (
+                    {nav?.periodosAcademicos && (
                         <SidebarLink
-                            href={route('admisiones.index')}
-                            active={route().current('admisiones.*')}
+                            href={route('periodos-academicos.index')}
+                            active={route().current(
+                                'periodos-academicos.*',
+                            )}
                             collapsed={collapsed}
-                            icon={<InboxIcon />}
+                            icon={<CalendarDaysIcon />}
                         >
-                            Solicitudes de admisión
+                            Períodos académicos
                         </SidebarLink>
                     )}
                     {nav?.subjects && (
@@ -273,19 +311,6 @@ function SidebarNav({
                             Secciones
                         </SidebarLink>
                     )}
-                    {nav?.notas && (
-                        <SidebarLink
-                            href={route('grades.index')}
-                            active={
-                                route().current('grades.*') ||
-                                route().current('evaluations.grades.*')
-                            }
-                            collapsed={collapsed}
-                            icon={<CheckBadgeIcon />}
-                        >
-                            Notas
-                        </SidebarLink>
-                    )}
                     {nav?.horarios && (
                         <SidebarLink
                             href={route('horarios.index')}
@@ -296,39 +321,14 @@ function SidebarNav({
                             Horarios
                         </SidebarLink>
                     )}
-                    {nav?.asistencias && (
+                    {nav?.admisiones && (
                         <SidebarLink
-                            href={route('asistencias.index')}
-                            active={
-                                route().current('asistencias.*') ||
-                                route().current('courses.asistencias.*')
-                            }
+                            href={route('admisiones.index')}
+                            active={route().current('admisiones.*')}
                             collapsed={collapsed}
-                            icon={<QrCodeIcon />}
+                            icon={<InboxIcon />}
                         >
-                            Asistencia
-                        </SidebarLink>
-                    )}
-                    {nav?.aulaVirtual && (
-                        <SidebarLink
-                            href={route('aula-virtual.index')}
-                            active={route().current('aula-virtual.*')}
-                            collapsed={collapsed}
-                            icon={<ComputerDesktopIcon />}
-                        >
-                            Aula virtual
-                        </SidebarLink>
-                    )}
-                    {nav?.periodosAcademicos && (
-                        <SidebarLink
-                            href={route('periodos-academicos.index')}
-                            active={route().current(
-                                'periodos-academicos.*',
-                            )}
-                            collapsed={collapsed}
-                            icon={<CalendarDaysIcon />}
-                        >
-                            Períodos académicos
+                            Solicitudes de admisión
                         </SidebarLink>
                     )}
                 </>

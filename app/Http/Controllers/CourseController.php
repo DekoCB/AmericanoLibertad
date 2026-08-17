@@ -39,7 +39,8 @@ class CourseController extends Controller
             })
             ->orderByDesc('period')
             ->orderBy('name')
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         $upcomingEvaluations = Evaluation::with('course.subject')
             ->when(

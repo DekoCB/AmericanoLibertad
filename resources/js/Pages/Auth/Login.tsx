@@ -103,18 +103,6 @@ export default function Login({
         (option) => option.value === selectedRole,
     );
 
-    const registerLink = (
-        <p className="mt-6 text-center text-sm text-brand-muted">
-            ¿No tienes una cuenta?{' '}
-            <Link
-                href={route('register')}
-                className="font-medium text-brand-navy hover:underline"
-            >
-                Regístrate
-            </Link>
-        </p>
-    );
-
     return (
         <GuestLayout>
             <Head title="Iniciar sesión" />
@@ -160,8 +148,6 @@ export default function Login({
                             </button>
                         ))}
                     </div>
-
-                    {registerLink}
                 </>
             ) : (
                 <>
@@ -271,8 +257,6 @@ export default function Login({
                             </PrimaryButton>
                         </div>
                     </form>
-
-                    {registerLink}
                 </>
             )}
         </GuestLayout>

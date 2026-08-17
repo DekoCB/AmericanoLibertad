@@ -28,7 +28,8 @@ class StudentController extends Controller
             ->orderBy('ciclo')
             ->orderBy('turno')
             ->orderBy('last_name')
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('Students/Index', [
             'students' => $students,

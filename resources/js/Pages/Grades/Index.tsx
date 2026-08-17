@@ -1,26 +1,29 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import SearchableSelect from '@/Components/SearchableSelect';
 import PageTitle from '@/Components/PageTitle';
-import { CheckBadgeIcon } from '@/Components/Icons';
+import { CheckBadgeIcon, ChevronLeftIcon } from '@/Components/Icons';
 import { Head, Link, router } from '@inertiajs/react';
 import { Course } from '@/types/models';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+
+type ViewMode = 'staff' | 'docente';
+type Step = 'carrera' | 'curso' | 'seccion';
+
+type SubjectGroup = {
+    key: string;
+    subjectName: string;
+    ciclo: number | null;
+    courses: Course[];
+};
 
 export default function Index({
     courses,
-    isDocente,
+    viewMode,
 }: {
     courses: Course[];
-    isDocente: boolean;
+    viewMode: ViewMode;
 }) {
     const porCarrera = useMemo(() => {
-        type SubjectGroup = {
-            key: string;
-            subjectName: string;
-            ciclo: number | null;
-            courses: Course[];
-        };
-
         const byCarrera = new Map<string, Map<string, SubjectGroup>>();
 
         courses.forEach((course) => {
@@ -55,16 +58,31 @@ export default function Index({
             .sort(([a], [b]) => a.localeCompare(b));
     }, [courses]);
 
+    const [step, setStep] = useState<Step>('carrera');
+    const [selectedCarrera, setSelectedCarrera] = useState<string | null>(
+        null,
+    );
+    const [selectedCursoKey, setSelectedCursoKey] = useState<string | null>(
+        null,
+    );
+
     const irAlCurso = (courseId: string) => {
         if (!courseId) return;
         router.visit(route('grades.show', courseId));
     };
 
+    const grupoActual = porCarrera.find(
+        ([carreraName]) => carreraName === selectedCarrera,
+    )?.[1];
+    const cursoActual = grupoActual?.find(
+        (group) => group.key === selectedCursoKey,
+    );
+
     return (
         <AuthenticatedLayout
             header={
                 <PageTitle icon={<CheckBadgeIcon />}>
-                    {isDocente ? 'Mis notas' : 'Notas'}
+                    {viewMode === 'docente' ? 'Mis notas' : 'Notas'}
                 </PageTitle>
             }
         >
@@ -94,27 +112,103 @@ export default function Index({
                         />
                     </div>
 
-                    <div className="space-y-10">
-                        {porCarrera.map(([carreraName, subjects]) => (
-                            <div key={carreraName} className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <h3 className="text-lg font-bold text-brand-ink-strong">
-                                        {carreraName}
-                                    </h3>
-                                    <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
-                                        {subjects.reduce(
+                    {viewMode === 'staff' ? (
+                        <div className="space-y-6">
+                            {step !== 'carrera' && (
+                                <div className="flex flex-wrap items-center gap-1.5 text-sm text-brand-muted">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setStep('carrera');
+                                            setSelectedCarrera(null);
+                                            setSelectedCursoKey(null);
+                                        }}
+                                        className="inline-flex items-center gap-1 text-brand-link hover:underline"
+                                    >
+                                        <ChevronLeftIcon className="size-3.5" />
+                                        Carreras
+                                    </button>
+                                    {step === 'seccion' && selectedCarrera && (
+                                        <>
+                                            <span>/</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setStep('curso');
+                                                    setSelectedCursoKey(null);
+                                                }}
+                                                className="text-brand-link hover:underline"
+                                            >
+                                                {selectedCarrera}
+                                            </button>
+                                        </>
+                                    )}
+                                    {step === 'seccion' && cursoActual && (
+                                        <>
+                                            <span>/</span>
+                                            <span className="text-brand-ink-strong">
+                                                {cursoActual.subjectName}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {step === 'carrera' && (
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {porCarrera.map(([carreraName, subjects]) => {
+                                        const total = subjects.reduce(
                                             (sum, group) =>
                                                 sum + group.courses.length,
                                             0,
-                                        )}
-                                    </span>
-                                </div>
+                                        );
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    {subjects.map((group) => (
-                                        <div
+                                        return (
+                                            <button
+                                                key={carreraName}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedCarrera(
+                                                        carreraName,
+                                                    );
+                                                    setStep('curso');
+                                                }}
+                                                className="rounded-[20px] border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
+                                            >
+                                                <p className="font-medium text-brand-ink-strong">
+                                                    {carreraName}
+                                                </p>
+                                                <p className="mt-1 text-xs text-brand-muted">
+                                                    {total}{' '}
+                                                    {total === 1
+                                                        ? 'sección'
+                                                        : 'secciones'}
+                                                </p>
+                                            </button>
+                                        );
+                                    })}
+                                    {porCarrera.length === 0 && (
+                                        <div className="col-span-full rounded-lg bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
+                                            No hay secciones con evaluaciones
+                                            disponibles.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {step === 'curso' && grupoActual && (
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {grupoActual.map((group) => (
+                                        <button
                                             key={group.key}
-                                            className="rounded-[20px] border border-brand-border bg-brand-card p-5 shadow-sm"
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedCursoKey(
+                                                    group.key,
+                                                );
+                                                setStep('seccion');
+                                            }}
+                                            className="rounded-[20px] border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
                                         >
                                             <div className="flex items-center gap-2">
                                                 <p className="font-medium text-brand-ink-strong">
@@ -126,38 +220,110 @@ export default function Index({
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="mt-3 flex flex-wrap gap-2">
-                                                {group.courses.map(
-                                                    (course) => (
-                                                        <Link
-                                                            key={course.id}
-                                                            href={route(
-                                                                'grades.show',
-                                                                course.id,
-                                                            )}
-                                                            className="flex items-center gap-1.5 rounded-full border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
-                                                        >
-                                                            {course.name}
-                                                            <span className="text-brand-muted">
-                                                                ·{' '}
-                                                                {course.evaluations_count ??
-                                                                    0}
-                                                            </span>
-                                                        </Link>
-                                                    ),
-                                                )}
-                                            </div>
-                                        </div>
+                                            <p className="mt-1 text-xs text-brand-muted">
+                                                {group.courses.length}{' '}
+                                                {group.courses.length === 1
+                                                    ? 'sección'
+                                                    : 'secciones'}
+                                            </p>
+                                        </button>
                                     ))}
                                 </div>
-                            </div>
-                        ))}
-                        {porCarrera.length === 0 && (
-                            <div className="rounded-lg bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
-                                No tienes secciones con evaluaciones disponibles.
-                            </div>
-                        )}
-                    </div>
+                            )}
+
+                            {step === 'seccion' && cursoActual && (
+                                <div className="flex flex-wrap gap-2">
+                                    {cursoActual.courses.map((course) => (
+                                        <Link
+                                            key={course.id}
+                                            href={route(
+                                                'grades.show',
+                                                course.id,
+                                            )}
+                                            className="flex items-center gap-1.5 rounded-full border border-brand-border bg-brand-card px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
+                                        >
+                                            {course.name}
+                                            <span className="text-brand-muted">
+                                                ·{' '}
+                                                {course.evaluations_count ??
+                                                    0}
+                                            </span>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-10">
+                            {porCarrera.map(([carreraName, subjects]) => (
+                                <div key={carreraName} className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-lg font-bold text-brand-ink-strong">
+                                            {carreraName}
+                                        </h3>
+                                        <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                            {subjects.reduce(
+                                                (sum, group) =>
+                                                    sum +
+                                                    group.courses.length,
+                                                0,
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        {subjects.map((group) => (
+                                            <div
+                                                key={group.key}
+                                                className="rounded-[20px] border border-brand-border bg-brand-card p-5 shadow-sm"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-medium text-brand-ink-strong">
+                                                        {group.subjectName}
+                                                    </p>
+                                                    {group.ciclo && (
+                                                        <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                            Ciclo{' '}
+                                                            {group.ciclo}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    {group.courses.map(
+                                                        (course) => (
+                                                            <Link
+                                                                key={
+                                                                    course.id
+                                                                }
+                                                                href={route(
+                                                                    'grades.show',
+                                                                    course.id,
+                                                                )}
+                                                                className="flex items-center gap-1.5 rounded-full border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
+                                                            >
+                                                                {course.name}
+                                                                <span className="text-brand-muted">
+                                                                    ·{' '}
+                                                                    {course.evaluations_count ??
+                                                                        0}
+                                                                </span>
+                                                            </Link>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            {porCarrera.length === 0 && (
+                                <div className="rounded-lg bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
+                                    No tienes secciones con evaluaciones
+                                    disponibles.
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </AuthenticatedLayout>

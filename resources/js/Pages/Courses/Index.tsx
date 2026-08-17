@@ -4,11 +4,12 @@ import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
 import UpcomingEvaluationsCard from '@/Components/UpcomingEvaluationsCard';
+import Pagination from '@/Components/Pagination';
 import PageTitle from '@/Components/PageTitle';
 import { PencilIcon, RectangleStackIcon, TrashIcon } from '@/Components/Icons';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { Course, Evaluation, PeriodoAcademico, Subject, Teacher } from '@/types/models';
+import { Course, Evaluation, Paginated, PeriodoAcademico, Subject, Teacher } from '@/types/models';
 import Form from './Form';
 
 const SIN_MATERIA = 'Sin curso';
@@ -24,7 +25,7 @@ export default function Index({
     upcomingEvaluations,
     can,
 }: {
-    courses: Course[];
+    courses: Paginated<Course>;
     nombresSecciones: string[];
     nombresCarreras: string[];
     filters: { name?: string; carrera_name?: string };
@@ -73,7 +74,7 @@ export default function Index({
 
     const bySubject = useMemo(() => {
         const groups = new Map<string, Course[]>();
-        courses.forEach((course) => {
+        courses.data.forEach((course) => {
             const key = course.subject?.name ?? SIN_MATERIA;
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key)!.push(course);
@@ -84,7 +85,7 @@ export default function Index({
             if (b === SIN_MATERIA) return -1;
             return a.localeCompare(b);
         });
-    }, [courses]);
+    }, [courses.data]);
 
     return (
         <AuthenticatedLayout
@@ -210,12 +211,14 @@ export default function Index({
                                 </ul>
                             </div>
                         ))}
-                        {courses.length === 0 && (
+                        {courses.data.length === 0 && (
                             <div className="col-span-full rounded-[28px] bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
                                 No se encontraron secciones.
                             </div>
                         )}
                     </div>
+
+                    <Pagination links={courses.links} />
 
                     <UpcomingEvaluationsCard
                         evaluations={upcomingEvaluations}

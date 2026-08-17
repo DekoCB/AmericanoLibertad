@@ -44,6 +44,7 @@ class GradeController extends Controller
         return Inertia::render('Grades/Index', [
             'courses' => $courses,
             'isDocente' => $esDocente,
+            'viewMode' => $esDocente ? 'docente' : 'staff',
         ]);
     }
 

@@ -19,7 +19,7 @@ export default function SidebarLink({
             href={href}
             {...props}
             title={collapsed ? String(children) : undefined}
-            className={`flex items-center overflow-hidden rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150 ease-in-out ${
+            className={`flex shrink-0 items-center overflow-hidden rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150 ease-in-out ${
                 active
                     ? 'bg-brand-navy text-white'
                     : 'text-brand-muted hover:bg-brand-hover'

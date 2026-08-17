@@ -27,10 +27,13 @@ class AsistenciaController extends Controller
 
         $this->authorize('viewAny', Course::class);
 
+        $esDocente = $user->hasRole(UserRole::Docente);
+
         $courses = Course::query()
-            ->with(['subject', 'teacher'])
+            ->with(['subject.carrera', 'teacher'])
+            ->withCount('enrollments')
             ->when(
-                $user->hasRole(UserRole::Docente),
+                $esDocente,
                 fn ($query) => $query->where('teacher_id', $user->teacher_id)
             )
             ->orderByDesc('period')
@@ -39,6 +42,7 @@ class AsistenciaController extends Controller
 
         return Inertia::render('Asistencias/Cursos', [
             'courses' => $courses,
+            'viewMode' => $esDocente ? 'docente' : 'staff',
             'can' => [
                 'viewHistorial' => $user->can('viewHistorial', Asistencia::class),
             ],

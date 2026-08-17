@@ -4,6 +4,7 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
+import Pagination from '@/Components/Pagination';
 import PageTitle from '@/Components/PageTitle';
 import {
     ArrowUpTrayIcon,
@@ -12,16 +13,15 @@ import {
     UsersIcon,
 } from '@/Components/Icons';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
     Carrera,
+    Paginated,
     Student,
     studentStatusLabels,
     turnoLabels,
 } from '@/types/models';
 import Form from './Form';
-
-const SIN_CARRERA = 'Sin carrera';
 
 export default function Index({
     students,
@@ -30,7 +30,7 @@ export default function Index({
     carreras,
     can,
 }: {
-    students: Student[];
+    students: Paginated<Student>;
     allStudents: Pick<
         Student,
         'id' | 'first_name' | 'last_name' | 'email' | 'document_number'
@@ -75,21 +75,6 @@ export default function Index({
             onSuccess: () => setConfirmingDelete(null),
         });
     };
-
-    const sections = useMemo(() => {
-        const groups = new Map<string, Student[]>();
-        students.forEach((student) => {
-            const key = student.carrera?.name ?? SIN_CARRERA;
-            if (!groups.has(key)) groups.set(key, []);
-            groups.get(key)!.push(student);
-        });
-
-        return Array.from(groups.entries()).sort(([a], [b]) => {
-            if (a === SIN_CARRERA) return 1;
-            if (b === SIN_CARRERA) return -1;
-            return a.localeCompare(b);
-        });
-    }, [students]);
 
     return (
         <AuthenticatedLayout
@@ -148,121 +133,120 @@ export default function Index({
                         )}
                     </div>
 
-                    {sections.map(([carreraName, sectionStudents]) => (
-                        <div key={carreraName} className="space-y-3">
-                            <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-bold text-brand-ink-strong">
-                                    {carreraName}
-                                </h3>
-                                <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
-                                    {sectionStudents.length}
-                                </span>
-                            </div>
+                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
+                        <table className="min-w-full divide-y divide-brand-border-faint">
+                            <thead className="bg-brand-thead">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Documento
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Nombre
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Email
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Carrera
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Ciclo
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Matrículas
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                        Estado
+                                    </th>
+                                    <th className="px-4 py-3" />
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-brand-border-faint">
+                                {students.data.map((student) => (
+                                    <tr key={student.id}>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                            {student.document_number}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
+                                            {student.first_name}{' '}
+                                            {student.last_name}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                            {student.email}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                            {student.carrera?.name ?? '—'}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                            {student.ciclo
+                                                ? `Ciclo ${student.ciclo}`
+                                                : '—'}
+                                            {student.turno
+                                                ? ` · ${turnoLabels[student.turno]}`
+                                                : ''}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                            {student.enrollments_count ?? 0}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm">
+                                            <span className="rounded-full bg-brand-hover px-2 py-1 text-xs text-brand-ink">
+                                                {
+                                                    studentStatusLabels[
+                                                        student.status
+                                                    ]
+                                                }
+                                            </span>
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                                            {can.update && (
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingStudent(
+                                                            student,
+                                                        );
+                                                        setEditModalOpen(
+                                                            true,
+                                                        );
+                                                    }}
+                                                    className="text-brand-link hover:opacity-70"
+                                                    title="Editar"
+                                                    aria-label="Editar"
+                                                >
+                                                    <PencilIcon className="size-4" />
+                                                </button>
+                                            )}
+                                            {can.delete && (
+                                                <button
+                                                    onClick={() =>
+                                                        setConfirmingDelete(
+                                                            student,
+                                                        )
+                                                    }
+                                                    className="ms-4 text-red-600 hover:opacity-70"
+                                                    title="Eliminar"
+                                                    aria-label="Eliminar"
+                                                >
+                                                    <TrashIcon className="size-4" />
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {students.data.length === 0 && (
+                                    <tr>
+                                        <td
+                                            colSpan={8}
+                                            className="px-4 py-6 text-center text-sm text-brand-muted"
+                                        >
+                                            No se encontraron estudiantes.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                            <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
-                                <table className="min-w-full divide-y divide-brand-border-faint">
-                                    <thead className="bg-brand-thead">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Documento
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Nombre
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Email
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Ciclo
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Matrículas
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                                Estado
-                                            </th>
-                                            <th className="px-4 py-3" />
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-brand-border-faint">
-                                        {sectionStudents.map((student) => (
-                                            <tr key={student.id}>
-                                                <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                                    {student.document_number}
-                                                </td>
-                                                <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
-                                                    {student.first_name}{' '}
-                                                    {student.last_name}
-                                                </td>
-                                                <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                                    {student.email}
-                                                </td>
-                                                <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                                    {student.ciclo
-                                                        ? `Ciclo ${student.ciclo}`
-                                                        : '—'}
-                                                    {student.turno
-                                                        ? ` · ${turnoLabels[student.turno]}`
-                                                        : ''}
-                                                </td>
-                                                <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                                    {student.enrollments_count ?? 0}
-                                                </td>
-                                                <td className="whitespace-nowrap px-4 py-3 text-sm">
-                                                    <span className="rounded-full bg-brand-hover px-2 py-1 text-xs text-brand-ink">
-                                                        {
-                                                            studentStatusLabels[
-                                                                student.status
-                                                            ]
-                                                        }
-                                                    </span>
-                                                </td>
-                                                <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                                                    {can.update && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingStudent(
-                                                                    student,
-                                                                );
-                                                                setEditModalOpen(
-                                                                    true,
-                                                                );
-                                                            }}
-                                                            className="text-brand-link hover:opacity-70"
-                                                            title="Editar"
-                                                            aria-label="Editar"
-                                                        >
-                                                            <PencilIcon className="size-4" />
-                                                        </button>
-                                                    )}
-                                                    {can.delete && (
-                                                        <button
-                                                            onClick={() =>
-                                                                setConfirmingDelete(
-                                                                    student,
-                                                                )
-                                                            }
-                                                            className="ms-4 text-red-600 hover:opacity-70"
-                                                            title="Eliminar"
-                                                            aria-label="Eliminar"
-                                                        >
-                                                            <TrashIcon className="size-4" />
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    ))}
-
-                    {students.length === 0 && (
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card px-4 py-6 text-center text-sm text-brand-muted">
-                            No se encontraron estudiantes.
-                        </div>
-                    )}
+                    <Pagination links={students.links} />
                 </div>
             </div>
 
