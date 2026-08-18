@@ -45,6 +45,7 @@ class GradeController extends Controller
             'courses' => $courses,
             'isDocente' => $esDocente,
             'viewMode' => $esDocente ? 'docente' : 'staff',
+            'canManageImagenes' => $user->hasRole(UserRole::Coordinador, UserRole::Gerencia),
         ]);
     }
 

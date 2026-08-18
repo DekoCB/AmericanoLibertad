@@ -32,4 +32,9 @@ class CarreraPolicy
     {
         return $user->hasRole(UserRole::Gerencia);
     }
+
+    public function manageImagen(User $user): bool
+    {
+        return $user->hasRole(UserRole::Coordinador, UserRole::Gerencia);
+    }
 }

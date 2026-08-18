@@ -1,4 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ImageEditButton from '@/Components/CourseImageEditButton';
+import CourseThumbnail from '@/Components/CourseThumbnail';
 import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -1060,6 +1062,7 @@ function BienvenidaPanel({
     course,
     recursos,
     canManage,
+    canManageImagen,
     isStudent,
     onDeleteRecurso,
     onToggleVisto,
@@ -1069,6 +1072,7 @@ function BienvenidaPanel({
     course: Course;
     recursos: RecursoAula[];
     canManage: boolean;
+    canManageImagen: boolean;
     isStudent: boolean;
     onDeleteRecurso: (id: number) => void;
     onToggleVisto: (id: number) => void;
@@ -1100,6 +1104,25 @@ function BienvenidaPanel({
 
     return (
         <div className="space-y-6">
+            {/* 2.0 Imagen del curso (compartida por todas las secciones de esta materia) */}
+            <div className="overflow-hidden rounded-[20px] border border-brand-border bg-brand-card">
+                <CourseThumbnail
+                    imageUrl={course.subject?.imagen_url ?? null}
+                    className="h-48 w-full sm:h-64"
+                />
+                {canManageImagen && course.subject_id && (
+                    <div className="p-3">
+                        <ImageEditButton
+                            uploadUrl={route(
+                                'subjects.imagen.update',
+                                course.subject_id,
+                            )}
+                            variant="inline"
+                        />
+                    </div>
+                )}
+            </div>
+
             {/* 2.1 Presentación del curso */}
             <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
                 <div className="flex items-start justify-between gap-3">
@@ -1391,7 +1414,7 @@ export default function Show({
     alertas: AlertaRecurso[];
     resumenSemanas: ResumenSemana[];
     semanaActual: number | null;
-    can: { manage: boolean; manageEvaluations: boolean };
+    can: { manage: boolean; manageEvaluations: boolean; manageImagen: boolean };
     isStudent: boolean;
 }) {
     const [addModalOpen, setAddModalOpen] = useState(false);
@@ -1454,6 +1477,7 @@ export default function Show({
                                     course={course}
                                     recursos={recursos}
                                     canManage={can.manage}
+                                    canManageImagen={can.manageImagen}
                                     isStudent={isStudent}
                                     onDeleteRecurso={deleteRecurso}
                                     onToggleVisto={toggleVisto}

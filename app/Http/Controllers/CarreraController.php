@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Carrera;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -72,6 +73,25 @@ class CarreraController extends Controller
         $carrera->delete();
 
         return redirect()->route('carreras.index')->with('success', 'Carrera eliminada correctamente.');
+    }
+
+    public function updateImagen(Request $request, Carrera $carrera): RedirectResponse
+    {
+        $this->authorize('manageImagen', Carrera::class);
+
+        $validated = $request->validate([
+            'imagen' => ['required', 'image', 'max:4096'],
+        ]);
+
+        if ($carrera->imagen_path) {
+            Storage::disk('public')->delete($carrera->imagen_path);
+        }
+
+        $carrera->update([
+            'imagen_path' => $validated['imagen']->store('carreras-imagenes', 'public'),
+        ]);
+
+        return back()->with('success', 'Imagen de la carrera actualizada correctamente.');
     }
 
     private function validateCarrera(Request $request, ?Carrera $carrera = null): array

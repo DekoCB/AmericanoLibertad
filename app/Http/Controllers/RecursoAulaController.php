@@ -11,6 +11,7 @@ use App\Models\QuizIntento;
 use App\Models\RecursoAula;
 use App\Models\RecursoVisto;
 use App\Models\SemanaContenido;
+use App\Models\Subject;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -51,6 +52,7 @@ class RecursoAulaController extends Controller
             'courses' => $courses,
             'isStudent' => $user->hasRole(UserRole::Estudiante),
             'viewMode' => $viewMode,
+            'canManageImagenes' => $user->hasRole(UserRole::Coordinador, UserRole::Gerencia),
         ]);
     }
 
@@ -242,6 +244,7 @@ class RecursoAulaController extends Controller
             'can' => [
                 'manage' => $request->user()->can('manage', [RecursoAula::class, $course]),
                 'manageEvaluations' => $request->user()->can('create', [Evaluation::class, $course]),
+                'manageImagen' => $request->user()->can('manageImagen', Subject::class),
             ],
             'isStudent' => $isStudent,
         ]);

@@ -1,4 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import CourseThumbnail from '@/Components/CourseThumbnail';
+import ImageEditButton from '@/Components/CourseImageEditButton';
 import SearchableSelect from '@/Components/SearchableSelect';
 import PageTitle from '@/Components/PageTitle';
 import { ChevronLeftIcon, ComputerDesktopIcon } from '@/Components/Icons';
@@ -11,17 +13,28 @@ type Step = 'carrera' | 'curso' | 'seccion';
 
 type SubjectGroup = {
     key: string;
+    subjectId: number | null;
     subjectName: string;
+    subjectImagenUrl: string | null;
     ciclo: number | null;
     courses: Course[];
+};
+
+type CarreraGroup = {
+    carreraId: number | null;
+    carreraName: string;
+    carreraImagenUrl: string | null;
+    subjects: SubjectGroup[];
 };
 
 export default function Index({
     courses,
     viewMode,
+    canManageImagenes,
 }: {
     courses: Course[];
     viewMode: ViewMode;
+    canManageImagenes: boolean;
 }) {
     const periods = useMemo(
         () => [...new Set(courses.map((course) => course.period))],
@@ -34,39 +47,57 @@ export default function Index({
         [courses, selectedPeriod],
     );
 
-    const porCarrera = useMemo(() => {
-        const byCarrera = new Map<string, Map<string, SubjectGroup>>();
+    const porCarrera = useMemo<CarreraGroup[]>(() => {
+        const byCarrera = new Map<
+            string,
+            {
+                id: number | null;
+                imagenUrl: string | null;
+                subjects: Map<string, SubjectGroup>;
+            }
+        >();
 
         cursosDelPeriodo.forEach((course) => {
-            const carreraName = course.subject?.carrera?.name ?? 'Sin carrera';
+            const carrera = course.subject?.carrera;
+            const carreraName = carrera?.name ?? 'Sin carrera';
             const subjectName = course.subject?.name ?? 'Sin curso';
             const ciclo = course.subject?.ciclo ?? null;
             const key = `${subjectName}__${ciclo ?? ''}`;
 
             if (!byCarrera.has(carreraName)) {
-                byCarrera.set(carreraName, new Map());
+                byCarrera.set(carreraName, {
+                    id: carrera?.id ?? null,
+                    imagenUrl: carrera?.imagen_url ?? null,
+                    subjects: new Map(),
+                });
             }
-            const bySubject = byCarrera.get(carreraName)!;
+            const grupo = byCarrera.get(carreraName)!;
 
-            if (!bySubject.has(key)) {
-                bySubject.set(key, { key, subjectName, ciclo, courses: [] });
+            if (!grupo.subjects.has(key)) {
+                grupo.subjects.set(key, {
+                    key,
+                    subjectId: course.subject?.id ?? null,
+                    subjectName,
+                    subjectImagenUrl: course.subject?.imagen_url ?? null,
+                    ciclo,
+                    courses: [],
+                });
             }
-            bySubject.get(key)!.courses.push(course);
+            grupo.subjects.get(key)!.courses.push(course);
         });
 
         return Array.from(byCarrera.entries())
-            .map(
-                ([carreraName, bySubject]) =>
-                    [
-                        carreraName,
-                        Array.from(bySubject.values()).sort(
-                            (a, b) =>
-                                a.subjectName.localeCompare(b.subjectName) ||
-                                (a.ciclo ?? 0) - (b.ciclo ?? 0),
-                        ),
-                    ] as const,
-            )
-            .sort(([a], [b]) => a.localeCompare(b));
+            .map(([carreraName, grupo]) => ({
+                carreraId: grupo.id,
+                carreraName,
+                carreraImagenUrl: grupo.imagenUrl,
+                subjects: Array.from(grupo.subjects.values()).sort(
+                    (a, b) =>
+                        a.subjectName.localeCompare(b.subjectName) ||
+                        (a.ciclo ?? 0) - (b.ciclo ?? 0),
+                ),
+            }))
+            .sort((a, b) => a.carreraName.localeCompare(b.carreraName));
     }, [cursosDelPeriodo]);
 
     const [step, setStep] = useState<Step>('carrera');
@@ -88,10 +119,10 @@ export default function Index({
         router.visit(route('aula-virtual.show', courseId));
     };
 
-    const grupoActual = porCarrera.find(
-        ([carreraName]) => carreraName === selectedCarrera,
-    )?.[1];
-    const cursoActual = grupoActual?.find(
+    const carreraActual = porCarrera.find(
+        (grupo) => grupo.carreraName === selectedCarrera,
+    );
+    const cursoActual = carreraActual?.subjects.find(
         (group) => group.key === selectedCursoKey,
     );
 
@@ -207,35 +238,58 @@ export default function Index({
 
                             {step === 'carrera' && (
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {porCarrera.map(([carreraName, subjects]) => {
-                                        const total = subjects.reduce(
+                                    {porCarrera.map((grupo) => {
+                                        const total = grupo.subjects.reduce(
                                             (sum, group) =>
                                                 sum + group.courses.length,
                                             0,
                                         );
 
                                         return (
-                                            <button
-                                                key={carreraName}
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedCarrera(
-                                                        carreraName,
-                                                    );
-                                                    setStep('curso');
-                                                }}
-                                                className="rounded-[20px] border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
+                                            <div
+                                                key={grupo.carreraName}
+                                                className="relative"
                                             >
-                                                <p className="font-medium text-brand-ink-strong">
-                                                    {carreraName}
-                                                </p>
-                                                <p className="mt-1 text-xs text-brand-muted">
-                                                    {total}{' '}
-                                                    {total === 1
-                                                        ? 'sección'
-                                                        : 'secciones'}
-                                                </p>
-                                            </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedCarrera(
+                                                            grupo.carreraName,
+                                                        );
+                                                        setStep('curso');
+                                                    }}
+                                                    className="block w-full overflow-hidden rounded-[20px] border border-brand-border bg-brand-card text-left shadow-sm transition hover:border-brand-navy"
+                                                >
+                                                    <CourseThumbnail
+                                                        imageUrl={
+                                                            grupo.carreraImagenUrl
+                                                        }
+                                                        className="h-28 w-full"
+                                                    />
+                                                    <div className="p-5">
+                                                        <p className="font-medium text-brand-ink-strong">
+                                                            {grupo.carreraName}
+                                                        </p>
+                                                        <p className="mt-1 text-xs text-brand-muted">
+                                                            {total}{' '}
+                                                            {total === 1
+                                                                ? 'sección'
+                                                                : 'secciones'}
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                                {canManageImagenes &&
+                                                    grupo.carreraId && (
+                                                        <ImageEditButton
+                                                            uploadUrl={route(
+                                                                'carreras.imagen.update',
+                                                                grupo.carreraId,
+                                                            )}
+                                                            variant="overlay"
+                                                            label=""
+                                                        />
+                                                    )}
+                                            </div>
                                         );
                                     })}
                                     {porCarrera.length === 0 && (
@@ -247,37 +301,67 @@ export default function Index({
                                 </div>
                             )}
 
-                            {step === 'curso' && grupoActual && (
+                            {step === 'curso' && carreraActual && (
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {grupoActual.map((group) => (
-                                        <button
+                                    {carreraActual.subjects.map((group) => (
+                                        <div
                                             key={group.key}
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedCursoKey(
-                                                    group.key,
-                                                );
-                                                setStep('seccion');
-                                            }}
-                                            className="rounded-[20px] border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
+                                            className="relative"
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-medium text-brand-ink-strong">
-                                                    {group.subjectName}
-                                                </p>
-                                                {group.ciclo && (
-                                                    <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
-                                                        Ciclo {group.ciclo}
-                                                    </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedCursoKey(
+                                                        group.key,
+                                                    );
+                                                    setStep('seccion');
+                                                }}
+                                                className="block w-full overflow-hidden rounded-[20px] border border-brand-border bg-brand-card text-left shadow-sm transition hover:border-brand-navy"
+                                            >
+                                                <CourseThumbnail
+                                                    imageUrl={
+                                                        group.subjectImagenUrl
+                                                    }
+                                                    className="h-28 w-full"
+                                                />
+                                                <div className="p-5">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-medium text-brand-ink-strong">
+                                                            {
+                                                                group.subjectName
+                                                            }
+                                                        </p>
+                                                        {group.ciclo && (
+                                                            <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                                Ciclo{' '}
+                                                                {group.ciclo}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="mt-1 text-xs text-brand-muted">
+                                                        {
+                                                            group.courses
+                                                                .length
+                                                        }{' '}
+                                                        {group.courses
+                                                            .length === 1
+                                                            ? 'sección'
+                                                            : 'secciones'}
+                                                    </p>
+                                                </div>
+                                            </button>
+                                            {canManageImagenes &&
+                                                group.subjectId && (
+                                                    <ImageEditButton
+                                                        uploadUrl={route(
+                                                            'subjects.imagen.update',
+                                                            group.subjectId,
+                                                        )}
+                                                        variant="overlay"
+                                                        label=""
+                                                    />
                                                 )}
-                                            </div>
-                                            <p className="mt-1 text-xs text-brand-muted">
-                                                {group.courses.length}{' '}
-                                                {group.courses.length === 1
-                                                    ? 'sección'
-                                                    : 'secciones'}
-                                            </p>
-                                        </button>
+                                        </div>
                                     ))}
                                 </div>
                             )}
@@ -306,14 +390,23 @@ export default function Index({
                         </div>
                     ) : (
                         <div className="space-y-10">
-                            {porCarrera.map(([carreraName, subjects]) => (
-                                <div key={carreraName} className="space-y-4">
+                            {porCarrera.map((grupo) => (
+                                <div
+                                    key={grupo.carreraName}
+                                    className="space-y-4"
+                                >
                                     <div className="flex items-center gap-3">
+                                        <CourseThumbnail
+                                            imageUrl={
+                                                grupo.carreraImagenUrl
+                                            }
+                                            className="size-10 shrink-0 rounded-full"
+                                        />
                                         <h3 className="text-lg font-bold text-brand-ink-strong">
-                                            {carreraName}
+                                            {grupo.carreraName}
                                         </h3>
                                         <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
-                                            {subjects.reduce(
+                                            {grupo.subjects.reduce(
                                                 (sum, group) =>
                                                     sum +
                                                     group.courses.length,
@@ -323,44 +416,56 @@ export default function Index({
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        {subjects.map((group) => (
+                                        {grupo.subjects.map((group) => (
                                             <div
                                                 key={group.key}
-                                                className="rounded-[20px] border border-brand-border bg-brand-card p-5 shadow-sm"
+                                                className="overflow-hidden rounded-[20px] border border-brand-border bg-brand-card shadow-sm"
                                             >
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-medium text-brand-ink-strong">
-                                                        {group.subjectName}
-                                                    </p>
-                                                    {group.ciclo && (
-                                                        <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
-                                                            Ciclo{' '}
-                                                            {group.ciclo}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="mt-3 flex flex-wrap gap-2">
-                                                    {group.courses.map(
-                                                        (course) => (
-                                                            <Link
-                                                                key={
-                                                                    course.id
-                                                                }
-                                                                href={route(
-                                                                    'aula-virtual.show',
-                                                                    course.id,
-                                                                )}
-                                                                className="flex items-center gap-1.5 rounded-full border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
-                                                            >
-                                                                {course.name}
-                                                                <span className="text-brand-muted">
-                                                                    ·{' '}
-                                                                    {course.recursos_aula_count ??
-                                                                        0}
-                                                                </span>
-                                                            </Link>
-                                                        ),
-                                                    )}
+                                                <CourseThumbnail
+                                                    imageUrl={
+                                                        group.subjectImagenUrl
+                                                    }
+                                                    className="h-36 w-full"
+                                                />
+                                                <div className="p-5">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-medium text-brand-ink-strong">
+                                                            {
+                                                                group.subjectName
+                                                            }
+                                                        </p>
+                                                        {group.ciclo && (
+                                                            <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                                Ciclo{' '}
+                                                                {group.ciclo}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-3 flex flex-wrap gap-2">
+                                                        {group.courses.map(
+                                                            (course) => (
+                                                                <Link
+                                                                    key={
+                                                                        course.id
+                                                                    }
+                                                                    href={route(
+                                                                        'aula-virtual.show',
+                                                                        course.id,
+                                                                    )}
+                                                                    className="flex items-center gap-1.5 rounded-full border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
+                                                                >
+                                                                    {
+                                                                        course.name
+                                                                    }
+                                                                    <span className="text-brand-muted">
+                                                                        ·{' '}
+                                                                        {course.recursos_aula_count ??
+                                                                            0}
+                                                                    </span>
+                                                                </Link>
+                                                            ),
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

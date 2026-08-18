@@ -6,6 +6,7 @@ use App\Models\Carrera;
 use App\Models\Subject;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -91,6 +92,25 @@ class SubjectController extends Controller
         $subject->delete();
 
         return redirect()->route('subjects.index')->with('success', 'Curso eliminado correctamente.');
+    }
+
+    public function updateImagen(Request $request, Subject $subject): RedirectResponse
+    {
+        $this->authorize('manageImagen', Subject::class);
+
+        $validated = $request->validate([
+            'imagen' => ['required', 'image', 'max:4096'],
+        ]);
+
+        if ($subject->imagen_path) {
+            Storage::disk('public')->delete($subject->imagen_path);
+        }
+
+        $subject->update([
+            'imagen_path' => $validated['imagen']->store('cursos-imagenes', 'public'),
+        ]);
+
+        return back()->with('success', 'Imagen del curso actualizada correctamente.');
     }
 
     private function validateSubject(Request $request, ?Subject $subject = null, bool $forCreate = false): array

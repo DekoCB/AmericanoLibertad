@@ -5,6 +5,8 @@ export interface Carrera {
     name: string;
     code: string;
     total_ciclos: number;
+    imagen_path: string | null;
+    imagen_url: string | null;
     students_count?: number;
     subjects_count?: number;
 }
@@ -102,6 +104,8 @@ export interface Subject {
     credit_hours: number;
     carrera_id: number | null;
     ciclo: number | null;
+    imagen_path: string | null;
+    imagen_url: string | null;
     carrera?: Carrera | null;
     courses_count?: number;
 }
