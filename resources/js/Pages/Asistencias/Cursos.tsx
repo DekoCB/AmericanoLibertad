@@ -174,7 +174,7 @@ export default function Cursos({
                             )}
 
                             {step === 'carrera' && (
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {porCarrera.map(([carreraName, subjects]) => {
                                         const total = subjects.reduce(
                                             (sum, group) =>
@@ -192,7 +192,7 @@ export default function Cursos({
                                                     );
                                                     setStep('curso');
                                                 }}
-                                                className="rounded-lg border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
+                                                className="border-b border-r border-brand-border bg-brand-card p-5 text-left transition hover:bg-brand-hover"
                                             >
                                                 <p className="font-medium text-brand-ink-strong">
                                                     {carreraName}
@@ -207,7 +207,7 @@ export default function Cursos({
                                         );
                                     })}
                                     {porCarrera.length === 0 && (
-                                        <div className="col-span-full rounded-lg bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
+                                        <div className="col-span-full border-b border-r border-brand-border bg-brand-card p-6 text-center text-sm text-brand-muted">
                                             No tienes secciones asignadas.
                                         </div>
                                     )}
@@ -215,7 +215,7 @@ export default function Cursos({
                             )}
 
                             {step === 'curso' && grupoActual && (
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {grupoActual.map((group) => (
                                         <button
                                             key={group.key}
@@ -226,7 +226,7 @@ export default function Cursos({
                                                 );
                                                 setStep('seccion');
                                             }}
-                                            className="rounded-lg border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
+                                            className="border-b border-r border-brand-border bg-brand-card p-5 text-left transition hover:bg-brand-hover"
                                         >
                                             <div className="flex items-center gap-2">
                                                 <p className="font-medium text-brand-ink-strong">
@@ -289,11 +289,11 @@ export default function Cursos({
                                         </span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2">
                                         {subjects.map((group) => (
                                             <div
                                                 key={group.key}
-                                                className="rounded-lg border border-brand-border bg-brand-card p-5 shadow-sm"
+                                                className="border-b border-r border-brand-border bg-brand-card p-5"
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <p className="font-medium text-brand-ink-strong">

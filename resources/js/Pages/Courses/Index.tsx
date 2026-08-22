@@ -132,11 +132,11 @@ export default function Index({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2">
                         {bySubject.map(([subjectName, subjectCourses]) => (
                             <div
                                 key={subjectName}
-                                className="rounded-xl bg-brand-card p-6 shadow-sm"
+                                className="border-b border-r border-brand-border bg-brand-card p-6"
                             >
                                 <h3 className="font-medium text-brand-ink-strong">
                                     {subjectName}
@@ -212,7 +212,7 @@ export default function Index({
                             </div>
                         ))}
                         {courses.data.length === 0 && (
-                            <div className="col-span-full rounded-xl bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
+                            <div className="col-span-full border-b border-r border-brand-border bg-brand-card p-6 text-center text-sm text-brand-muted">
                                 No se encontraron secciones.
                             </div>
                         )}

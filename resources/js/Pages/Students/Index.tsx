@@ -141,11 +141,11 @@ export default function Index({
                     </div>
 
                     {students.data.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {students.data.map((student) => (
                                 <div
                                     key={student.id}
-                                    className="relative flex flex-col items-center gap-3 rounded-lg border border-brand-border bg-brand-card p-4 pt-10 text-center shadow-sm transition hover:border-brand-navy"
+                                    className="relative flex flex-col items-center gap-3 border-b border-r border-brand-border bg-brand-card p-4 pt-10 text-center transition hover:bg-brand-hover"
                                 >
                                     {(can.update || can.delete) && (
                                         <div className="absolute right-3 top-3 flex items-center gap-3">

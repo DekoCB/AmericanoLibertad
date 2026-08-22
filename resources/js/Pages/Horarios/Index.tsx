@@ -152,7 +152,7 @@ function AulaCard({
     };
 
     return (
-        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
+        <div className="border-b border-r border-brand-border bg-brand-card p-6">
             <p className="font-medium text-brand-ink-strong">{aula}</p>
             <p className="mt-1 text-sm text-brand-muted">
                 {total} {total === 1 ? 'clase registrada' : 'clases registradas'}
@@ -258,7 +258,7 @@ export default function Index({
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2">
                         {aulas.map(({ aula, total, horarios }) => (
                             <AulaCard
                                 key={aula}
@@ -269,7 +269,7 @@ export default function Index({
                             />
                         ))}
                         {aulas.length === 0 && (
-                            <div className="col-span-full rounded-lg bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
+                            <div className="col-span-full border-b border-r border-brand-border bg-brand-card p-6 text-center text-sm text-brand-muted">
                                 Todavía no hay aulas con horarios registrados.
                             </div>
                         )}

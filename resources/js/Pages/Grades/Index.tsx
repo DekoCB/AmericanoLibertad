@@ -186,7 +186,7 @@ export default function Index({
                             )}
 
                             {step === 'carrera' && (
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {porCarrera.map((grupo) => {
                                         const total = grupo.subjects.reduce(
                                             (sum, group) =>
@@ -207,7 +207,7 @@ export default function Index({
                                                         );
                                                         setStep('curso');
                                                     }}
-                                                    className="block w-full overflow-hidden rounded-lg border border-brand-border bg-brand-card text-left shadow-sm transition hover:border-brand-navy"
+                                                    className="block w-full border-b border-r border-brand-border bg-brand-card text-left transition hover:bg-brand-hover"
                                                 >
                                                     <CourseThumbnail
                                                         imageUrl={
@@ -242,7 +242,7 @@ export default function Index({
                                         );
                                     })}
                                     {porCarrera.length === 0 && (
-                                        <div className="col-span-full rounded-lg bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
+                                        <div className="col-span-full border-b border-r border-brand-border bg-brand-card p-6 text-center text-sm text-brand-muted">
                                             No hay secciones con evaluaciones
                                             disponibles.
                                         </div>
@@ -251,7 +251,7 @@ export default function Index({
                             )}
 
                             {step === 'curso' && carreraActual && (
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {carreraActual.subjects.map((group) => (
                                         <div
                                             key={group.key}
@@ -265,7 +265,7 @@ export default function Index({
                                                     );
                                                     setStep('seccion');
                                                 }}
-                                                className="block w-full overflow-hidden rounded-lg border border-brand-border bg-brand-card text-left shadow-sm transition hover:border-brand-navy"
+                                                className="block w-full border-b border-r border-brand-border bg-brand-card text-left transition hover:bg-brand-hover"
                                             >
                                                 <CourseThumbnail
                                                     imageUrl={
@@ -358,11 +358,11 @@ export default function Index({
                                         </span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2">
                                         {grupo.subjects.map((group) => (
                                             <div
                                                 key={group.key}
-                                                className="rounded-lg border border-brand-border bg-brand-card p-5 shadow-sm"
+                                                className="border-b border-r border-brand-border bg-brand-card p-5"
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <p className="font-medium text-brand-ink-strong">
