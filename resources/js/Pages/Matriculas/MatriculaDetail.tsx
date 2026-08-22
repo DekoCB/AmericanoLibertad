@@ -391,6 +391,11 @@ export default function MatriculaDetail({
         destroy(route('matriculas.cuotas.destroy', [matricula.id, cuotaId]));
     };
 
+    const quitarMatriculaCurso = (courseId: number, enrollmentId: number) => {
+        if (!confirm('¿Quitar esta matrícula de la sección?')) return;
+        destroy(route('courses.enrollments.destroy', [courseId, enrollmentId]));
+    };
+
     return (
         <div className="space-y-6">
             <div className="border border-brand-border bg-brand-card p-6 sm:rounded-lg">
@@ -481,6 +486,7 @@ export default function MatriculaDetail({
                                     <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
                                         Profesor
                                     </th>
+                                    {can.manage && <th className="px-4 py-2" />}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-brand-border-faint">
@@ -495,6 +501,23 @@ export default function MatriculaDetail({
                                         <td className="whitespace-nowrap px-4 py-2 text-sm text-brand-ink">
                                             {materia.teacher ?? 'Sin docente'}
                                         </td>
+                                        {can.manage && (
+                                            <td className="whitespace-nowrap px-4 py-2 text-right text-sm">
+                                                <button
+                                                    onClick={() =>
+                                                        quitarMatriculaCurso(
+                                                            materia.course_id,
+                                                            materia.enrollment_id,
+                                                        )
+                                                    }
+                                                    className="text-red-600 hover:opacity-70"
+                                                    title="Quitar de la sección"
+                                                    aria-label="Quitar de la sección"
+                                                >
+                                                    <TrashIcon className="size-4" />
+                                                </button>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

@@ -178,6 +178,8 @@ class MatriculaController extends Controller
                     && $enrollment->course->subject->carrera_id === $matricula->carrera_id
                     && $enrollment->course->subject->ciclo === $matricula->ciclo)
                 ->map(fn (Enrollment $enrollment) => [
+                    'enrollment_id' => $enrollment->id,
+                    'course_id' => $enrollment->course_id,
                     'subject' => $enrollment->course->subject->name,
                     'course' => $enrollment->course->name,
                     'teacher' => $enrollment->course->teacher

@@ -37,6 +37,6 @@ class EnrollmentController extends Controller
 
         $enrollment->delete();
 
-        return redirect()->route('courses.show', $course)->with('success', 'Matrícula eliminada correctamente.');
+        return back()->with('success', 'Matrícula eliminada correctamente.');
     }
 }

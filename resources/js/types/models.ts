@@ -370,7 +370,13 @@ export interface Matricula {
     cuotas?: Cuota[];
     saldo_total?: number;
     pagado_total?: number;
-    materias?: { subject: string; course: string; teacher: string | null }[];
+    materias?: {
+        enrollment_id: number;
+        course_id: number;
+        subject: string;
+        course: string;
+        teacher: string | null;
+    }[];
     historiales?: HistorialMatricula[];
 }
 
