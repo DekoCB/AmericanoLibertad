@@ -37,7 +37,7 @@ export default function Modal({
             <Dialog
                 as="div"
                 id="modal"
-                className="fixed inset-0 z-50 flex transform items-center overflow-y-auto px-4 py-6 transition-all sm:px-0"
+                className="fixed inset-0 z-50 flex items-center overflow-y-auto px-4 py-6 transition-all sm:px-0"
                 onClose={close}
             >
                 <TransitionChild
@@ -48,7 +48,7 @@ export default function Modal({
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="absolute inset-0 bg-gray-500/75" />
+                    <div className="fixed inset-0 bg-gray-500/75" />
                 </TransitionChild>
 
                 <TransitionChild
