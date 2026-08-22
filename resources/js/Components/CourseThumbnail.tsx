@@ -13,6 +13,8 @@ export default function CourseThumbnail({
                 <img
                     src={imageUrl}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     className="size-full object-cover"
                 />
             ) : (

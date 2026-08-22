@@ -141,7 +141,7 @@ export default function Index({
                     </div>
 
                     {students.data.length > 0 ? (
-                        <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {students.data.map((student) => (
                                 <div
                                     key={student.id}

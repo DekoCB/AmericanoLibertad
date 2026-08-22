@@ -132,7 +132,7 @@ export default function Index({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2">
+                    <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2">
                         {bySubject.map(([subjectName, subjectCourses]) => (
                             <div
                                 key={subjectName}

@@ -186,7 +186,7 @@ export default function Index({
                             )}
 
                             {step === 'carrera' && (
-                                <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {porCarrera.map((grupo) => {
                                         const total = grupo.subjects.reduce(
                                             (sum, group) =>
@@ -251,7 +251,7 @@ export default function Index({
                             )}
 
                             {step === 'curso' && carreraActual && (
-                                <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {carreraActual.subjects.map((group) => (
                                         <div
                                             key={group.key}
@@ -358,7 +358,7 @@ export default function Index({
                                         </span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2">
                                         {grupo.subjects.map((group) => (
                                             <div
                                                 key={group.key}

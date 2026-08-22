@@ -174,7 +174,7 @@ export default function Cursos({
                             )}
 
                             {step === 'carrera' && (
-                                <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {porCarrera.map(([carreraName, subjects]) => {
                                         const total = subjects.reduce(
                                             (sum, group) =>
@@ -215,7 +215,7 @@ export default function Cursos({
                             )}
 
                             {step === 'curso' && grupoActual && (
-                                <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {grupoActual.map((group) => (
                                         <button
                                             key={group.key}
@@ -289,7 +289,7 @@ export default function Cursos({
                                         </span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 overflow-hidden rounded-lg border-l border-t border-brand-border sm:grid-cols-2">
+                                    <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2">
                                         {subjects.map((group) => (
                                             <div
                                                 key={group.key}
