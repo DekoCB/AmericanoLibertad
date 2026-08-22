@@ -9,7 +9,7 @@ import { Course, turnoLabels } from '@/types/models';
 import { useEffect, useMemo, useState } from 'react';
 
 type ViewMode = 'staff' | 'docente' | 'estudiante';
-type Step = 'carrera' | 'curso' | 'seccion';
+type Step = 'carrera' | 'curso';
 
 type SubjectGroup = {
     key: string;
@@ -104,14 +104,10 @@ export default function Index({
     const [selectedCarrera, setSelectedCarrera] = useState<string | null>(
         null,
     );
-    const [selectedCursoKey, setSelectedCursoKey] = useState<string | null>(
-        null,
-    );
 
     useEffect(() => {
         setStep('carrera');
         setSelectedCarrera(null);
-        setSelectedCursoKey(null);
     }, [selectedPeriod]);
 
     const irAlCurso = (courseId: string) => {
@@ -121,9 +117,6 @@ export default function Index({
 
     const carreraActual = porCarrera.find(
         (grupo) => grupo.carreraName === selectedCarrera,
-    );
-    const cursoActual = carreraActual?.subjects.find(
-        (group) => group.key === selectedCursoKey,
     );
 
     return (
@@ -203,33 +196,17 @@ export default function Index({
                                         onClick={() => {
                                             setStep('carrera');
                                             setSelectedCarrera(null);
-                                            setSelectedCursoKey(null);
                                         }}
                                         className="inline-flex items-center gap-1 text-brand-link hover:underline"
                                     >
                                         <ChevronLeftIcon className="size-3.5" />
                                         Carreras
                                     </button>
-                                    {step === 'seccion' && selectedCarrera && (
-                                        <>
-                                            <span>/</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setStep('curso');
-                                                    setSelectedCursoKey(null);
-                                                }}
-                                                className="text-brand-link hover:underline"
-                                            >
-                                                {selectedCarrera}
-                                            </button>
-                                        </>
-                                    )}
-                                    {step === 'seccion' && cursoActual && (
+                                    {selectedCarrera && (
                                         <>
                                             <span>/</span>
                                             <span className="text-brand-ink-strong">
-                                                {cursoActual.subjectName}
+                                                {selectedCarrera}
                                             </span>
                                         </>
                                     )}
@@ -306,50 +283,14 @@ export default function Index({
                                     {carreraActual.subjects.map((group) => (
                                         <div
                                             key={group.key}
-                                            className="relative"
+                                            className="relative border-b border-r border-brand-border bg-brand-card"
                                         >
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedCursoKey(
-                                                        group.key,
-                                                    );
-                                                    setStep('seccion');
-                                                }}
-                                                className="block w-full border-b border-r border-brand-border bg-brand-card text-left transition hover:bg-brand-hover"
-                                            >
-                                                <CourseThumbnail
-                                                    imageUrl={
-                                                        group.subjectImagenUrl
-                                                    }
-                                                    className="h-28 w-full"
-                                                />
-                                                <div className="p-5">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-medium text-brand-ink-strong">
-                                                            {
-                                                                group.subjectName
-                                                            }
-                                                        </p>
-                                                        {group.ciclo && (
-                                                            <span className="whitespace-nowrap rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
-                                                                Ciclo{' '}
-                                                                {group.ciclo}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="mt-1 text-xs text-brand-muted">
-                                                        {
-                                                            group.courses
-                                                                .length
-                                                        }{' '}
-                                                        {group.courses
-                                                            .length === 1
-                                                            ? 'sección'
-                                                            : 'secciones'}
-                                                    </p>
-                                                </div>
-                                            </button>
+                                            <CourseThumbnail
+                                                imageUrl={
+                                                    group.subjectImagenUrl
+                                                }
+                                                className="h-28 w-full"
+                                            />
                                             {canManageImagenes &&
                                                 group.subjectId && (
                                                     <ImageEditButton
@@ -361,29 +302,43 @@ export default function Index({
                                                         label=""
                                                     />
                                                 )}
+                                            <div className="p-5">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-medium text-brand-ink-strong">
+                                                        {group.subjectName}
+                                                    </p>
+                                                    {group.ciclo && (
+                                                        <span className="whitespace-nowrap rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                            Ciclo{' '}
+                                                            {group.ciclo}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    {group.courses.map(
+                                                        (course) => (
+                                                            <Link
+                                                                key={
+                                                                    course.id
+                                                                }
+                                                                href={route(
+                                                                    'aula-virtual.show',
+                                                                    course.id,
+                                                                )}
+                                                                className="flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
+                                                            >
+                                                                {course.name}
+                                                                <span className="text-brand-muted">
+                                                                    ·{' '}
+                                                                    {course.recursos_aula_count ??
+                                                                        0}
+                                                                </span>
+                                                            </Link>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {step === 'seccion' && cursoActual && (
-                                <div className="flex flex-wrap gap-2">
-                                    {cursoActual.courses.map((course) => (
-                                        <Link
-                                            key={course.id}
-                                            href={route(
-                                                'aula-virtual.show',
-                                                course.id,
-                                            )}
-                                            className="flex items-center gap-1.5 rounded-lg border border-brand-border bg-brand-card px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
-                                        >
-                                            {course.name}
-                                            <span className="text-brand-muted">
-                                                ·{' '}
-                                                {course.recursos_aula_count ??
-                                                    0}
-                                            </span>
-                                        </Link>
                                     ))}
                                 </div>
                             )}
