@@ -21,7 +21,7 @@ export default function UpcomingEvaluationsCard({
 }) {
     return (
         <div
-            className="rounded-[20px] border bg-brand-card p-[26px_28px]"
+            className="rounded-lg border bg-brand-card p-[26px_28px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <h3
@@ -61,7 +61,7 @@ export default function UpcomingEvaluationsCard({
                                 </div>
                             </div>
                             <span
-                                className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold"
+                                className="whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold"
                                 style={{
                                     background: badge.bg,
                                     color: badge.text,

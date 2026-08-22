@@ -83,7 +83,7 @@ export default function Index({
 
                     {can.confirmarPagos &&
                         pagosDeclaradosPendientes.length > 0 && (
-                            <div className="rounded-[20px] border border-amber-300 bg-amber-50 p-6">
+                            <div className="rounded-lg border border-amber-300 bg-amber-50 p-6">
                                 <h3 className="mb-4 text-lg font-bold text-amber-900">
                                     Pagos en efectivo pendientes de confirmar
                                 </h3>
@@ -128,7 +128,7 @@ export default function Index({
                             </div>
                         )}
 
-                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
+                    <div className="overflow-hidden overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
                         <table className="min-w-full divide-y divide-brand-border-faint">
                             <thead className="bg-brand-thead">
                                 <tr>

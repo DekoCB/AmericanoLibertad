@@ -17,6 +17,17 @@ export default {
             fontFamily: {
                 sans: ['Ubuntu', ...defaultTheme.fontFamily.sans],
             },
+            borderRadius: {
+                none: '0px',
+                sm: '2px',
+                DEFAULT: '3px',
+                md: '4px',
+                lg: '6px',
+                xl: '8px',
+                '2xl': '10px',
+                '3xl': '12px',
+                full: '9999px',
+            },
             colors: {
                 brand: {
                     cream: 'var(--brand-cream)',

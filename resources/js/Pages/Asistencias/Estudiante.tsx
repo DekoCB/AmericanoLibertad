@@ -85,7 +85,7 @@ export default function Estudiante({
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-4xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             Mi código QR
                         </h3>
@@ -98,7 +98,7 @@ export default function Estudiante({
                         </div>
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             Marcar mi asistencia
                         </h3>
@@ -161,7 +161,7 @@ export default function Estudiante({
                         )}
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <h3 className="text-lg font-bold text-brand-ink-strong">
                                 Mi historial de asistencia
@@ -201,7 +201,7 @@ export default function Estudiante({
                                             </td>
                                             <td className="whitespace-nowrap px-4 py-3 text-sm">
                                                 <span
-                                                    className={`rounded-full px-2 py-1 text-xs font-medium ${estadoBadge[asistencia.estado]}`}
+                                                    className={`rounded-lg px-2 py-1 text-xs font-medium ${estadoBadge[asistencia.estado]}`}
                                                 >
                                                     {
                                                         asistenciaEstadoLabels[

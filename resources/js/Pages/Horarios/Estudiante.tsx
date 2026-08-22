@@ -54,7 +54,7 @@ export default function Estudiante({ horarios }: { horarios: Horario[] }) {
                     {porDia.map(({ dia, items }) => (
                         <div
                             key={dia}
-                            className="rounded-[20px] border border-brand-border bg-brand-card p-6"
+                            className="rounded-lg border border-brand-border bg-brand-card p-6"
                         >
                             <h3 className="text-lg font-bold text-brand-ink-strong">
                                 {diaSemanaLabels[dia]}
@@ -97,7 +97,7 @@ export default function Estudiante({ horarios }: { horarios: Horario[] }) {
                     ))}
 
                     {horarios.length === 0 && (
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6 text-center text-sm text-brand-muted">
+                        <div className="rounded-lg border border-brand-border bg-brand-card p-6 text-center text-sm text-brand-muted">
                             Aún no tienes un horario asignado.
                         </div>
                     )}

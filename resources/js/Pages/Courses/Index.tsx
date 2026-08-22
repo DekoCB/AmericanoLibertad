@@ -136,7 +136,7 @@ export default function Index({
                         {bySubject.map(([subjectName, subjectCourses]) => (
                             <div
                                 key={subjectName}
-                                className="rounded-[28px] bg-brand-card p-6 shadow-sm"
+                                className="rounded-xl bg-brand-card p-6 shadow-sm"
                             >
                                 <h3 className="font-medium text-brand-ink-strong">
                                     {subjectName}
@@ -158,7 +158,7 @@ export default function Index({
                                                     {course.name}
                                                 </Link>
                                                 {course.subject?.ciclo && (
-                                                    <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                    <span className="whitespace-nowrap rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
                                                         Ciclo{' '}
                                                         {course.subject.ciclo}
                                                     </span>
@@ -212,7 +212,7 @@ export default function Index({
                             </div>
                         ))}
                         {courses.data.length === 0 && (
-                            <div className="col-span-full rounded-[28px] bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
+                            <div className="col-span-full rounded-xl bg-brand-card p-6 text-center text-sm text-brand-muted shadow-sm">
                                 No se encontraron secciones.
                             </div>
                         )}
@@ -264,7 +264,7 @@ export default function Index({
 
             {confirmingDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-                    <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
+                    <div className="w-full max-w-md rounded-lg border border-brand-border bg-brand-card p-6 shadow-xl">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             ¿Eliminar sección?
                         </h3>

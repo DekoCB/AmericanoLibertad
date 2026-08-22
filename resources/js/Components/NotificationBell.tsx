@@ -17,7 +17,7 @@ export default function NotificationBell() {
             <Dropdown.Trigger>
                 <button
                     type="button"
-                    className="relative inline-flex items-center justify-center rounded-full p-2 text-brand-muted transition hover:bg-brand-hover hover:text-brand-ink-strong"
+                    className="relative inline-flex items-center justify-center rounded-lg p-2 text-brand-muted transition hover:bg-brand-hover hover:text-brand-ink-strong"
                     aria-label="Notificaciones"
                 >
                     <BellIcon className="size-6" />

@@ -74,7 +74,7 @@ export default function Index({
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-5xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                             Solicitar permiso
                         </h3>
@@ -147,7 +147,7 @@ export default function Index({
                         </form>
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                             Solicitudes
                         </h3>
@@ -187,7 +187,7 @@ export default function Index({
                                             </td>
                                             <td className="py-2 pr-4 text-sm">
                                                 <span
-                                                    className={`rounded-full px-2 py-1 text-xs font-medium ${estadoBadge[permiso.estado]}`}
+                                                    className={`rounded-lg px-2 py-1 text-xs font-medium ${estadoBadge[permiso.estado]}`}
                                                 >
                                                     {permisoEstadoLabels[permiso.estado]}
                                                 </span>

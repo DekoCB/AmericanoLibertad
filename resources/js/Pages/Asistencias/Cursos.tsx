@@ -192,7 +192,7 @@ export default function Cursos({
                                                     );
                                                     setStep('curso');
                                                 }}
-                                                className="rounded-[20px] border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
+                                                className="rounded-lg border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
                                             >
                                                 <p className="font-medium text-brand-ink-strong">
                                                     {carreraName}
@@ -226,14 +226,14 @@ export default function Cursos({
                                                 );
                                                 setStep('seccion');
                                             }}
-                                            className="rounded-[20px] border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
+                                            className="rounded-lg border border-brand-border bg-brand-card p-5 text-left shadow-sm transition hover:border-brand-navy"
                                         >
                                             <div className="flex items-center gap-2">
                                                 <p className="font-medium text-brand-ink-strong">
                                                     {group.subjectName}
                                                 </p>
                                                 {group.ciclo && (
-                                                    <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                    <span className="whitespace-nowrap rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
                                                         Ciclo {group.ciclo}
                                                     </span>
                                                 )}
@@ -258,7 +258,7 @@ export default function Cursos({
                                                 'courses.asistencias.index',
                                                 course.id,
                                             )}
-                                            className="flex items-center gap-1.5 rounded-full border border-brand-border bg-brand-card px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
+                                            className="flex items-center gap-1.5 rounded-lg border border-brand-border bg-brand-card px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
                                         >
                                             {course.name}
                                             <span className="text-brand-muted">
@@ -279,7 +279,7 @@ export default function Cursos({
                                         <h3 className="text-lg font-bold text-brand-ink-strong">
                                             {carreraName}
                                         </h3>
-                                        <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                        <span className="rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
                                             {subjects.reduce(
                                                 (sum, group) =>
                                                     sum +
@@ -293,14 +293,14 @@ export default function Cursos({
                                         {subjects.map((group) => (
                                             <div
                                                 key={group.key}
-                                                className="rounded-[20px] border border-brand-border bg-brand-card p-5 shadow-sm"
+                                                className="rounded-lg border border-brand-border bg-brand-card p-5 shadow-sm"
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <p className="font-medium text-brand-ink-strong">
                                                         {group.subjectName}
                                                     </p>
                                                     {group.ciclo && (
-                                                        <span className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                                        <span className="whitespace-nowrap rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
                                                             Ciclo{' '}
                                                             {group.ciclo}
                                                         </span>
@@ -317,7 +317,7 @@ export default function Cursos({
                                                                     'courses.asistencias.index',
                                                                     course.id,
                                                                 )}
-                                                                className="flex items-center gap-1.5 rounded-full border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
+                                                                className="flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-ink transition hover:border-brand-navy hover:text-brand-navy"
                                                             >
                                                                 {course.name}
                                                                 <span className="text-brand-muted">

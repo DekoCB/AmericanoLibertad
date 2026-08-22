@@ -393,7 +393,7 @@ export default function MatriculaDetail({
 
     return (
         <div className="space-y-6">
-            <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
+            <div className="border border-brand-border bg-brand-card p-6 sm:rounded-lg">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
                         <div>
@@ -423,7 +423,7 @@ export default function MatriculaDetail({
                     </div>
                     <div className="flex items-center gap-3">
                         <span
-                            className={`rounded-full px-3 py-1 text-sm font-medium ${estadoBadge[matricula.estado]}`}
+                            className={`rounded-lg px-3 py-1 text-sm font-medium ${estadoBadge[matricula.estado]}`}
                         >
                             {cuotaEstadoLabels[matricula.estado]}
                         </span>
@@ -464,7 +464,7 @@ export default function MatriculaDetail({
             </div>
 
             {matricula.materias && matricula.materias.length > 0 && (
-                <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
+                <div className="border border-brand-border bg-brand-card p-6 sm:rounded-lg">
                     <h3 className="text-lg font-bold text-brand-ink-strong">
                         Cursos y profesores asignados
                     </h3>
@@ -503,7 +503,7 @@ export default function MatriculaDetail({
                 </div>
             )}
 
-            <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
+            <div className="border border-brand-border bg-brand-card p-6 sm:rounded-lg">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-brand-ink-strong">
                         Cuotas
@@ -541,7 +541,7 @@ export default function MatriculaDetail({
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span
-                                            className={`rounded-full px-2 py-1 text-xs font-medium ${estadoBadge[cuota.estado]}`}
+                                            className={`rounded-lg px-2 py-1 text-xs font-medium ${estadoBadge[cuota.estado]}`}
                                         >
                                             {cuotaEstadoLabels[cuota.estado]}
                                         </span>
@@ -648,7 +648,7 @@ export default function MatriculaDetail({
             </div>
 
             {matricula.historiales && matricula.historiales.length > 0 && (
-                <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
+                <div className="border border-brand-border bg-brand-card p-6 sm:rounded-lg">
                     <h3 className="text-lg font-bold text-brand-ink-strong">
                         Historial de cambios
                     </h3>

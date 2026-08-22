@@ -46,7 +46,7 @@ export default function Error({ status }: { status: number }) {
 
             <div className="flex flex-col items-center gap-4 py-4 text-center">
                 <div
-                    className="flex size-16 items-center justify-center rounded-full"
+                    className="flex size-16 items-center justify-center rounded-lg"
                     style={{
                         background: 'oklch(92% 0.05 55)',
                         color: 'oklch(48% 0.14 55)',

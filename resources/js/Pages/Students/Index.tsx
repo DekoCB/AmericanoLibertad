@@ -6,6 +6,7 @@ import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
 import Pagination from '@/Components/Pagination';
 import PageTitle from '@/Components/PageTitle';
+import UserAvatar from '@/Components/UserAvatar';
 import {
     ArrowUpTrayIcon,
     PencilIcon,
@@ -76,6 +77,12 @@ export default function Index({
         });
     };
 
+    const statusBadge: Record<Student['status'], string> = {
+        active: 'bg-green-100 text-green-800',
+        inactive: 'bg-red-100 text-red-800',
+        graduated: 'bg-blue-100 text-blue-800',
+    };
+
     return (
         <AuthenticatedLayout
             header={
@@ -133,71 +140,15 @@ export default function Index({
                         )}
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
-                        <table className="min-w-full divide-y divide-brand-border-faint">
-                            <thead className="bg-brand-thead">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Documento
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Nombre
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Email
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Carrera
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Ciclo
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Matrículas
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Estado
-                                    </th>
-                                    <th className="px-4 py-3" />
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-brand-border-faint">
-                                {students.data.map((student) => (
-                                    <tr key={student.id}>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {student.document_number}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
-                                            {student.first_name}{' '}
-                                            {student.last_name}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {student.email}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {student.carrera?.name ?? '—'}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {student.ciclo
-                                                ? `Ciclo ${student.ciclo}`
-                                                : '—'}
-                                            {student.turno
-                                                ? ` · ${turnoLabels[student.turno]}`
-                                                : ''}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {student.enrollments_count ?? 0}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm">
-                                            <span className="rounded-full bg-brand-hover px-2 py-1 text-xs text-brand-ink">
-                                                {
-                                                    studentStatusLabels[
-                                                        student.status
-                                                    ]
-                                                }
-                                            </span>
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                    {students.data.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {students.data.map((student) => (
+                                <div
+                                    key={student.id}
+                                    className="relative flex flex-col items-center gap-3 rounded-lg border border-brand-border bg-brand-card p-4 pt-10 text-center shadow-sm transition hover:border-brand-navy"
+                                >
+                                    {(can.update || can.delete) && (
+                                        <div className="absolute right-3 top-3 flex items-center gap-3">
                                             {can.update && (
                                                 <button
                                                     onClick={() => {
@@ -222,29 +173,71 @@ export default function Index({
                                                             student,
                                                         )
                                                     }
-                                                    className="ms-4 text-red-600 hover:opacity-70"
+                                                    className="text-red-600 hover:opacity-70"
                                                     title="Eliminar"
                                                     aria-label="Eliminar"
                                                 >
                                                     <TrashIcon className="size-4" />
                                                 </button>
                                             )}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {students.data.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={8}
-                                            className="px-4 py-6 text-center text-sm text-brand-muted"
+                                        </div>
+                                    )}
+
+                                    <UserAvatar
+                                        src={student.user?.avatar_url}
+                                        size="size-20"
+                                        iconSize="size-12"
+                                    />
+
+                                    <div>
+                                        <div className="leading-snug font-semibold text-brand-ink-strong">
+                                            {student.first_name}{' '}
+                                            {student.last_name}
+                                        </div>
+                                        <div className="text-xs text-brand-muted">
+                                            {student.document_number}
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full space-y-1 text-sm text-brand-ink">
+                                        <div className="truncate">
+                                            {student.email}
+                                        </div>
+                                        <div className="text-brand-muted">
+                                            {student.carrera?.name ?? 'Sin carrera asignada'}
+                                        </div>
+                                        <div className="text-brand-muted">
+                                            {student.ciclo
+                                                ? `Ciclo ${student.ciclo}`
+                                                : '—'}
+                                            {student.turno
+                                                ? ` · ${turnoLabels[student.turno]}`
+                                                : ''}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-auto flex w-full items-center justify-between border-t border-brand-border-faint pt-3">
+                                        <span className="text-xs text-brand-muted">
+                                            {student.enrollments_count ?? 0}{' '}
+                                            matrícula
+                                            {student.enrollments_count === 1
+                                                ? ''
+                                                : 's'}
+                                        </span>
+                                        <span
+                                            className={`rounded-lg px-2 py-1 text-xs font-medium ${statusBadge[student.status]}`}
                                         >
-                                            No se encontraron estudiantes.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                            {studentStatusLabels[student.status]}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border border-brand-border bg-brand-card px-4 py-6 text-center text-sm text-brand-muted">
+                            No se encontraron estudiantes.
+                        </div>
+                    )}
 
                     <Pagination links={students.links} />
                 </div>
@@ -285,7 +278,7 @@ export default function Index({
 
             {confirmingDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-                    <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
+                    <div className="w-full max-w-md rounded-lg border border-brand-border bg-brand-card p-6 shadow-xl">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             ¿Eliminar estudiante?
                         </h3>

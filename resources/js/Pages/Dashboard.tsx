@@ -274,7 +274,7 @@ function DateCard({ clima }: { clima: Clima | null }) {
             </div>
 
             {clima && (
-                <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-xs font-medium backdrop-blur-sm">
+                <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-lg bg-black/25 px-3 py-1 text-xs font-medium backdrop-blur-sm">
                     <span>{clima.temperatura}°C</span>
                     <span className="text-white/60">·</span>
                     <span>{clima.descripcion}</span>
@@ -345,7 +345,7 @@ function MiniStat({
 }) {
     return (
         <div
-            className="flex items-center gap-4 rounded-[20px] border bg-brand-card p-[22px_26px]"
+            className="flex items-center gap-4 rounded-lg border bg-brand-card p-[22px_26px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <span className="shrink-0" style={{ color: iconColor }}>
@@ -378,7 +378,7 @@ function PromedioGeneralBar({
 }) {
     return (
         <div
-            className="flex flex-wrap items-center gap-6 rounded-[20px] border bg-brand-card p-[22px_26px]"
+            className="flex flex-wrap items-center gap-6 rounded-lg border bg-brand-card p-[22px_26px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <div className="flex shrink-0 items-center gap-4">
@@ -653,7 +653,7 @@ function MatriculasActivasCard({
 function ListCard({ title, children }: { title: string; children: ReactNode }) {
     return (
         <div
-            className="rounded-[20px] border bg-brand-card p-[26px_28px]"
+            className="rounded-lg border bg-brand-card p-[26px_28px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <h3
@@ -735,7 +735,7 @@ function CardPager({
                 type="button"
                 onClick={() => onChange((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 hover:bg-brand-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex items-center gap-1 rounded-lg border px-3 py-1 text-xs font-medium transition-all duration-200 hover:bg-brand-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                 style={{
                     borderColor: 'var(--brand-border)',
                     color: 'var(--brand-ink-strong)',
@@ -751,7 +751,7 @@ function CardPager({
                 type="button"
                 onClick={() => onChange((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
-                className="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 hover:bg-brand-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex items-center gap-1 rounded-lg border px-3 py-1 text-xs font-medium transition-all duration-200 hover:bg-brand-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                 style={{
                     borderColor: 'var(--brand-border)',
                     color: 'var(--brand-ink-strong)',
@@ -937,7 +937,7 @@ function HorarioHoyCard({ horarios }: { horarios: Horario[] }) {
 
     return (
         <div
-            className="rounded-[20px] border bg-brand-card p-[26px_28px]"
+            className="rounded-lg border bg-brand-card p-[26px_28px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <h3
@@ -956,7 +956,7 @@ function HorarioHoyCard({ horarios }: { horarios: Horario[] }) {
                             key={dia}
                             type="button"
                             onClick={() => setDiaSeleccionado(dia)}
-                            className="rounded-full px-3 py-1 text-xs font-semibold transition"
+                            className="rounded-lg px-3 py-1 text-xs font-semibold transition"
                             style={{
                                 background: activo
                                     ? 'var(--brand-navy)'
@@ -1004,7 +1004,7 @@ function HorarioHoyCard({ horarios }: { horarios: Horario[] }) {
                                 </div>
                             </div>
                             <span
-                                className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold"
+                                className="whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold"
                                 style={{ background: tag.bg, color: tag.text }}
                             >
                                 {horario.course?.subject?.name}
@@ -1027,7 +1027,7 @@ function RankingEstudiantesCard({
 }) {
     return (
         <div
-            className="rounded-[20px] border bg-brand-card p-[26px_28px]"
+            className="rounded-lg border bg-brand-card p-[26px_28px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <h3
@@ -1160,7 +1160,7 @@ function EstudiantesPorCarreraCard({
 }) {
     return (
         <div
-            className="rounded-[20px] border bg-brand-card p-[26px_28px]"
+            className="rounded-lg border bg-brand-card p-[26px_28px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <h3
@@ -1199,7 +1199,7 @@ function EstudiantesPorCarreraCard({
 
                     <Link
                         href={route('students.index')}
-                        className="mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-brand-hover"
+                        className="mt-3 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-brand-hover"
                         style={{
                             borderColor: 'var(--brand-border)',
                             color: 'var(--brand-ink-strong)',
@@ -1285,7 +1285,7 @@ function EvaluacionesCalendarCard({
 
     return (
         <div
-            className="rounded-[20px] border bg-brand-card p-[26px_28px]"
+            className="rounded-lg border bg-brand-card p-[26px_28px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <h3
@@ -1302,7 +1302,7 @@ function EvaluacionesCalendarCard({
                         setCursor(new Date(year, month - 1, 1));
                         setSelectedDay(null);
                     }}
-                    className="flex size-7 items-center justify-center rounded-full border transition hover:bg-brand-hover"
+                    className="flex size-7 items-center justify-center rounded-lg border transition hover:bg-brand-hover"
                     style={{
                         borderColor: 'var(--brand-border)',
                         color: 'var(--brand-ink-strong)',
@@ -1323,7 +1323,7 @@ function EvaluacionesCalendarCard({
                         setCursor(new Date(year, month + 1, 1));
                         setSelectedDay(null);
                     }}
-                    className="flex size-7 items-center justify-center rounded-full border transition hover:bg-brand-hover"
+                    className="flex size-7 items-center justify-center rounded-lg border transition hover:bg-brand-hover"
                     style={{
                         borderColor: 'var(--brand-border)',
                         color: 'var(--brand-ink-strong)',
@@ -1476,7 +1476,7 @@ function DashboardHeader({
                 </h1>
             </div>
             <div
-                className="flex items-center gap-2.5 rounded-full border bg-brand-card px-4 py-2"
+                className="flex items-center gap-2.5 rounded-lg border bg-brand-card px-4 py-2"
                 style={{ borderColor: 'var(--brand-border)' }}
             >
                 {auth.user.avatar_url ? (

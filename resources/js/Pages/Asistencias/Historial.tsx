@@ -98,7 +98,7 @@ export default function Historial({
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-6xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="flex flex-wrap gap-4">
                             <div>
                                 <InputLabel htmlFor="fecha" value="Fecha" />
@@ -177,13 +177,13 @@ export default function Historial({
                         <details
                             key={carreraName}
                             open
-                            className="rounded-[20px] border border-brand-border bg-brand-card p-6"
+                            className="rounded-lg border border-brand-border bg-brand-card p-6"
                         >
                             <summary className="flex cursor-pointer list-none items-center gap-3">
                                 <h3 className="text-lg font-bold text-brand-ink-strong">
                                     {carreraName}
                                 </h3>
-                                <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                                <span className="rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
                                     {registros.length}
                                 </span>
                             </summary>
@@ -216,7 +216,7 @@ export default function Historial({
                                                 </td>
                                                 <td className="whitespace-nowrap px-4 py-2 text-sm">
                                                     <span
-                                                        className={`rounded-full px-2 py-1 text-xs font-medium ${estadoBadge[registro.estado]}`}
+                                                        className={`rounded-lg px-2 py-1 text-xs font-medium ${estadoBadge[registro.estado]}`}
                                                     >
                                                         {
                                                             asistenciaEstadoLabels[
@@ -234,7 +234,7 @@ export default function Historial({
                     ))}
 
                     {asistencias.data.length === 0 && (
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card px-4 py-6 text-center text-sm text-brand-muted">
+                        <div className="rounded-lg border border-brand-border bg-brand-card px-4 py-6 text-center text-sm text-brand-muted">
                             No se encontraron asistencias en la fecha
                             seleccionada.
                         </div>

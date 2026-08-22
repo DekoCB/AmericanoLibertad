@@ -136,7 +136,7 @@ export default function Login({
                                 key={option.value}
                                 type="button"
                                 onClick={() => chooseRole(option.value)}
-                                className="flex flex-col items-start gap-2 rounded-[16px] border border-brand-border bg-brand-card p-4 text-left transition hover:border-brand-navy hover:bg-brand-hover"
+                                className="flex flex-col items-start gap-2 rounded-md border border-brand-border bg-brand-card p-4 text-left transition hover:border-brand-navy hover:bg-brand-hover"
                             >
                                 <option.icon className="size-6 text-brand-navy" />
                                 <span className="text-sm font-semibold text-brand-ink-strong">

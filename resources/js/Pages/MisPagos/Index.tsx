@@ -317,7 +317,7 @@ export default function Index({
                         return (
                             <div
                                 key={matricula.id}
-                                className="space-y-4 rounded-[20px] border border-brand-border bg-brand-card p-6"
+                                className="space-y-4 rounded-lg border border-brand-border bg-brand-card p-6"
                             >
                                 <div className="flex flex-wrap items-start justify-between gap-4">
                                     <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
@@ -355,7 +355,7 @@ export default function Index({
                                         </div>
                                     </div>
                                     <span
-                                        className={`rounded-full px-3 py-1 text-sm font-medium ${estadoBadge[matricula.estado]}`}
+                                        className={`rounded-lg px-3 py-1 text-sm font-medium ${estadoBadge[matricula.estado]}`}
                                     >
                                         {cuotaEstadoLabels[matricula.estado]}
                                     </span>
@@ -425,7 +425,7 @@ export default function Index({
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <span
-                                                            className={`rounded-full px-2 py-1 text-xs font-medium ${estadoBadge[cuota.estado]}`}
+                                                            className={`rounded-lg px-2 py-1 text-xs font-medium ${estadoBadge[cuota.estado]}`}
                                                         >
                                                             {
                                                                 cuotaEstadoLabels[
@@ -482,7 +482,7 @@ export default function Index({
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
                                                                             <span
-                                                                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${pagoBadge[pago.estado]}`}
+                                                                                className={`rounded-lg px-2 py-0.5 text-xs font-medium ${pagoBadge[pago.estado]}`}
                                                                             >
                                                                                 {
                                                                                     pagoEstadoLabels[
@@ -543,7 +543,7 @@ export default function Index({
                     })}
 
                     {matriculas.length === 0 && (
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card px-4 py-6 text-center text-sm text-brand-muted">
+                        <div className="rounded-lg border border-brand-border bg-brand-card px-4 py-6 text-center text-sm text-brand-muted">
                             No tienes matrículas registradas.
                         </div>
                     )}

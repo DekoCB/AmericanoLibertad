@@ -117,7 +117,7 @@ export default function Index({
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-4xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="mb-4 flex items-center gap-3">
                             <InputLabel htmlFor="fecha" value="Fecha" />
                             <DateInput
@@ -197,7 +197,7 @@ export default function Index({
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm">
                                             <span
-                                                className={`rounded-full px-2 py-1 text-xs font-medium ${
+                                                className={`rounded-lg px-2 py-1 text-xs font-medium ${
                                                     row.asistencia
                                                         ? estadoBadge[row.asistencia.estado]
                                                         : estadoBadge.sin_registro

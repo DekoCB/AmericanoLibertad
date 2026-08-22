@@ -60,7 +60,7 @@ export default function ResolverQuiz({
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
                     <form
                         onSubmit={submit}
-                        className="space-y-6 border border-brand-border bg-brand-card p-6 sm:rounded-[20px]"
+                        className="space-y-6 border border-brand-border bg-brand-card p-6 sm:rounded-lg"
                     >
                         <p className="text-sm text-brand-muted">
                             Responde todas las preguntas y presiona enviar.

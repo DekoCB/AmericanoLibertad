@@ -116,7 +116,7 @@ export default function Show({
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 gap-4 rounded-[20px] bg-brand-card p-6 shadow-sm sm:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-4 rounded-lg bg-brand-card p-6 shadow-sm sm:grid-cols-4">
                         <div>
                             <div className="text-xs uppercase text-brand-muted">
                                 Profesor
@@ -154,7 +154,7 @@ export default function Show({
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                             <div className="mb-4 flex items-center justify-between">
                                 <h3 className="text-lg font-bold text-brand-ink-strong">
                                     Estudiantes matriculados
@@ -242,7 +242,7 @@ export default function Show({
                             </ul>
                         </div>
 
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                             <div className="mb-4 flex items-center justify-between">
                                 <h3 className="text-lg font-bold text-brand-ink-strong">
                                     Evaluaciones
@@ -332,7 +332,7 @@ export default function Show({
                         </div>
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-brand-ink-strong">
                                 Horario de clases

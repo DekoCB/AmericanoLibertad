@@ -60,7 +60,7 @@ export default function Index({
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-6xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             Ingresos por período
                         </h3>
@@ -107,7 +107,7 @@ export default function Index({
                         </div>
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                             <h3 className="text-lg font-bold text-brand-ink-strong">
                                 Mora por carrera
@@ -162,7 +162,7 @@ export default function Index({
                         </div>
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                             <h3 className="text-lg font-bold text-brand-ink-strong">
                                 Proyección de cobranza

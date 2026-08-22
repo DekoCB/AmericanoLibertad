@@ -106,7 +106,7 @@ function StatCard({
 
     return (
         <div
-            className="flex items-center gap-3 rounded-[20px] border bg-brand-card p-[18px_20px]"
+            className="flex items-center gap-3 rounded-lg border bg-brand-card p-[18px_20px]"
             style={{ borderColor: 'var(--brand-border)' }}
         >
             <ArrowTrendingUpIcon
@@ -194,7 +194,7 @@ export default function Index({
                         />
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                             Resumen mensual
                         </h3>
@@ -249,7 +249,7 @@ export default function Index({
                         </div>
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                             Ingresos y egresos por categoría (mes actual)
                         </h3>
@@ -294,7 +294,7 @@ export default function Index({
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                             <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                                 Últimos ingresos
                             </h3>
@@ -333,7 +333,7 @@ export default function Index({
                             </ul>
                         </div>
 
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                             <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                                 Últimos egresos
                             </h3>

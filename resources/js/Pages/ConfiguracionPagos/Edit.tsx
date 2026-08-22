@@ -58,7 +58,7 @@ export default function Edit({
 
                     <form
                         onSubmit={submit}
-                        className="space-y-8 rounded-[20px] border border-brand-border bg-brand-card p-6"
+                        className="space-y-8 rounded-lg border border-brand-border bg-brand-card p-6"
                     >
                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div className="space-y-4 rounded-xl border border-brand-border-faint p-4">

@@ -877,7 +877,7 @@ function ContactSection() {
                                                 )
                                             }
                                             required
-                                            className="w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                            className="w-full rounded-[12px] border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                         />
                                         {errors.nombre && (
                                             <p className="mt-1 text-sm text-red-600">
@@ -899,7 +899,7 @@ function ContactSection() {
                                                 )
                                             }
                                             required
-                                            className="w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                            className="w-full rounded-[12px] border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                         />
                                         {errors.correo && (
                                             <p className="mt-1 text-sm text-red-600">
@@ -919,7 +919,7 @@ function ContactSection() {
                                         onChange={(e) =>
                                             setData('asunto', e.target.value)
                                         }
-                                        className="w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                        className="w-full rounded-[12px] border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                     />
                                 </div>
 
@@ -934,7 +934,7 @@ function ContactSection() {
                                         }
                                         required
                                         rows={4}
-                                        className="w-full rounded-xl border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
+                                        className="w-full rounded-[12px] border-brand-border bg-brand-input text-brand-ink shadow-sm focus:border-brand-navy focus:ring-brand-navy"
                                     />
                                     {errors.mensaje && (
                                         <p className="mt-1 text-sm text-red-600">
@@ -946,7 +946,7 @@ function ContactSection() {
                                 <PrimaryButton
                                     type="submit"
                                     disabled={processing}
-                                    className="w-full justify-center"
+                                    className="w-full justify-center !rounded-[12px]"
                                 >
                                     Enviar mensaje
                                 </PrimaryButton>
@@ -1028,7 +1028,7 @@ export default function Welcome({
                 <header className="border-b border-brand-border-faint bg-brand-card">
                     <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
                         <div className="flex items-center gap-3">
-                            <ApplicationLogo className="size-10 rounded-lg object-contain" />
+                            <ApplicationLogo className="size-10 rounded-[8px] object-contain" />
                             <span className="text-lg font-semibold tracking-tight text-brand-ink-strong">
                                 Instituto Americano Libertad
                             </span>
@@ -1038,7 +1038,7 @@ export default function Welcome({
                             {auth.user ? (
                                 <Link
                                     href={route('dashboard')}
-                                    className="rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-dark"
+                                    className="rounded-[12px] bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-dark"
                                 >
                                     Ir al sistema
                                 </Link>
@@ -1046,15 +1046,15 @@ export default function Welcome({
                                 <>
                                     <Link
                                         href={route('admision.create')}
-                                        className="rounded-xl px-4 py-2 text-sm font-medium text-brand-muted transition hover:text-brand-navy"
+                                        className="rounded-[12px] px-4 py-2 text-sm font-medium text-brand-muted transition hover:text-brand-navy"
                                     >
                                         Admisión
                                     </Link>
-                                    <ThemeToggleButton />
+                                    <ThemeToggleButton className="!rounded-[12px]" />
                                     {canLogin && (
                                         <Link
                                             href={route('login')}
-                                            className="rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-dark"
+                                            className="rounded-[12px] bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-dark"
                                         >
                                             Ingresar al sistema
                                         </Link>
@@ -1105,7 +1105,7 @@ export default function Welcome({
                                 {!auth.user && (
                                     <Link
                                         href={route('admision.create')}
-                                        className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-navy-dark shadow-sm transition hover:bg-blue-50"
+                                        className="rounded-[12px] bg-white px-6 py-3 text-sm font-semibold text-brand-navy-dark shadow-sm transition hover:bg-blue-50"
                                     >
                                         Solicita tu admisión
                                     </Link>
@@ -1167,7 +1167,7 @@ export default function Welcome({
                                     className="aspect-square w-full origin-center object-contain drop-shadow-xl transition-transform duration-700 ease-out hover:rotate-[360deg] hover:scale-110"
                                 />
                             </div>
-                            <div className="absolute -right-4 top-8 rounded-2xl bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
+                            <div className="absolute -right-4 top-8 rounded-[16px] bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
                                 <p
                                     className="text-xs font-semibold uppercase tracking-wide"
                                     style={{ color: 'oklch(32% 0.07 255)' }}

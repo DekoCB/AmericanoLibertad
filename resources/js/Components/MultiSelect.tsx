@@ -26,7 +26,7 @@ export default function MultiSelect({
                             value.map((item) => (
                                 <span
                                     key={item}
-                                    className="flex items-center gap-1 rounded-full bg-brand-hover px-2.5 py-1 text-sm text-brand-ink"
+                                    className="flex items-center gap-1 rounded-lg bg-brand-hover px-2.5 py-1 text-sm text-brand-ink"
                                 >
                                     {item}
                                     <span

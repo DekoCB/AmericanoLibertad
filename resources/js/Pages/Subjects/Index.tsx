@@ -82,7 +82,7 @@ export default function Index({
                         )}
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
+                    <div className="overflow-hidden overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
                         <table className="min-w-full divide-y divide-brand-border-faint">
                             <thead className="bg-brand-thead">
                                 <tr>
@@ -215,7 +215,7 @@ export default function Index({
 
             {confirmingDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-                    <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
+                    <div className="w-full max-w-md rounded-lg border border-brand-border bg-brand-card p-6 shadow-xl">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             ¿Eliminar curso?
                         </h3>

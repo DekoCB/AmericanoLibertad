@@ -36,7 +36,7 @@ export default function Create({ course }: { course: Course }) {
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                    <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
+                    <div className="border border-brand-border bg-brand-card p-6 sm:rounded-lg">
                         <form onSubmit={submit} className="space-y-6">
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                 <div className="sm:col-span-2">

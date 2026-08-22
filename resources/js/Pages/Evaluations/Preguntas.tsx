@@ -191,7 +191,7 @@ export default function Preguntas({
                         </div>
                     )}
 
-                    <div className="border border-brand-border bg-brand-card p-6 sm:rounded-[20px]">
+                    <div className="border border-brand-border bg-brand-card p-6 sm:rounded-lg">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-bold text-brand-ink-strong">
                                 Preguntas

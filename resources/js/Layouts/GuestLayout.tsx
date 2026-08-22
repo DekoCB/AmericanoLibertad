@@ -16,7 +16,7 @@ export default function Guest({ children }: PropsWithChildren) {
                 <ThemeToggleButton />
             </div>
 
-            <div className="mt-6 w-full overflow-hidden rounded-[20px] border border-brand-border bg-brand-card px-6 py-6 shadow-sm sm:max-w-md">
+            <div className="mt-6 w-full overflow-hidden rounded-lg border border-brand-border bg-brand-card px-6 py-6 shadow-sm sm:max-w-md">
                 {children}
             </div>
         </div>

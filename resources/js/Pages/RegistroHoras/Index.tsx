@@ -187,7 +187,7 @@ export default function Index({
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-6xl space-y-6 sm:px-6 lg:px-8">
                     {!isDocente && pendientesPorDocente.length > 0 && (
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                             <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                                 Pendiente de pago
                             </h3>
@@ -250,7 +250,7 @@ export default function Index({
                         </div>
                     )}
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="mb-4 text-lg font-bold text-brand-ink-strong">
                             Registrar horas académicas
                         </h3>
@@ -350,7 +350,7 @@ export default function Index({
                         </form>
                     </div>
 
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <h3 className="text-lg font-bold text-brand-ink-strong">
                                 Historial
@@ -411,7 +411,7 @@ export default function Index({
                                             </td>
                                             <td className="py-2 pr-4 text-sm">
                                                 <span
-                                                    className={`rounded-full px-2 py-1 text-xs font-medium ${
+                                                    className={`rounded-lg px-2 py-1 text-xs font-medium ${
                                                         registro.pagado
                                                             ? 'bg-green-100 text-green-800'
                                                             : 'bg-yellow-100 text-yellow-800'

@@ -5,6 +5,7 @@ import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
 import Pagination from '@/Components/Pagination';
 import PageTitle from '@/Components/PageTitle';
+import UserAvatar from '@/Components/UserAvatar';
 import { BriefcaseIcon, PencilIcon, TrashIcon } from '@/Components/Icons';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
@@ -108,55 +109,15 @@ export default function Index({
                         )}
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
-                        <table className="min-w-full divide-y divide-brand-border-faint">
-                            <thead className="bg-brand-thead">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Nombre
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Email
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Especialidad
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                        Secciones
-                                    </th>
-                                    <th className="px-4 py-3" />
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-brand-border-faint">
-                                {teachers.data.map((teacher) => (
-                                    <tr key={teacher.id}>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
-                                            {teacher.first_name}{' '}
-                                            {teacher.last_name}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {teacher.email}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-brand-ink">
-                                            {teacher.specialty && teacher.specialty.length > 0 ? (
-                                                <div className="flex flex-wrap gap-1">
-                                                    {teacher.specialty.map((specialty) => (
-                                                        <span
-                                                            key={specialty}
-                                                            className="whitespace-nowrap rounded-full bg-brand-hover px-2 py-0.5 text-xs text-brand-ink"
-                                                        >
-                                                            {specialty}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                '—'
-                                            )}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                            {teacher.courses_count ?? 0}
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                    {teachers.data.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {teachers.data.map((teacher) => (
+                                <div
+                                    key={teacher.id}
+                                    className="relative flex flex-col items-center gap-3 rounded-lg border border-brand-border bg-brand-card p-4 pt-10 text-center shadow-sm transition hover:border-brand-navy"
+                                >
+                                    {(can.update || can.delete) && (
+                                        <div className="absolute right-3 top-3 flex items-center gap-3">
                                             {can.update && (
                                                 <button
                                                     onClick={() => {
@@ -179,29 +140,61 @@ export default function Index({
                                                             teacher,
                                                         )
                                                     }
-                                                    className="ms-4 text-red-600 hover:opacity-70"
+                                                    className="text-red-600 hover:opacity-70"
                                                     title="Eliminar"
                                                     aria-label="Eliminar"
                                                 >
                                                     <TrashIcon className="size-4" />
                                                 </button>
                                             )}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {teachers.data.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={5}
-                                            className="px-4 py-6 text-center text-sm text-brand-muted"
-                                        >
-                                            No se encontraron profesores.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+                                    )}
+
+                                    <UserAvatar
+                                        src={teacher.user?.avatar_url}
+                                        size="size-20"
+                                        iconSize="size-12"
+                                    />
+
+                                    <div>
+                                        <div className="leading-snug font-semibold text-brand-ink-strong">
+                                            {teacher.first_name}{' '}
+                                            {teacher.last_name}
+                                        </div>
+                                        <div className="text-xs text-brand-muted">
+                                            {teacher.email}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex w-full flex-wrap justify-center gap-1">
+                                        {teacher.specialty && teacher.specialty.length > 0 ? (
+                                            teacher.specialty.map((specialty) => (
+                                                <span
+                                                    key={specialty}
+                                                    className="whitespace-nowrap rounded-lg bg-brand-hover px-2 py-0.5 text-xs text-brand-ink"
+                                                >
+                                                    {specialty}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span className="text-sm text-brand-muted">
+                                                Sin especialidad asignada
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-auto w-full border-t border-brand-border-faint pt-3 text-xs text-brand-muted">
+                                        {teacher.courses_count ?? 0} sección
+                                        {teacher.courses_count === 1 ? '' : 'es'}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border border-brand-border bg-brand-card px-4 py-6 text-center text-sm text-brand-muted">
+                            No se encontraron profesores.
+                        </div>
+                    )}
 
                     <Pagination links={teachers.links} />
                 </div>
@@ -241,7 +234,7 @@ export default function Index({
 
             {confirmingDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-                    <div className="w-full max-w-md rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-xl">
+                    <div className="w-full max-w-md rounded-lg border border-brand-border bg-brand-card p-6 shadow-xl">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             ¿Eliminar profesor?
                         </h3>

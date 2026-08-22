@@ -30,7 +30,7 @@ export default function ImageEditButton({
 
     const styles =
         variant === 'overlay'
-            ? 'absolute bottom-2 right-2 z-10 gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur hover:bg-black/75'
+            ? 'absolute bottom-2 right-2 z-10 gap-1.5 rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur hover:bg-black/75'
             : 'gap-1.5 text-sm font-medium text-brand-link hover:underline';
 
     return (

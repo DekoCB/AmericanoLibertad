@@ -215,7 +215,7 @@ export default function ForoPanel({
     if (foroTemas.length === 0 && !canManage) return null;
 
     return (
-        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-brand-ink-strong">
                     Foro / Participación

@@ -43,7 +43,7 @@ export default function Show({
                             <span>{course.subject.carrera.name}</span>
                         )}
                         {course.subject?.ciclo && (
-                            <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                            <span className="rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
                                 Ciclo {course.subject.ciclo}
                             </span>
                         )}
@@ -55,7 +55,7 @@ export default function Show({
                         )}
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto rounded-[20px] border border-brand-border bg-brand-card">
+                    <div className="overflow-hidden overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
                         <table className="min-w-full divide-y divide-brand-border-faint">
                             <thead className="bg-brand-thead">
                                 <tr>
@@ -77,7 +77,7 @@ export default function Show({
                                         <td className="whitespace-nowrap px-4 py-3 text-sm">
                                             <div className="flex items-center gap-2">
                                                 <span
-                                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${tipoBadge[evaluation.type]}`}
+                                                    className={`rounded-lg px-2 py-0.5 text-xs font-medium ${tipoBadge[evaluation.type]}`}
                                                 >
                                                     {
                                                         evaluationTypeLabels[

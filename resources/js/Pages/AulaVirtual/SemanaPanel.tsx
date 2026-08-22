@@ -49,7 +49,7 @@ function SeccionSemana({
     if (vacio && !canManage) return null;
 
     return (
-        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-brand-ink-strong">
                     {titulo}
@@ -463,7 +463,7 @@ export default function SemanaPanel({
     return (
         <div className="space-y-6">
             {/* 3.1 Encabezado de la semana */}
-            <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+            <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
@@ -553,7 +553,7 @@ export default function SemanaPanel({
 
             {/* 3.5 Clase / contenido principal */}
             {recursoPrincipal && (
-                <div className="rounded-[20px] border-2 border-brand-navy bg-brand-card p-6">
+                <div className="rounded-lg border-2 border-brand-navy bg-brand-card p-6">
                     <h3 className="text-lg font-bold text-brand-ink-strong">
                         Clase de la semana
                     </h3>
@@ -570,7 +570,7 @@ export default function SemanaPanel({
             )}
 
             {/* 3.4 + 3.9 Materiales de aprendizaje y recursos complementarios */}
-            <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+            <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-brand-ink-strong">
                         Materiales de la semana
@@ -602,7 +602,7 @@ export default function SemanaPanel({
 
             {/* 3.9 Recursos complementarios */}
             {(complementarios.length > 0 || canManage) && (
-                <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                     <div className="flex items-center justify-between">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             Recursos complementarios
@@ -640,7 +640,7 @@ export default function SemanaPanel({
 
             {/* 3.6 + 3.7 Actividades de la semana */}
             {(evaluaciones.length > 0 || canManage) && (
-                <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                     <div className="flex items-center justify-between">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
                             Actividades de la semana
@@ -680,7 +680,7 @@ export default function SemanaPanel({
             />
 
             {/* 3.10 Cierre de la semana */}
-            <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+            <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-brand-ink-strong">
                         Cierre de la semana

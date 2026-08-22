@@ -62,9 +62,9 @@ export default function Import({
 
             <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-3xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="flex items-start gap-4">
-                            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-hover text-brand-navy">
+                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand-hover text-brand-navy">
                                 <UsersIcon className="size-5" />
                             </div>
                             <div>
@@ -123,7 +123,7 @@ export default function Import({
                     </div>
 
                     {summary && (
-                        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+                        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                             <h3 className="font-bold text-brand-ink-strong">
                                 Resultado de la importación
                             </h3>

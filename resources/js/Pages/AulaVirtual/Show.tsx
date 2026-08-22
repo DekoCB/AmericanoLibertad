@@ -396,23 +396,23 @@ export function RecursoItem({
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <span
-                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tipoBadge[recurso.tipo]}`}
+                            className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium ${tipoBadge[recurso.tipo]}`}
                         >
                             <Icono className="size-3.5" />
                             {recursoTipoLabels[recurso.tipo]}
                         </span>
                         {recurso.es_principal && (
-                            <span className="rounded-full bg-brand-navy px-2 py-0.5 text-xs font-medium text-white">
+                            <span className="rounded-lg bg-brand-navy px-2 py-0.5 text-xs font-medium text-white">
                                 Contenido principal
                             </span>
                         )}
                         {recurso.es_complementario && (
-                            <span className="rounded-full bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
+                            <span className="rounded-lg bg-brand-hover px-2 py-0.5 text-xs font-medium text-brand-muted">
                                 Complementario
                             </span>
                         )}
                         {recurso.entregable && (
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                                 Entregable
                                 {recurso.fecha_entrega &&
                                     ` · vence ${formatDate(recurso.fecha_entrega)}`}
@@ -634,14 +634,14 @@ export function EvaluacionItem({
         <li className="rounded-md border border-brand-border p-4">
             <div className="flex flex-wrap items-center gap-2">
                 <span
-                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${evaluacionBadge[evaluacion.type]}`}
+                    className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium ${evaluacionBadge[evaluacion.type]}`}
                 >
                     <Icono className="size-3.5" />
                     Evaluación · {evaluationTypeLabels[evaluacion.type]}
                 </span>
                 {isStudent && evaluacion.estado && (
                     <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${estadoActividadBadge[evaluacion.estado]}`}
+                        className={`rounded-lg px-2 py-0.5 text-xs font-medium ${estadoActividadBadge[evaluacion.estado]}`}
                     >
                         {estadoActividadLabel[evaluacion.estado]}
                     </span>
@@ -702,7 +702,7 @@ function SemanasNav({
             <h3 className="text-lg font-bold text-brand-ink-strong">
                 Contenido de la sección
             </h3>
-            <ul className="max-h-[70vh] divide-y divide-brand-border-faint overflow-y-auto rounded-[20px] border border-brand-border bg-brand-card">
+            <ul className="max-h-[70vh] divide-y divide-brand-border-faint overflow-y-auto rounded-lg border border-brand-border bg-brand-card">
                 {resumenSemanas.map(({ semana, total, pendiente }) => {
                     const isActive =
                         semana === 'general'
@@ -736,7 +736,7 @@ function SemanasNav({
                                 </span>
                                 {total > 0 && (
                                     <span
-                                        className={`rounded-full px-2 py-0.5 text-xs ${
+                                        className={`rounded-lg px-2 py-0.5 text-xs ${
                                             isActive
                                                 ? 'bg-white/20'
                                                 : 'bg-brand-cream text-brand-muted'
@@ -772,14 +772,14 @@ function AlertasPanel({ recursos }: { recursos: AlertaRecurso[] }) {
                 Actividades pendientes
             </h3>
             {alertas.length === 0 && (
-                <div className="rounded-[20px] border border-brand-border bg-brand-card p-4 text-sm text-brand-muted">
+                <div className="rounded-lg border border-brand-border bg-brand-card p-4 text-sm text-brand-muted">
                     No tienes entregables pendientes.
                 </div>
             )}
             {alertas.map(({ recurso, dias }) => (
                 <div
                     key={recurso.id}
-                    className={`rounded-[20px] border p-4 ${estiloAlerta(dias)}`}
+                    className={`rounded-lg border p-4 ${estiloAlerta(dias)}`}
                 >
                     <p className="font-medium">{recurso.titulo}</p>
                     <p className="mt-1 text-xs font-semibold">
@@ -820,7 +820,7 @@ function InfoSeccion({
     if (vacio && !canManage) return null;
 
     return (
-        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-brand-ink-strong">
                     {titulo}
@@ -1105,7 +1105,7 @@ function BienvenidaPanel({
     return (
         <div className="space-y-6">
             {/* 2.0 Imagen del curso (compartida por todas las secciones de esta materia) */}
-            <div className="overflow-hidden rounded-[20px] border border-brand-border bg-brand-card">
+            <div className="overflow-hidden rounded-lg border border-brand-border bg-brand-card">
                 <CourseThumbnail
                     imageUrl={course.subject?.imagen_url ?? null}
                     className="h-48 w-full sm:h-64"
@@ -1124,7 +1124,7 @@ function BienvenidaPanel({
             </div>
 
             {/* 2.1 Presentación del curso */}
-            <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+            <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <h3 className="text-lg font-bold text-brand-ink-strong">
@@ -1220,7 +1220,7 @@ function BienvenidaPanel({
             </InfoSeccion>
 
             {/* 2.3 Información general */}
-            <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+            <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-brand-ink-strong">
                         Información general
@@ -1299,7 +1299,7 @@ function BienvenidaPanel({
             </InfoSeccion>
 
             {/* 2.5 ¿Cómo utilizar el aula virtual? */}
-            <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+            <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                 <h3 className="text-lg font-bold text-brand-ink-strong">
                     ¿Cómo utilizar el aula virtual?
                 </h3>
@@ -1325,7 +1325,7 @@ function BienvenidaPanel({
             </InfoSeccion>
 
             {/* 2.7 Documentos importantes */}
-            <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+            <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-brand-ink-strong">
                         Documentos importantes

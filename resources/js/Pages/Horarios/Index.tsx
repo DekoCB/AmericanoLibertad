@@ -70,7 +70,7 @@ function VistaPreviaHorario({ aula, horarios }: { aula: string; horarios: Horari
                             key={dia}
                             type="button"
                             onClick={() => setDiaSeleccionado(dia)}
-                            className="rounded-full px-3 py-1 text-xs font-semibold transition"
+                            className="rounded-lg px-3 py-1 text-xs font-semibold transition"
                             style={{
                                 background: activo
                                     ? 'var(--brand-navy)'
@@ -152,7 +152,7 @@ function AulaCard({
     };
 
     return (
-        <div className="rounded-[20px] border border-brand-border bg-brand-card p-6">
+        <div className="rounded-lg border border-brand-border bg-brand-card p-6">
             <p className="font-medium text-brand-ink-strong">{aula}</p>
             <p className="mt-1 text-sm text-brand-muted">
                 {total} {total === 1 ? 'clase registrada' : 'clases registradas'}

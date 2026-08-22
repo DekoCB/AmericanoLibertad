@@ -286,10 +286,10 @@ export default function AdmisionIndex({
                         proceso de matrícula.
                     </p>
 
-                    <div className="mt-10 rounded-[20px] border border-brand-border bg-brand-card p-6 shadow-sm sm:p-10">
+                    <div className="mt-10 rounded-lg border border-brand-border bg-brand-card p-6 shadow-sm sm:p-10">
                         {wasSuccessful ? (
                             <div className="flex flex-col items-center py-12 text-center">
-                                <div className="flex size-16 items-center justify-center rounded-full bg-brand-hover">
+                                <div className="flex size-16 items-center justify-center rounded-lg bg-brand-hover">
                                     <CheckIcon className="size-8 text-brand-navy" />
                                 </div>
                                 <p className="mt-6 text-xl font-semibold text-brand-ink-strong">
@@ -317,7 +317,7 @@ export default function AdmisionIndex({
                                         >
                                             <div className="flex flex-col items-center gap-2">
                                                 <div
-                                                    className="flex size-9 items-center justify-center rounded-full text-sm font-bold transition"
+                                                    className="flex size-9 items-center justify-center rounded-lg text-sm font-bold transition"
                                                     style={{
                                                         background:
                                                             index <= step
