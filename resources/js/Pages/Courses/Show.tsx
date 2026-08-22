@@ -114,7 +114,7 @@ export default function Show({
         >
             <Head title={course.name} />
 
-            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
+            <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 gap-4 rounded-lg bg-brand-card p-6 shadow-sm sm:grid-cols-4">
                         <div>

@@ -115,7 +115,7 @@ export default function Index({
         >
             <Head title="Tomar asistencia" />
 
-            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
+            <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-4xl space-y-6 sm:px-6 lg:px-8">
                     <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <div className="mb-4 flex items-center gap-3">

@@ -696,7 +696,7 @@ export default function Authenticated({
                     </header>
                 )}
 
-                <main className="relative flex-1 bg-starfield animate-drift-down">
+                <main className="relative flex-1">
                     <PaymentAlertBanner />
                     <div key={url} className="relative animate-fade-in">
                         {children}

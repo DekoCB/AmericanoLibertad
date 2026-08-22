@@ -1459,7 +1459,7 @@ export default function Show({
         >
             <Head title={`Aula virtual — ${course.name} — ${tituloSemana}`} />
 
-            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
+            <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
                     <div className="flex flex-col gap-6 lg:flex-row">
                         <div className="w-full space-y-6 lg:w-72 lg:shrink-0">

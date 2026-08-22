@@ -48,7 +48,7 @@ export default function Edit({
         >
             <Head title="Métodos de pago" />
 
-            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
+            <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-3xl space-y-4 sm:px-6 lg:px-8">
                     <p className="text-sm text-brand-muted">
                         Esta información es la que verán los alumnos al

@@ -106,7 +106,7 @@ export default function Index({
         >
             <Head title="Matrículas" />
 
-            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
+            <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-col gap-3 sm:flex-row">

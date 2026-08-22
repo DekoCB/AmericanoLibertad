@@ -21,7 +21,7 @@ export default function Show({
         >
             <Head title="Detalle de matrícula" />
 
-            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
+            <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-5xl space-y-6 sm:px-6 lg:px-8">
                     <MatriculaDetail matricula={matricula} can={can} />
 

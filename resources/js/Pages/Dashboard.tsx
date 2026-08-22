@@ -1523,7 +1523,7 @@ export default function Dashboard(props: DashboardProps) {
             <Head title="Dashboard" />
 
             <div
-                className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] px-4 py-9 sm:px-6 lg:px-11 lg:pt-9"
+                className="bg-brand-cream min-h-[calc(100vh-4rem)] px-4 py-9 sm:px-6 lg:px-11 lg:pt-9"
                 style={{
                     backgroundColor: 'var(--brand-cream)',
                     color: 'var(--brand-ink)',

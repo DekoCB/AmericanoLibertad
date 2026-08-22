@@ -58,7 +58,7 @@ export default function Index({
         >
             <Head title="Reportes financieros" />
 
-            <div className="bg-page-pattern animate-drift-pattern min-h-[calc(100vh-4rem)] py-12">
+            <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-6xl space-y-6 sm:px-6 lg:px-8">
                     <div className="rounded-lg border border-brand-border bg-brand-card p-6">
                         <h3 className="text-lg font-bold text-brand-ink-strong">
