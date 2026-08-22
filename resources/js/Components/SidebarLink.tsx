@@ -20,14 +20,16 @@ export default function SidebarLink({
             {...props}
             title={collapsed ? String(children) : undefined}
             className={`flex shrink-0 items-center overflow-hidden rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150 ease-in-out ${
-                collapsed ? 'justify-center' : ''
-            } ${
                 active
                     ? 'bg-brand-navy text-white'
                     : 'text-brand-muted hover:bg-brand-hover'
             }`}
         >
-            <div className="flex items-center">
+            <div
+                className={`flex items-center transition-transform duration-300 ease-in-out ${
+                    collapsed ? 'translate-x-[5.5px]' : 'translate-x-0'
+                }`}
+            >
                 <span className="flex size-5 shrink-0 items-center justify-center">
                     {icon}
                 </span>

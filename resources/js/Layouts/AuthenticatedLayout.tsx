@@ -463,12 +463,14 @@ export default function Authenticated({
                 }`}
             >
                 <div className="flex h-16 items-center justify-center border-b border-brand-border px-4">
-                    <div
-                        className={`flex w-full items-center overflow-hidden ${collapsed ? 'justify-center' : ''}`}
-                    >
+                    <div className="flex w-full items-center overflow-hidden">
                         <Link
                             href={route('dashboard')}
-                            className="flex items-center"
+                            className={`flex items-center transition-transform duration-300 ease-in-out ${
+                                collapsed
+                                    ? 'translate-x-[5.5px]'
+                                    : 'translate-x-0'
+                            }`}
                         >
                             <ApplicationLogo className="size-9 shrink-0 rounded-full object-contain" />
                             <CollapsibleLabel
@@ -486,9 +488,15 @@ export default function Authenticated({
                 <div className="border-t border-brand-border p-3">
                     <button
                         onClick={toggle}
-                        className={`flex w-full items-center overflow-hidden rounded-xl px-3 py-2 text-sm font-medium text-brand-muted transition-colors duration-150 hover:bg-brand-cream ${collapsed ? 'justify-center' : ''}`}
+                        className="flex w-full items-center overflow-hidden rounded-xl px-3 py-2 text-sm font-medium text-brand-muted transition-colors duration-150 hover:bg-brand-cream"
                     >
-                        <div className="flex items-center">
+                        <div
+                            className={`flex items-center transition-transform duration-300 ease-in-out ${
+                                collapsed
+                                    ? 'translate-x-[5.5px]'
+                                    : 'translate-x-0'
+                            }`}
+                        >
                             <span className="flex size-5 shrink-0 items-center justify-center">
                                 <ChevronLeftIcon
                                     className={`transition-transform duration-300 ease-in-out ${
@@ -508,7 +516,7 @@ export default function Authenticated({
                         <Dropdown.Trigger>
                             <button
                                 type="button"
-                                className={`flex w-full items-center overflow-hidden rounded-xl px-3 py-2 text-sm font-medium text-brand-muted transition-colors duration-150 hover:bg-brand-cream ${collapsed ? 'justify-center' : ''}`}
+                                className="flex w-full items-center overflow-hidden rounded-xl px-3 py-2 text-sm font-medium text-brand-muted transition-colors duration-150 hover:bg-brand-cream"
                             >
                                 <div className="flex items-center">
                                     <UserAvatar src={user.avatar_url} />
