@@ -277,7 +277,7 @@ export default function Index({
             <Modal
                 show={viewModalOpen}
                 onClose={() => setViewModalOpen(false)}
-                maxWidth="2xl"
+                maxWidth="4xl"
             >
                 <div className="max-h-[85vh] overflow-y-auto p-6">
                     <div className="relative mb-6 flex items-center justify-center">
