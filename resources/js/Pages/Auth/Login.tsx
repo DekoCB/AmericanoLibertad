@@ -204,10 +204,10 @@ export default function Login({
                                         onClick={() =>
                                             chooseRole(option.value)
                                         }
-                                        className={`group relative flex flex-col items-center gap-1.5 overflow-hidden rounded-lg px-2 py-3 text-center transition-all duration-300 ease-out ${
+                                        className={`group relative flex flex-col items-center gap-1.5 overflow-hidden rounded-lg px-2 py-3 text-center transition-colors duration-300 ease-out ${
                                             active
                                                 ? 'bg-white text-[oklch(20%_0.07_255)]'
-                                                : 'bg-white/5 text-white/60 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white'
+                                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
                                         }`}
                                     >
                                         {!active && (
