@@ -124,6 +124,10 @@ export default {
                     '0%, 100%': { transform: 'scale(1)', opacity: 0.35 },
                     '50%': { transform: 'scale(0.82)', opacity: 0.16 },
                 },
+                'login-sheen': {
+                    '0%': { transform: 'translate(-18%, -22%)' },
+                    '100%': { transform: 'translate(18%, 22%)' },
+                },
             },
             animation: {
                 'fade-in': 'fade-in 0.55s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -142,6 +146,8 @@ export default {
                 float: 'float 6s ease-in-out infinite',
                 'float-reverse': 'float-reverse 7s ease-in-out infinite',
                 'float-shadow': 'float-shadow 6s ease-in-out infinite',
+                'login-sheen':
+                    'login-sheen 14s ease-in-out infinite alternate',
             },
         },
     },

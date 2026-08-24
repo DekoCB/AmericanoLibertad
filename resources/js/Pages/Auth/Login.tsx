@@ -91,10 +91,21 @@ export default function Login({
     };
 
     return (
-        <div className="flex min-h-screen flex-col bg-[oklch(14%_0.02_260)] lg:grid lg:grid-cols-2">
+        <div className="relative flex min-h-screen flex-col bg-[oklch(14%_0.02_260)] lg:grid lg:grid-cols-2">
             <Head title="Iniciar sesión" />
 
-            <div className="relative hidden overflow-hidden lg:block">
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                <div
+                    className="animate-login-sheen absolute -left-1/2 -top-1/2 h-[200%] w-[200%] mix-blend-screen"
+                    style={{
+                        background:
+                            'linear-gradient(135deg, transparent 44%, rgba(147,197,253,0.14) 48%, rgba(224,236,255,0.22) 50%, rgba(147,197,253,0.14) 52%, transparent 56%)',
+                        filter: 'blur(60px)',
+                    }}
+                />
+            </div>
+
+            <div className="relative z-10 hidden overflow-hidden lg:block">
                 <img
                     src="/welcome/Enf3.jpeg"
                     alt=""
@@ -157,7 +168,7 @@ export default function Login({
                 </div>
             </div>
 
-            <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 sm:px-10">
+            <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 py-12 sm:px-10">
                 <div className="w-full max-w-md">
                     <Link
                         href="/"
@@ -193,10 +204,10 @@ export default function Login({
                                         onClick={() =>
                                             chooseRole(option.value)
                                         }
-                                        className={`flex flex-col items-center gap-1.5 rounded-lg px-2 py-3 text-center transition ${
+                                        className={`flex flex-col items-center gap-1.5 rounded-lg px-2 py-3 text-center transition-all duration-300 ease-out ${
                                             active
-                                                ? 'bg-white text-[oklch(20%_0.07_255)]'
-                                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                                                ? 'bg-white text-[oklch(20%_0.07_255)] shadow-[0_0_22px_rgba(147,197,253,0.45)]'
+                                                : 'bg-white/5 text-white/60 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white hover:shadow-[0_0_18px_rgba(147,197,253,0.35)]'
                                         }`}
                                     >
                                         <option.icon className="size-5" />
