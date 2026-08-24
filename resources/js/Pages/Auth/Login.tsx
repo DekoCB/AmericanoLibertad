@@ -212,7 +212,11 @@ export default function Login({
                                     >
                                         <span
                                             aria-hidden
-                                            className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-hover:animate-shine-sweep"
+                                            className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-shine-scan"
+                                            style={{
+                                                background:
+                                                    'linear-gradient(to bottom, transparent 0%, transparent calc(50% - 9px), rgba(255,255,255,0.95) 50%, transparent calc(50% + 9px), transparent 100%)',
+                                            }}
                                         />
                                         <option.icon className="size-5" />
                                         <span className="text-xs font-semibold leading-tight">

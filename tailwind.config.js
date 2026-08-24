@@ -136,9 +136,9 @@ export default {
                         opacity: 0,
                     },
                 },
-                'shine-sweep': {
-                    '0%': { transform: 'translateX(-130%) skewX(-15deg)' },
-                    '100%': { transform: 'translateX(130%) skewX(-15deg)' },
+                'shine-scan': {
+                    '0%': { transform: 'translateY(-100%)' },
+                    '100%': { transform: 'translateY(100%)' },
                 },
             },
             animation: {
@@ -159,7 +159,7 @@ export default {
                 'float-reverse': 'float-reverse 7s ease-in-out infinite',
                 'float-shadow': 'float-shadow 6s ease-in-out infinite',
                 'login-sheen': 'login-sheen 9s ease-in-out infinite',
-                'shine-sweep': 'shine-sweep 0.9s ease-in-out',
+                'shine-scan': 'shine-scan 0.45s linear forwards',
             },
         },
     },
