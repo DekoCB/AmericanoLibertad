@@ -126,10 +126,10 @@ export default {
                 },
                 'particle-float': {
                     '0%': { transform: 'translate(0, 0)', opacity: 0 },
-                    '12%': { opacity: 0.55 },
-                    '88%': { opacity: 0.55 },
+                    '12%': { opacity: 0.7 },
+                    '88%': { opacity: 0.7 },
                     '100%': {
-                        transform: 'translate(var(--dx, 10px), -110px)',
+                        transform: 'translate(var(--dx, 10px), -150px)',
                         opacity: 0,
                     },
                 },
@@ -156,7 +156,7 @@ export default {
                 'float-reverse': 'float-reverse 7s ease-in-out infinite',
                 'float-shadow': 'float-shadow 6s ease-in-out infinite',
                 'particle-float':
-                    'particle-float 22s ease-in-out infinite',
+                    'particle-float 11s ease-in-out infinite',
                 'shine-scan': 'shine-scan 0.45s linear forwards',
             },
         },
