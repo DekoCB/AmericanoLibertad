@@ -180,7 +180,7 @@ export default function Login({
                         </span>
                     </Link>
 
-                    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/40 sm:p-8">
+                    <div className="rounded-lg border border-white/10 bg-[oklch(17%_0.02_260)] p-6 shadow-2xl shadow-black/40 sm:p-8">
                         <h2 className="text-center text-xl font-bold text-white">
                             Aula Virtual
                         </h2>
@@ -204,12 +204,16 @@ export default function Login({
                                         onClick={() =>
                                             chooseRole(option.value)
                                         }
-                                        className={`flex flex-col items-center gap-1.5 rounded-lg px-2 py-3 text-center transition-all duration-300 ease-out ${
+                                        className={`group relative flex flex-col items-center gap-1.5 overflow-hidden rounded-lg px-2 py-3 text-center transition-all duration-300 ease-out ${
                                             active
                                                 ? 'bg-white text-[oklch(20%_0.07_255)] shadow-[0_0_22px_rgba(147,197,253,0.45)]'
                                                 : 'bg-white/5 text-white/60 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white hover:shadow-[0_0_18px_rgba(147,197,253,0.35)]'
                                         }`}
                                     >
+                                        <span
+                                            aria-hidden
+                                            className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-hover:animate-shine-sweep"
+                                        />
                                         <option.icon className="size-5" />
                                         <span className="text-xs font-semibold leading-tight">
                                             {option.label}
