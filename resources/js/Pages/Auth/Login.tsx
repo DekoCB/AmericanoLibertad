@@ -206,18 +206,20 @@ export default function Login({
                                         }
                                         className={`group relative flex flex-col items-center gap-1.5 overflow-hidden rounded-lg px-2 py-3 text-center transition-all duration-300 ease-out ${
                                             active
-                                                ? 'bg-white text-[oklch(20%_0.07_255)] shadow-[0_0_22px_rgba(147,197,253,0.45)]'
-                                                : 'bg-white/5 text-white/60 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white hover:shadow-[0_0_18px_rgba(147,197,253,0.35)]'
+                                                ? 'bg-white text-[oklch(20%_0.07_255)]'
+                                                : 'bg-white/5 text-white/60 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white'
                                         }`}
                                     >
-                                        <span
-                                            aria-hidden
-                                            className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-shine-scan"
-                                            style={{
-                                                background:
-                                                    'linear-gradient(200deg, transparent 0%, transparent calc(50% - 10px), rgba(255,255,255,0.95) 50%, transparent calc(50% + 10px), transparent 100%)',
-                                            }}
-                                        />
+                                        {!active && (
+                                            <span
+                                                aria-hidden
+                                                className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-shine-scan"
+                                                style={{
+                                                    background:
+                                                        'linear-gradient(200deg, transparent 0%, transparent calc(50% - 10px), rgba(255,255,255,0.95) 50%, transparent calc(50% + 10px), transparent 100%)',
+                                                }}
+                                            />
+                                        )}
                                         <option.icon className="size-5" />
                                         <span className="text-xs font-semibold leading-tight">
                                             {option.label}
