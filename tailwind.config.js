@@ -124,15 +124,12 @@ export default {
                     '0%, 100%': { transform: 'scale(1)', opacity: 0.35 },
                     '50%': { transform: 'scale(0.82)', opacity: 0.16 },
                 },
-                'login-sheen': {
-                    '0%': {
-                        transform: 'translate(-30%, -38%)',
-                        opacity: 0,
-                    },
-                    '15%': { opacity: 1 },
-                    '85%': { opacity: 1 },
+                'particle-float': {
+                    '0%': { transform: 'translate(0, 0)', opacity: 0 },
+                    '12%': { opacity: 0.55 },
+                    '88%': { opacity: 0.55 },
                     '100%': {
-                        transform: 'translate(30%, 38%)',
+                        transform: 'translate(var(--dx, 10px), -110px)',
                         opacity: 0,
                     },
                 },
@@ -158,7 +155,8 @@ export default {
                 float: 'float 6s ease-in-out infinite',
                 'float-reverse': 'float-reverse 7s ease-in-out infinite',
                 'float-shadow': 'float-shadow 6s ease-in-out infinite',
-                'login-sheen': 'login-sheen 9s ease-in-out infinite',
+                'particle-float':
+                    'particle-float 22s ease-in-out infinite',
                 'shine-scan': 'shine-scan 0.45s linear forwards',
             },
         },

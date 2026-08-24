@@ -14,7 +14,12 @@ import {
 } from '@/Components/Icons';
 import { UserRole } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ComponentType, FormEventHandler, useState } from 'react';
+import {
+    ComponentType,
+    CSSProperties,
+    FormEventHandler,
+    useState,
+} from 'react';
 
 const roleOptions: {
     value: UserRole;
@@ -60,6 +65,35 @@ const highlights: {
     },
 ];
 
+const particles: {
+    top: string;
+    left: string;
+    size: number;
+    duration: number;
+    delay: number;
+    dx: number;
+    color: string;
+}[] = [
+    { top: '8%', left: '6%', size: 3, duration: 22, delay: 0, dx: 14, color: 'bg-white' },
+    { top: '18%', left: '34%', size: 2, duration: 26, delay: 4, dx: -10, color: 'bg-blue-200' },
+    { top: '30%', left: '18%', size: 4, duration: 19, delay: 2, dx: 8, color: 'bg-white' },
+    { top: '46%', left: '9%', size: 2, duration: 24, delay: 6, dx: -12, color: 'bg-blue-200' },
+    { top: '60%', left: '28%', size: 3, duration: 21, delay: 1, dx: 10, color: 'bg-white' },
+    { top: '72%', left: '15%', size: 2, duration: 27, delay: 8, dx: -8, color: 'bg-blue-200' },
+    { top: '15%', left: '55%', size: 2, duration: 23, delay: 3, dx: 12, color: 'bg-white' },
+    { top: '38%', left: '48%', size: 3, duration: 20, delay: 7, dx: -10, color: 'bg-blue-200' },
+    { top: '55%', left: '60%', size: 2, duration: 25, delay: 5, dx: 9, color: 'bg-white' },
+    { top: '10%', left: '80%', size: 3, duration: 18, delay: 2, dx: -14, color: 'bg-blue-200' },
+    { top: '25%', left: '90%', size: 2, duration: 24, delay: 9, dx: 8, color: 'bg-white' },
+    { top: '42%', left: '72%', size: 4, duration: 22, delay: 0, dx: -9, color: 'bg-blue-200' },
+    { top: '65%', left: '85%', size: 2, duration: 26, delay: 4, dx: 11, color: 'bg-white' },
+    { top: '80%', left: '65%', size: 3, duration: 19, delay: 6, dx: -13, color: 'bg-blue-200' },
+    { top: '88%', left: '40%', size: 2, duration: 23, delay: 10, dx: 10, color: 'bg-white' },
+    { top: '5%', left: '48%', size: 2, duration: 21, delay: 3, dx: -8, color: 'bg-blue-200' },
+    { top: '92%', left: '20%', size: 3, duration: 20, delay: 1, dx: 9, color: 'bg-white' },
+    { top: '35%', left: '5%', size: 2, duration: 25, delay: 8, dx: 13, color: 'bg-blue-200' },
+];
+
 export default function Login({
     status,
     canResetPassword,
@@ -95,14 +129,23 @@ export default function Login({
             <Head title="Iniciar sesión" />
 
             <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-                <div
-                    className="animate-login-sheen absolute -left-1/2 -top-1/2 h-[200%] w-[200%] mix-blend-screen"
-                    style={{
-                        background:
-                            'linear-gradient(135deg, transparent 44%, rgba(147,197,253,0.14) 48%, rgba(224,236,255,0.22) 50%, rgba(147,197,253,0.14) 52%, transparent 56%)',
-                        filter: 'blur(60px)',
-                    }}
-                />
+                {particles.map((p, i) => (
+                    <span
+                        key={i}
+                        className={`animate-particle-float absolute rounded-full ${p.color}`}
+                        style={
+                            {
+                                top: p.top,
+                                left: p.left,
+                                width: p.size,
+                                height: p.size,
+                                animationDuration: `${p.duration}s`,
+                                animationDelay: `${p.delay}s`,
+                                '--dx': `${p.dx}px`,
+                            } as CSSProperties
+                        }
+                    />
+                ))}
             </div>
 
             <div className="relative z-10 hidden overflow-hidden lg:block">
