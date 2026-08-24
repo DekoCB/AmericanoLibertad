@@ -215,7 +215,7 @@ export default function Login({
                                             className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-shine-scan"
                                             style={{
                                                 background:
-                                                    'linear-gradient(to bottom, transparent 0%, transparent calc(50% - 9px), rgba(255,255,255,0.95) 50%, transparent calc(50% + 9px), transparent 100%)',
+                                                    'linear-gradient(200deg, transparent 0%, transparent calc(50% - 10px), rgba(255,255,255,0.95) 50%, transparent calc(50% + 10px), transparent 100%)',
                                             }}
                                         />
                                         <option.icon className="size-5" />
