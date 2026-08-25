@@ -2,14 +2,12 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DateInput from '@/Components/DateInput';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
-import Modal from '@/Components/Modal';
 import PageTitle from '@/Components/PageTitle';
-import PagoForm from '@/Components/PagoForm';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SearchableSelect from '@/Components/SearchableSelect';
 import SelectMenu from '@/Components/SelectMenu';
 import TextInput from '@/Components/TextInput';
-import { CreditCardIcon } from '@/Components/Icons';
+import { CreditCardIcon, DocumentTextIcon } from '@/Components/Icons';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { FormEvent, useMemo, useState } from 'react';
 import { medioPagoLabels } from '@/types/models';
@@ -31,6 +29,15 @@ type PendienteRow = {
 
 type Carrera = { id: number; name: string };
 
+type PagoReciente = {
+    id: number;
+    estado: 'declarado' | 'confirmado';
+    fecha: string;
+    student_name: string;
+    monto: number;
+    comprobante_url: string;
+};
+
 function Tabs({
     tab,
     setTab,
@@ -39,12 +46,12 @@ function Tabs({
     setTab: (tab: 'individual' | 'masivo') => void;
 }) {
     const opciones: { value: 'individual' | 'masivo'; label: string }[] = [
-        { value: 'individual', label: 'Individual' },
-        { value: 'masivo', label: 'Masivo' },
+        { value: 'individual', label: 'Pago individual' },
+        { value: 'masivo', label: 'Pago masivo' },
     ];
 
     return (
-        <div className="flex gap-2">
+        <div className="flex gap-6 border-b border-brand-border">
             {opciones.map((opcion) => {
                 const activo = opcion.value === tab;
                 return (
@@ -52,13 +59,11 @@ function Tabs({
                         key={opcion.value}
                         type="button"
                         onClick={() => setTab(opcion.value)}
-                        className="rounded-lg px-4 py-2 text-sm font-semibold transition"
-                        style={{
-                            background: activo
-                                ? 'var(--brand-navy)'
-                                : 'var(--brand-hover)',
-                            color: activo ? '#fff' : 'var(--brand-muted)',
-                        }}
+                        className={`-mb-px border-b-2 pb-3 text-sm font-bold uppercase tracking-wide transition ${
+                            activo
+                                ? 'border-brand-navy text-brand-ink-strong'
+                                : 'border-transparent text-brand-muted hover:text-brand-ink'
+                        }`}
                     >
                         {opcion.label}
                     </button>
@@ -68,12 +73,91 @@ function Tabs({
     );
 }
 
-function IndividualTab({ pendientes }: { pendientes: PendienteRow[] }) {
+const estadoPagoInfo: Record<
+    PagoReciente['estado'],
+    { label: string; dot: string }
+> = {
+    confirmado: { label: 'Pagado', dot: 'bg-green-500' },
+    declarado: { label: 'Por confirmar', dot: 'bg-amber-500' },
+};
+
+function PagosRecientes({ pagos }: { pagos: PagoReciente[] }) {
+    return (
+        <div className="rounded-lg border border-brand-border bg-brand-card p-5">
+            <h3 className="font-bold text-brand-ink-strong">
+                Pagos recientes
+            </h3>
+
+            {pagos.length === 0 ? (
+                <p className="mt-4 text-sm text-brand-muted">
+                    Todavía no hay pagos registrados.
+                </p>
+            ) : (
+                <div className="mt-4 space-y-1">
+                    {pagos.map((pago) => {
+                        const info = estadoPagoInfo[pago.estado];
+                        return (
+                            <div
+                                key={pago.id}
+                                className="flex items-center justify-between gap-3 border-t border-brand-border-faint py-2.5 first:border-t-0"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <span
+                                        className={`size-2 shrink-0 rounded-full ${info.dot}`}
+                                    />
+                                    <div>
+                                        <p className="text-sm font-medium text-brand-ink-strong">
+                                            {pago.student_name}
+                                        </p>
+                                        <p className="text-xs text-brand-muted">
+                                            {info.label} · {pago.fecha} · S/{' '}
+                                            {pago.monto.toFixed(2)}
+                                        </p>
+                                    </div>
+                                </div>
+                                <a
+                                    href={pago.comprobante_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="shrink-0 text-brand-link hover:opacity-70"
+                                    title="Ver boleta"
+                                    aria-label="Ver boleta"
+                                >
+                                    <DocumentTextIcon className="size-5" />
+                                </a>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function IndividualTab({
+    pendientes,
+    pagosRecientes,
+}: {
+    pendientes: PendienteRow[];
+    pagosRecientes: PagoReciente[];
+}) {
     const [studentId, setStudentId] = useState('');
-    const [payingCuota, setPayingCuota] = useState<PendienteRow | null>(null);
+    const [cuotaId, setCuotaId] = useState('');
+
+    const { data, setData, post, processing, errors, reset } = useForm({
+        monto: '',
+        medio: 'efectivo',
+        monto_efectivo: '',
+        monto_yape: '0',
+        fecha: new Date().toISOString().slice(0, 10),
+        nota: '',
+    });
 
     const estudiantes = useMemo(() => {
-        const map = new Map<number, { id: number; label: string; searchText: string }>();
+        const map = new Map<
+            number,
+            { id: number; label: string; searchText: string }
+        >();
         pendientes.forEach((p) => {
             if (!map.has(p.student_id)) {
                 map.set(p.student_id, {
@@ -96,77 +180,231 @@ function IndividualTab({ pendientes }: { pendientes: PendienteRow[] }) {
         [pendientes, studentId],
     );
 
+    const cuotaSeleccionada = cuotasDelEstudiante.find(
+        (c) => String(c.cuota_id) === cuotaId,
+    );
+
+    const elegirEstudiante = (value: string) => {
+        setStudentId(value);
+        setCuotaId('');
+        setData('monto', '');
+        setData('monto_efectivo', '');
+    };
+
+    const elegirCuota = (value: string) => {
+        setCuotaId(value);
+        const row = cuotasDelEstudiante.find(
+            (c) => String(c.cuota_id) === value,
+        );
+        if (row) {
+            setData('monto', row.saldo.toFixed(2));
+            setData('monto_efectivo', row.saldo.toFixed(2));
+        }
+    };
+
+    const submit = (e: FormEvent) => {
+        e.preventDefault();
+        if (!cuotaSeleccionada) return;
+
+        post(route('cuotas.pagos.store', cuotaSeleccionada.cuota_id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+                setStudentId('');
+                setCuotaId('');
+            },
+        });
+    };
+
     return (
-        <div className="space-y-4">
-            <div className="max-w-sm">
-                <SearchableSelect
-                    value={studentId}
-                    onChange={setStudentId}
-                    placeholder="Buscar estudiante por nombre o documento..."
-                    allLabel="Selecciona un estudiante"
-                    options={estudiantes.map((e) => ({
-                        value: String(e.id),
-                        label: e.label,
-                        searchText: e.searchText,
-                    }))}
-                />
-            </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="rounded-lg border border-brand-border bg-brand-card p-6">
+                <h3 className="mb-4 font-bold text-brand-ink-strong">
+                    Registrar pago
+                </h3>
 
-            {studentId && cuotasDelEstudiante.length === 0 && (
-                <div className="rounded-lg border border-brand-border bg-brand-card p-6 text-center text-sm text-brand-muted">
-                    Este estudiante no tiene cuotas pendientes.
-                </div>
-            )}
-
-            {cuotasDelEstudiante.length > 0 && (
-                <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
-                    {cuotasDelEstudiante.map((row) => (
-                        <button
-                            key={row.cuota_id}
-                            type="button"
-                            onClick={() => setPayingCuota(row)}
-                            className="border-b border-r border-brand-border bg-brand-card p-5 text-left transition hover:bg-brand-hover"
-                        >
-                            <p className="font-medium text-brand-ink-strong">
-                                {row.concepto_label}
-                            </p>
-                            <p className="mt-1 text-xs text-brand-muted">
-                                {row.carrera_name} · Ciclo {row.ciclo}
-                            </p>
-                            <p className="mt-2 text-lg font-semibold text-brand-ink-strong">
-                                S/ {row.saldo.toFixed(2)}
-                            </p>
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            <Modal
-                show={payingCuota !== null}
-                onClose={() => setPayingCuota(null)}
-            >
-                <div className="p-6">
-                    <h2 className="mb-1 text-center text-lg font-bold uppercase text-brand-ink-strong">
-                        Registrar pago
-                    </h2>
-                    {payingCuota && (
-                        <>
-                            <p className="mb-6 text-center text-sm text-brand-muted">
-                                {payingCuota.student_name} ·{' '}
-                                {payingCuota.concepto_label}
-                            </p>
-                            <PagoForm
-                                cuota={{
-                                    id: payingCuota.cuota_id,
-                                    monto_programado: payingCuota.saldo,
-                                    monto_pagado: 0,
-                                }}
-                                onDone={() => setPayingCuota(null)}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                        <InputLabel
+                            htmlFor="estudiante"
+                            value="Buscar estudiante"
+                        />
+                        <div className="mt-1">
+                            <SearchableSelect
+                                value={studentId}
+                                onChange={elegirEstudiante}
+                                placeholder="Buscar por nombre o documento..."
+                                allLabel="Selecciona un estudiante"
+                                options={estudiantes.map((e) => ({
+                                    value: String(e.id),
+                                    label: e.label,
+                                    searchText: e.searchText,
+                                }))}
                             />
+                        </div>
+                    </div>
+
+                    {studentId && cuotasDelEstudiante.length === 0 && (
+                        <div className="sm:col-span-2">
+                            <p className="rounded-lg border border-brand-border bg-brand-hover px-4 py-3 text-sm text-brand-muted">
+                                Este estudiante no tiene cuotas pendientes.
+                            </p>
+                        </div>
+                    )}
+
+                    {cuotasDelEstudiante.length > 0 && (
+                        <div className="sm:col-span-2">
+                            <InputLabel htmlFor="cuota" value="Deuda" />
+                            <div className="mt-1">
+                                <SelectMenu
+                                    id="cuota"
+                                    value={cuotaId}
+                                    onChange={elegirCuota}
+                                    placeholder="Selecciona la cuota a pagar"
+                                    options={cuotasDelEstudiante.map((c) => ({
+                                        value: String(c.cuota_id),
+                                        label: `${c.concepto_label} — S/ ${c.saldo.toFixed(2)}`,
+                                    }))}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {cuotaSeleccionada && (
+                        <>
+                            <div>
+                                <InputLabel value="Concepto" />
+                                <p className="mt-1 rounded-lg border border-brand-border bg-brand-hover px-3 py-2 text-sm text-brand-ink">
+                                    {cuotaSeleccionada.concepto_label}
+                                </p>
+                            </div>
+                            <div>
+                                <InputLabel value="Carrera · Ciclo" />
+                                <p className="mt-1 rounded-lg border border-brand-border bg-brand-hover px-3 py-2 text-sm text-brand-ink">
+                                    {cuotaSeleccionada.carrera_name} · Ciclo{' '}
+                                    {cuotaSeleccionada.ciclo}
+                                </p>
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    htmlFor="medio"
+                                    value="Medio de pago"
+                                />
+                                <div className="mt-1">
+                                    <SelectMenu
+                                        id="medio"
+                                        value={data.medio}
+                                        onChange={(value) =>
+                                            setData('medio', value)
+                                        }
+                                        options={[
+                                            {
+                                                value: 'efectivo',
+                                                label: medioPagoLabels.efectivo,
+                                            },
+                                            {
+                                                value: 'yape',
+                                                label: medioPagoLabels.yape,
+                                            },
+                                            {
+                                                value: 'plin',
+                                                label: medioPagoLabels.plin,
+                                            },
+                                            {
+                                                value: 'tarjeta',
+                                                label: medioPagoLabels.tarjeta,
+                                            },
+                                        ]}
+                                    />
+                                </div>
+                                <InputError
+                                    message={errors.medio}
+                                    className="mt-1"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    htmlFor="fecha"
+                                    value="Fecha de pago"
+                                />
+                                <DateInput
+                                    id="fecha"
+                                    className="mt-1 block w-full"
+                                    value={data.fecha}
+                                    onChange={(v) => setData('fecha', v)}
+                                />
+                                <InputError
+                                    message={errors.fecha}
+                                    className="mt-1"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    htmlFor="monto"
+                                    value="Monto a pagar"
+                                />
+                                <TextInput
+                                    id="monto"
+                                    type="number"
+                                    step="0.01"
+                                    min={0.01}
+                                    max={cuotaSeleccionada.saldo}
+                                    className="mt-1 block w-full"
+                                    value={data.monto}
+                                    onChange={(e) => {
+                                        setData('monto', e.target.value);
+                                        setData(
+                                            'monto_efectivo',
+                                            e.target.value,
+                                        );
+                                    }}
+                                />
+                                <InputError
+                                    message={errors.monto}
+                                    className="mt-1"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel value="Sub total" />
+                                <p className="mt-1 rounded-lg border border-brand-border bg-brand-hover px-3 py-2 text-sm font-semibold text-brand-ink-strong">
+                                    S/ {(parseFloat(data.monto) || 0).toFixed(2)}
+                                </p>
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <InputLabel
+                                    htmlFor="nota"
+                                    value="Nota (opcional)"
+                                />
+                                <TextInput
+                                    id="nota"
+                                    className="mt-1 block w-full"
+                                    value={data.nota}
+                                    onChange={(e) =>
+                                        setData('nota', e.target.value)
+                                    }
+                                />
+                            </div>
                         </>
                     )}
                 </div>
-            </Modal>
+
+                {cuotaSeleccionada && (
+                    <PrimaryButton
+                        onClick={submit}
+                        disabled={processing}
+                        className="mt-6"
+                    >
+                        Registrar pago
+                    </PrimaryButton>
+                )}
+            </div>
+
+            <PagosRecientes pagos={pagosRecientes} />
         </div>
     );
 }
@@ -518,9 +756,11 @@ function MasivoTab({
 export default function Index({
     carreras,
     pendientes,
+    pagosRecientes,
 }: {
     carreras: Carrera[];
     pendientes: PendienteRow[];
+    pagosRecientes: PagoReciente[];
 }) {
     const [tab, setTab] = useState<'individual' | 'masivo'>('individual');
     const { flash } = usePage<PageProps>().props;
@@ -547,7 +787,10 @@ export default function Index({
                     <Tabs tab={tab} setTab={setTab} />
 
                     {tab === 'individual' ? (
-                        <IndividualTab pendientes={pendientes} />
+                        <IndividualTab
+                            pendientes={pendientes}
+                            pagosRecientes={pagosRecientes}
+                        />
                     ) : (
                         <MasivoTab carreras={carreras} pendientes={pendientes} />
                     )}

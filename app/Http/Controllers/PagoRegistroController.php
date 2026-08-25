@@ -53,9 +53,26 @@ class PagoRegistroController extends Controller
             ->sortBy('student_name')
             ->values();
 
+        $pagosRecientes = Pago::query()
+            ->with('student:id,first_name,last_name')
+            ->latest('created_at')
+            ->take(10)
+            ->get()
+            ->map(fn (Pago $pago) => [
+                'id' => $pago->id,
+                'estado' => $pago->estado,
+                'fecha' => $pago->fecha->toDateString(),
+                'student_name' => $pago->student
+                    ? trim($pago->student->first_name.' '.$pago->student->last_name)
+                    : 'Estudiante eliminado',
+                'monto' => (float) $pago->monto,
+                'comprobante_url' => route('pagos.comprobante', $pago->id),
+            ]);
+
         return Inertia::render('Pagos/Index', [
             'carreras' => Carrera::orderBy('name')->get(['id', 'name']),
             'pendientes' => $pendientes,
+            'pagosRecientes' => $pagosRecientes,
         ]);
     }
 
