@@ -1227,6 +1227,10 @@ const EVALUATION_CALENDAR_COLORS: Record<
         text: 'var(--eval-homework-text)',
     },
     project: { bg: 'var(--eval-project-bg)', text: 'var(--eval-project-text)' },
+    comportamiento: {
+        bg: 'var(--eval-comportamiento-bg)',
+        text: 'var(--eval-comportamiento-text)',
+    },
 };
 
 function toFechaKey(date: Date): string {

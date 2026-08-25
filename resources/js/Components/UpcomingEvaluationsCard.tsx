@@ -10,6 +10,7 @@ const EVALUATION_BADGE: Record<
     exam: { bg: 'oklch(93% 0.05 350)', text: 'oklch(42% 0.1 350)' },
     project: { bg: 'oklch(93% 0.05 240)', text: 'oklch(42% 0.1 240)' },
     quiz: { bg: 'oklch(93% 0.05 155)', text: 'oklch(42% 0.1 155)' },
+    comportamiento: { bg: 'oklch(93% 0.05 60)', text: 'oklch(42% 0.1 60)' },
 };
 
 export default function UpcomingEvaluationsCard({

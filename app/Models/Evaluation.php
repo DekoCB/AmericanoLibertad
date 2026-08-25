@@ -14,6 +14,7 @@ class Evaluation extends Model
 
     protected $fillable = [
         'course_id',
+        'grupo_notas_id',
         'name',
         'type',
         'weight',
@@ -35,6 +36,11 @@ class Evaluation extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function grupoNotas(): BelongsTo
+    {
+        return $this->belongsTo(GrupoNotas::class, 'grupo_notas_id');
     }
 
     public function grades(): HasMany

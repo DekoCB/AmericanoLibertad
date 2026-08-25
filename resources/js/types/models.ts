@@ -187,8 +187,9 @@ export interface Enrollment {
 export interface Evaluation {
     id: number;
     course_id: number;
+    grupo_notas_id: number | null;
     name: string;
-    type: 'exam' | 'quiz' | 'homework' | 'project';
+    type: 'exam' | 'quiz' | 'homework' | 'project' | 'comportamiento';
     weight: number;
     date: string;
     semana: number | null;
@@ -202,6 +203,43 @@ export interface Evaluation {
     mi_intento?: QuizIntento | null;
     mi_entrega?: EntregaEvaluacion | null;
     estado?: 'pendiente' | 'entregado' | 'en_progreso' | 'calificado' | 'vencido';
+}
+
+export interface GrupoNotas {
+    id: number;
+    course_id: number;
+    nombre: string;
+    peso: number;
+    tipo: 'promedio' | 'comportamiento';
+}
+
+export interface GrupoNotasColumna {
+    id: number;
+    label: string;
+    name: string;
+    max_score: number;
+    weight: number;
+}
+
+export interface LibretaGrupo {
+    id: number;
+    nombre: string;
+    peso: number;
+    tipo: 'promedio' | 'comportamiento';
+    evaluaciones: GrupoNotasColumna[];
+}
+
+export interface LibretaFila {
+    student_id: number;
+    nombre: string;
+    notas: Record<number, number | null>;
+    promediosPorGrupo: Record<number, number | null>;
+    promedioFinal: number | null;
+}
+
+export interface Libreta {
+    grupos: LibretaGrupo[];
+    filas: LibretaFila[];
 }
 
 export interface Tema {
@@ -286,6 +324,7 @@ export const evaluationTypeLabels: Record<Evaluation['type'], string> = {
     quiz: 'Quiz',
     homework: 'Tarea',
     project: 'Proyecto',
+    comportamiento: 'Comportamiento',
 };
 
 export const studentStatusLabels: Record<Student['status'], string> = {

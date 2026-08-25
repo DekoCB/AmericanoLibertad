@@ -47,6 +47,8 @@
     --eval-homework-text: #fff;
     --eval-project-bg: oklch(66% 0.13 240);
     --eval-project-text: #fff;
+    --eval-comportamiento-bg: oklch(70% 0.13 300);
+    --eval-comportamiento-text: #fff;
     --matriculas-accent: oklch(78% 0.13 90);
     --stat-icon-pink: oklch(50% 0.14 350);
     --stat-icon-blue: oklch(45% 0.13 240);
@@ -98,6 +100,8 @@
     --eval-homework-text: oklch(22% 0.04 100);
     --eval-project-bg: oklch(75% 0.19 215);
     --eval-project-text: oklch(16% 0.03 215);
+    --eval-comportamiento-bg: oklch(78% 0.24 305);
+    --eval-comportamiento-text: oklch(16% 0.03 305);
     --matriculas-accent: #fcff00;
     --stat-icon-pink: oklch(72% 0.27 350);
     --stat-icon-blue: oklch(75% 0.19 215);

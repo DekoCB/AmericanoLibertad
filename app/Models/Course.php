@@ -81,4 +81,41 @@ class Course extends Model
     {
         return $this->hasMany(ForoTema::class);
     }
+
+    public function gruposNotas(): HasMany
+    {
+        return $this->hasMany(GrupoNotas::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (Course $course) {
+            $course->gruposNotas()->create([
+                'nombre' => 'Promedio 1',
+                'peso' => 50,
+                'tipo' => 'promedio',
+            ]);
+
+            $course->gruposNotas()->create([
+                'nombre' => 'Promedio 2',
+                'peso' => 50,
+                'tipo' => 'promedio',
+            ]);
+
+            $comportamiento = $course->gruposNotas()->create([
+                'nombre' => 'Comportamiento',
+                'peso' => 0,
+                'tipo' => 'comportamiento',
+            ]);
+
+            $comportamiento->evaluaciones()->create([
+                'course_id' => $course->id,
+                'name' => 'Comportamiento',
+                'type' => 'comportamiento',
+                'weight' => 100,
+                'date' => now()->toDateString(),
+                'max_score' => 20,
+            ]);
+        });
+    }
 }

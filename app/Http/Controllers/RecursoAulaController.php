@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\EntregaEvaluacion;
 use App\Models\Evaluation;
 use App\Models\Grade;
+use App\Models\GrupoNotas;
 use App\Models\QuizIntento;
 use App\Models\RecursoAula;
 use App\Models\RecursoVisto;
@@ -295,6 +296,110 @@ class RecursoAulaController extends Controller
                 });
         }
 
+        $libreta = null;
+
+        if ($canManageNotas) {
+            $gruposNotas = $course->gruposNotas()
+                ->with(['evaluaciones' => fn ($q) => $q->orderBy('date')->orderBy('id')])
+                ->orderBy('id')
+                ->get();
+
+            $evaluationIds = $gruposNotas->flatMap(fn (GrupoNotas $grupo) => $grupo->evaluaciones->pluck('id'));
+
+            $gradesByEvaluation = Grade::whereIn('evaluation_id', $evaluationIds)
+                ->get()
+                ->groupBy('evaluation_id')
+                ->map(fn ($grades) => $grades->keyBy('student_id'));
+
+            $gruposData = $gruposNotas->map(function (GrupoNotas $grupo) {
+                $contadorC = 0;
+                $contadorE = 0;
+
+                $evaluaciones = $grupo->evaluaciones->map(function (Evaluation $evaluacion) use (&$contadorC, &$contadorE) {
+                    if ($evaluacion->type === 'comportamiento') {
+                        $label = 'NOTA';
+                    } elseif ($evaluacion->type === 'exam') {
+                        $contadorE++;
+                        $label = 'E' . $contadorE;
+                    } else {
+                        $contadorC++;
+                        $label = 'C' . $contadorC;
+                    }
+
+                    return [
+                        'id' => $evaluacion->id,
+                        'label' => $label,
+                        'name' => $evaluacion->name,
+                        'max_score' => $evaluacion->max_score,
+                        'weight' => (float) $evaluacion->weight,
+                    ];
+                })->values();
+
+                return [
+                    'id' => $grupo->id,
+                    'nombre' => $grupo->nombre,
+                    'peso' => (float) $grupo->peso,
+                    'tipo' => $grupo->tipo,
+                    'evaluaciones' => $evaluaciones,
+                ];
+            })->values();
+
+            $estudiantesActivos = $course->enrollments()
+                ->with('student')
+                ->where('status', 'active')
+                ->get()
+                ->sortBy(fn ($enrollment) => $enrollment->student?->last_name)
+                ->values();
+
+            $filas = $estudiantesActivos->map(function ($enrollment) use ($gruposNotas, $gradesByEvaluation) {
+                $studentId = $enrollment->student_id;
+                $notas = [];
+                $promediosPorGrupo = [];
+
+                foreach ($gruposNotas as $grupo) {
+                    $sumaPonderada = 0;
+                    $sumaPesos = 0;
+
+                    foreach ($grupo->evaluaciones as $evaluacion) {
+                        $grade = $gradesByEvaluation->get($evaluacion->id)?->get($studentId);
+                        $notas[$evaluacion->id] = $grade ? (float) $grade->score : null;
+
+                        if ($grade) {
+                            $sumaPonderada += ($grade->score / $evaluacion->max_score) * 20 * $evaluacion->weight;
+                            $sumaPesos += $evaluacion->weight;
+                        }
+                    }
+
+                    $promediosPorGrupo[$grupo->id] = $sumaPesos > 0 ? round($sumaPonderada / $sumaPesos, 2) : null;
+                }
+
+                $sumaFinalPonderada = 0;
+                $sumaFinalPesos = 0;
+
+                foreach ($gruposNotas as $grupo) {
+                    $promedio = $promediosPorGrupo[$grupo->id];
+
+                    if ($promedio !== null) {
+                        $sumaFinalPonderada += $promedio * $grupo->peso;
+                        $sumaFinalPesos += $grupo->peso;
+                    }
+                }
+
+                return [
+                    'student_id' => $studentId,
+                    'nombre' => trim($enrollment->student->first_name . ' ' . $enrollment->student->last_name),
+                    'notas' => $notas,
+                    'promediosPorGrupo' => $promediosPorGrupo,
+                    'promedioFinal' => $sumaFinalPesos > 0 ? round($sumaFinalPonderada / $sumaFinalPesos, 2) : null,
+                ];
+            });
+
+            $libreta = [
+                'grupos' => $gruposData,
+                'filas' => $filas,
+            ];
+        }
+
         return Inertia::render('AulaVirtual/Show', [
             'course' => $course->load(['subject', 'teacher', 'periodoAcademico']),
             'recursos' => $recursos,
@@ -310,6 +415,7 @@ class RecursoAulaController extends Controller
             'misAsistencias' => $misAsistencias,
             'evaluacionesCurso' => $evaluacionesCurso,
             'misNotas' => $misNotas,
+            'libreta' => $libreta,
             'can' => [
                 'manage' => $request->user()->can('manage', [RecursoAula::class, $course]),
                 'manageEvaluations' => $canManageEvaluations,

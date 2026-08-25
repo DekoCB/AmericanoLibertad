@@ -21,6 +21,7 @@ import {
     PhotoIcon,
     QuestionMarkCircleIcon,
     RectangleStackIcon,
+    ScaleIcon,
     TextIcon,
     TrashIcon,
     VideoCameraIcon,
@@ -35,6 +36,7 @@ import {
     Evaluation,
     evaluationTypeLabels,
     ForoTema,
+    Libreta,
     RecursoAula,
     recursoTipoLabels,
     SemanaContenido,
@@ -56,6 +58,7 @@ const evaluacionBadge: Record<Evaluation['type'], string> = {
     quiz: 'bg-amber-100 text-amber-800',
     homework: 'bg-sky-100 text-sky-800',
     project: 'bg-violet-100 text-violet-800',
+    comportamiento: 'bg-fuchsia-100 text-fuchsia-800',
 };
 
 const evaluacionIcon: Record<Evaluation['type'], typeof AcademicCapIcon> = {
@@ -63,6 +66,7 @@ const evaluacionIcon: Record<Evaluation['type'], typeof AcademicCapIcon> = {
     quiz: QuestionMarkCircleIcon,
     homework: DocumentTextIcon,
     project: BeakerIcon,
+    comportamiento: ScaleIcon,
 };
 
 type TipoContenido =
@@ -1457,6 +1461,7 @@ export default function Show({
     misAsistencias,
     evaluacionesCurso,
     misNotas,
+    libreta,
     can,
     isStudent,
 }: {
@@ -1474,6 +1479,7 @@ export default function Show({
     misAsistencias: Asistencia[] | null;
     evaluacionesCurso: Evaluation[] | null;
     misNotas: EvaluacionConMiNota[] | null;
+    libreta: Libreta | null;
     can: {
         manage: boolean;
         manageEvaluations: boolean;
@@ -1597,9 +1603,12 @@ export default function Show({
 
                     {tab === 'notas' && (
                         <NotasPanel
+                            course={course}
                             evaluacionesCurso={evaluacionesCurso}
                             misNotas={misNotas}
+                            libreta={libreta}
                             canManage={can.manageNotas}
+                            canManageEstructura={can.manageEvaluations}
                         />
                     )}
                 </div>

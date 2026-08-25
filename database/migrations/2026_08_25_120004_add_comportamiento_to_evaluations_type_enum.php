@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE evaluations MODIFY type ENUM('exam', 'quiz', 'homework', 'project', 'comportamiento') NOT NULL DEFAULT 'exam'");
+        }
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        DB::statement("UPDATE evaluations SET type = 'exam' WHERE type = 'comportamiento'");
+
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE evaluations MODIFY type ENUM('exam', 'quiz', 'homework', 'project') NOT NULL DEFAULT 'exam'");
+        }
+    }
+};

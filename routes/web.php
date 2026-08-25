@@ -16,6 +16,7 @@ use App\Http\Controllers\EntregaEvaluacionController;
 use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\ForoController;
 use App\Http\Controllers\GradeController;
+use App\Http\Controllers\GrupoNotasController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\IngresoManualController;
 use App\Http\Controllers\MatriculaController;
@@ -129,6 +130,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('evaluations/{evaluation}/grades', [GradeController::class, 'edit'])->name('evaluations.grades.edit');
     Route::put('evaluations/{evaluation}/grades', [GradeController::class, 'update'])->name('evaluations.grades.update');
+
+    Route::patch('grupos-notas/{grupoNotas}', [GrupoNotasController::class, 'update'])->name('grupos-notas.update');
 
     // Preguntas de cuestionario (docente/staff)
     Route::get('evaluations/{evaluation}/preguntas', [QuizPreguntaController::class, 'index'])->name('evaluations.preguntas.index');

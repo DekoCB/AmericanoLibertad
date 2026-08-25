@@ -63,12 +63,16 @@ class EvaluationController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'type' => ['required', 'in:exam,quiz,homework,project'],
+            'type' => ['required', 'in:exam,quiz,homework,project,comportamiento'],
             'weight' => ['required', 'numeric', 'min:0', 'max:100'],
             'date' => ['required', 'date'],
-            'semana' => ['required', 'integer', 'min:1', 'max:20'],
+            'semana' => [
+                $request->input('type') === 'comportamiento' ? 'nullable' : 'required',
+                'integer', 'min:1', 'max:20',
+            ],
             'max_score' => ['required', 'integer', 'min:1', 'max:20'],
             'intentos_permitidos' => ['required', 'integer', 'min:1', 'max:10'],
+            'grupo_notas_id' => ['nullable', 'exists:grupos_notas,id'],
         ]);
     }
 }

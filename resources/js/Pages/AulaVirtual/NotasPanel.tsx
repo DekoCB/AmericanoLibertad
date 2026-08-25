@@ -1,12 +1,15 @@
 import CalificarModal from '@/Components/CalificarModal';
-import { Evaluation, Grade, evaluationTypeLabels } from '@/types/models';
+import { Course, Evaluation, Grade, Libreta, evaluationTypeLabels } from '@/types/models';
 import { formatDate } from '@/utils/date';
+import { useState } from 'react';
+import LibretaNotas from './LibretaNotas';
 
 const tipoBadge: Record<Evaluation['type'], string> = {
     exam: 'bg-rose-100 text-rose-800',
     quiz: 'bg-amber-100 text-amber-800',
     homework: 'bg-sky-100 text-sky-800',
     project: 'bg-violet-100 text-violet-800',
+    comportamiento: 'bg-fuchsia-100 text-fuchsia-800',
 };
 
 export type EvaluacionConMiNota = Evaluation & { mi_grade: Grade | null };
@@ -148,17 +151,78 @@ function MisNotas({ misNotas }: { misNotas: EvaluacionConMiNota[] }) {
     );
 }
 
+type VistaNotas = 'evaluacion' | 'libreta';
+
+function SelectorVista({
+    vista,
+    setVista,
+}: {
+    vista: VistaNotas;
+    setVista: (vista: VistaNotas) => void;
+}) {
+    const opciones: { value: VistaNotas; label: string }[] = [
+        { value: 'evaluacion', label: 'Vista por evaluación' },
+        { value: 'libreta', label: 'Libreta de notas' },
+    ];
+
+    return (
+        <div className="flex gap-2">
+            {opciones.map((opcion) => {
+                const activo = opcion.value === vista;
+                return (
+                    <button
+                        key={opcion.value}
+                        type="button"
+                        onClick={() => setVista(opcion.value)}
+                        className="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                        style={{
+                            background: activo
+                                ? 'var(--brand-navy)'
+                                : 'var(--brand-hover)',
+                            color: activo ? '#fff' : 'var(--brand-muted)',
+                        }}
+                    >
+                        {opcion.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function NotasPanel({
+    course,
     evaluacionesCurso,
     misNotas,
+    libreta,
     canManage,
+    canManageEstructura,
 }: {
+    course: Course;
     evaluacionesCurso: Evaluation[] | null;
     misNotas: EvaluacionConMiNota[] | null;
+    libreta: Libreta | null;
     canManage: boolean;
+    canManageEstructura: boolean;
 }) {
+    const [vista, setVista] = useState<VistaNotas>('evaluacion');
+
     if (canManage && evaluacionesCurso) {
-        return <TablaEvaluaciones evaluaciones={evaluacionesCurso} />;
+        return (
+            <div className="space-y-4">
+                <SelectorVista vista={vista} setVista={setVista} />
+                {vista === 'evaluacion' ? (
+                    <TablaEvaluaciones evaluaciones={evaluacionesCurso} />
+                ) : libreta ? (
+                    <LibretaNotas
+                        course={course}
+                        libreta={libreta}
+                        canGrade={canManage}
+                        canManageEstructura={canManageEstructura}
+                    />
+                ) : null}
+            </div>
+        );
     }
 
     if (misNotas) {

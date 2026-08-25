@@ -13,12 +13,14 @@ export default function Form({
     course,
     evaluation,
     defaultSemana,
+    defaultGrupoNotasId,
     onSuccess,
     onCancel,
 }: {
     course: Course;
     evaluation?: Evaluation;
     defaultSemana?: number;
+    defaultGrupoNotasId?: number;
     onSuccess: () => void;
     onCancel: () => void;
 }) {
@@ -34,6 +36,7 @@ export default function Form({
               : '',
         max_score: evaluation?.max_score ?? 20,
         intentos_permitidos: evaluation?.intentos_permitidos ?? 1,
+        grupo_notas_id: evaluation?.grupo_notas_id ?? defaultGrupoNotasId ?? null,
     });
 
     const submit = (e: FormEvent) => {
@@ -47,6 +50,10 @@ export default function Form({
             });
         }
     };
+
+    const tipoOpciones = Object.entries(evaluationTypeLabels).filter(
+        ([value]) => value !== 'comportamiento',
+    );
 
     return (
         <form onSubmit={submit} className="space-y-6">
@@ -75,9 +82,10 @@ export default function Form({
                                     value as Evaluation['type'],
                                 )
                             }
-                            options={Object.entries(evaluationTypeLabels).map(
-                                ([value, label]) => ({ value, label }),
-                            )}
+                            options={tipoOpciones.map(([value, label]) => ({
+                                value,
+                                label,
+                            }))}
                         />
                     </div>
                     <InputError message={errors.type} className="mt-2" />
