@@ -18,7 +18,6 @@ import {
     BookOpenIcon,
     BriefcaseIcon,
     CalendarDaysIcon,
-    CheckBadgeIcon,
     ChevronLeftIcon,
     ClockIcon,
     Cog6ToothIcon,
@@ -28,7 +27,6 @@ import {
     HomeIcon,
     InboxIcon,
     MoonIcon,
-    QrCodeIcon,
     QuestionMarkCircleIcon,
     RectangleStackIcon,
     ShieldCheckIcon,
@@ -180,7 +178,6 @@ function SidebarNav({
             nav?.carreras ||
             nav?.admisiones ||
             nav?.horarios ||
-            nav?.asistencias ||
             nav?.aulaVirtual ||
             nav?.periodosAcademicos,
     );
@@ -242,32 +239,6 @@ function SidebarNav({
                             icon={<ComputerDesktopIcon />}
                         >
                             Aula virtual
-                        </SidebarLink>
-                    )}
-                    {nav?.notas && (
-                        <SidebarLink
-                            href={route('grades.index')}
-                            active={
-                                route().current('grades.*') ||
-                                route().current('evaluations.grades.*')
-                            }
-                            collapsed={collapsed}
-                            icon={<CheckBadgeIcon />}
-                        >
-                            Notas
-                        </SidebarLink>
-                    )}
-                    {nav?.asistencias && (
-                        <SidebarLink
-                            href={route('asistencias.index')}
-                            active={
-                                route().current('asistencias.*') ||
-                                route().current('courses.asistencias.*')
-                            }
-                            collapsed={collapsed}
-                            icon={<QrCodeIcon />}
-                        >
-                            Asistencia
                         </SidebarLink>
                     )}
                     {nav?.carreras && (

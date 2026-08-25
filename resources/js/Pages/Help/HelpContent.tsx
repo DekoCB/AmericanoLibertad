@@ -19,7 +19,7 @@ const ESTUDIANTE_FAQS: Faq[] = [
     {
         pregunta: '¿Cómo registro mi asistencia?',
         respuesta:
-            'Ve a Asistencias y usa el campo de escaneo con tu DNI o tu código QR al llegar a clase.',
+            'Ve a Aula virtual y usa "Registrar mi asistencia" para escanear tu DNI o tu código QR al llegar a clase.',
     },
     {
         pregunta: '¿Cómo entrego una tarea o resuelvo un quiz?',
@@ -40,12 +40,12 @@ const DOCENTE_FAQS: Faq[] = [
     {
         pregunta: '¿Cómo tomo asistencia a mis secciones?',
         respuesta:
-            'Ve a Asistencias, elige la sección y registra a cada estudiante con su DNI/QR o márcalo manualmente.',
+            'Entra a Aula virtual, elige tu sección y abre la pestaña Asistencia para registrar a cada estudiante con su DNI/QR o marcarlo manualmente.',
     },
     {
         pregunta: '¿Cómo registro las notas de una evaluación?',
         respuesta:
-            'Entra a la sección, abre la evaluación y usa "Registrar notas". Si es un quiz, se califica automáticamente al resolverlo el estudiante.',
+            'Entra a Aula virtual, elige tu sección, abre la pestaña Notas y usa "Calificar" en la evaluación. Si es un quiz, se califica automáticamente al resolverlo el estudiante.',
     },
     {
         pregunta: '¿Cómo publico recursos o evaluaciones en el aula virtual?',
@@ -90,8 +90,8 @@ function buildStaffFaqs(nav: PageProps['auth']['nav']): Faq[] {
         {
             pregunta: '¿Cómo tomo o reviso la asistencia de una sección?',
             respuesta:
-                'En Asistencias eliges la sección para marcar asistencia, o revisas el historial por fecha, sección o estudiante.',
-            when: nav?.asistencias,
+                'Entra a Aula virtual, elige la sección y abre la pestaña Asistencia para marcarla. El historial completo por fecha, sección o estudiante está en "Ver historial de asistencia", visible desde Aula virtual.',
+            when: nav?.aulaVirtual,
         },
         {
             pregunta: '¿Cómo registro un egreso o reviso la caja?',

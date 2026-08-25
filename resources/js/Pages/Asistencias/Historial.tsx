@@ -86,10 +86,10 @@ export default function Historial({
                         Historial de asistencias
                     </h2>
                     <Link
-                        href={route('asistencias.index')}
+                        href={route('aula-virtual.index')}
                         className="text-sm text-brand-muted hover:underline"
                     >
-                        Volver a asistencias
+                        Volver a aula virtual
                     </Link>
                 </div>
             }

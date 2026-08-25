@@ -127,8 +127,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('evaluations/{evaluation}', [EvaluationController::class, 'update'])->name('evaluations.update');
     Route::delete('evaluations/{evaluation}', [EvaluationController::class, 'destroy'])->name('evaluations.destroy');
 
-    Route::get('notas', [GradeController::class, 'index'])->name('grades.index');
-    Route::get('notas/{course}', [GradeController::class, 'show'])->name('grades.show');
     Route::get('evaluations/{evaluation}/grades', [GradeController::class, 'edit'])->name('evaluations.grades.edit');
     Route::put('evaluations/{evaluation}/grades', [GradeController::class, 'update'])->name('evaluations.grades.update');
 
@@ -159,7 +157,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('asistencias', [AsistenciaController::class, 'cursos'])->name('asistencias.index');
     Route::get('asistencias/historial', [AsistenciaController::class, 'historial'])->name('asistencias.historial');
     Route::post('mis-asistencias/escanear', [AsistenciaController::class, 'escanearPropio'])->name('mis-asistencias.escanear');
-    Route::get('courses/{course}/asistencias', [AsistenciaController::class, 'index'])->name('courses.asistencias.index');
     Route::post('courses/{course}/asistencias', [AsistenciaController::class, 'store'])->name('courses.asistencias.store');
     Route::post('courses/{course}/asistencias/escanear', [AsistenciaController::class, 'escanear'])->name('courses.asistencias.escanear');
 

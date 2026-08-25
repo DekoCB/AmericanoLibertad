@@ -24,13 +24,11 @@ export interface NavPermissions {
     courses: boolean;
     carreras: boolean;
     admisiones: boolean;
-    notas: boolean;
     matriculas: boolean;
     pagos: boolean;
     caja: boolean;
     reportes: boolean;
     horarios: boolean;
-    asistencias: boolean;
     aulaVirtual: boolean;
     registrosHoras: boolean;
     permisos: boolean;

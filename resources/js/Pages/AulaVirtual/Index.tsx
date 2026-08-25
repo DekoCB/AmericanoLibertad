@@ -144,9 +144,27 @@ export default function Index({
     return (
         <AuthenticatedLayout
             header={
-                <PageTitle icon={<ComputerDesktopIcon />}>
-                    Aula virtual
-                </PageTitle>
+                <div className="flex items-center justify-between">
+                    <PageTitle icon={<ComputerDesktopIcon />}>
+                        Aula virtual
+                    </PageTitle>
+                    {viewMode === 'staff' && (
+                        <Link
+                            href={route('asistencias.historial')}
+                            className="text-sm text-brand-muted hover:underline"
+                        >
+                            Ver historial de asistencia
+                        </Link>
+                    )}
+                    {viewMode === 'estudiante' && (
+                        <Link
+                            href={route('asistencias.index')}
+                            className="text-sm text-brand-muted hover:underline"
+                        >
+                            Registrar mi asistencia
+                        </Link>
+                    )}
+                </div>
             }
         >
             <Head title="Aula virtual" />

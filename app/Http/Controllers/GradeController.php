@@ -2,83 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\UserRole;
-use App\Models\Course;
 use App\Models\Evaluation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class GradeController extends Controller
 {
-    public function index(Request $request): Response
-    {
-        $user = $request->user();
-
-        abort_unless(
-            $user->hasRole(UserRole::Docente, UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico),
-            403,
-        );
-
-        $esDocente = $user->hasRole(UserRole::Docente);
-
-        $courses = Course::query()
-            ->with(['subject.carrera', 'teacher'])
-            ->withCount('evaluations')
-            ->when(
-                $esDocente,
-                fn ($query) => $query->where('teacher_id', $user->teacher_id)
-            )
-            ->when($request->string('search')->toString(), function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhereHas('subject', fn ($q2) => $q2->where('name', 'like', "%{$search}%"));
-                });
-            })
-            ->orderBy('name')
-            ->get();
-
-        return Inertia::render('Grades/Index', [
-            'courses' => $courses,
-            'isDocente' => $esDocente,
-            'viewMode' => $esDocente ? 'docente' : 'staff',
-            'canManageImagenes' => $user->hasRole(UserRole::Coordinador, UserRole::Gerencia),
-        ]);
-    }
-
-    public function show(Request $request, Course $course): Response
-    {
-        $user = $request->user();
-
-        abort_unless(
-            $user->hasRole(UserRole::Docente, UserRole::Gerencia, UserRole::Coordinador, UserRole::Academico),
-            403,
-        );
-
-        $esDocente = $user->hasRole(UserRole::Docente);
-
-        abort_if($esDocente && $course->teacher_id !== $user->teacher_id, 403);
-
-        $totalEstudiantes = $course->enrollments()->where('status', 'active')->count();
-
-        $evaluations = $course->evaluations()
-            ->withCount('grades')
-            ->orderByDesc('date')
-            ->get();
-
-        $evaluations->each(function (Evaluation $evaluation) use ($totalEstudiantes) {
-            $evaluation->total_estudiantes = $totalEstudiantes;
-        });
-
-        return Inertia::render('Grades/Show', [
-            'course' => $course->load(['subject.carrera', 'teacher']),
-            'evaluations' => $evaluations,
-        ]);
-    }
-
     public function edit(Evaluation $evaluation): JsonResponse
     {
         $this->authorize('grade', $evaluation);

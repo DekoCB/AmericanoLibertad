@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\UserRole;
 use App\Models\Asistencia;
 use App\Models\Carrera;
 use App\Models\Course;
@@ -19,64 +18,7 @@ class AsistenciaController extends Controller
 {
     public function cursos(Request $request): Response
     {
-        $user = $request->user();
-
-        if ($user->hasRole(UserRole::Estudiante)) {
-            return $this->misAsistencias($request);
-        }
-
-        $this->authorize('viewAny', Course::class);
-
-        $esDocente = $user->hasRole(UserRole::Docente);
-
-        $courses = Course::query()
-            ->with(['subject.carrera', 'teacher'])
-            ->withCount('enrollments')
-            ->when(
-                $esDocente,
-                fn ($query) => $query->where('teacher_id', $user->teacher_id)
-            )
-            ->orderByDesc('period')
-            ->orderBy('name')
-            ->get();
-
-        return Inertia::render('Asistencias/Cursos', [
-            'courses' => $courses,
-            'viewMode' => $esDocente ? 'docente' : 'staff',
-            'can' => [
-                'viewHistorial' => $user->can('viewHistorial', Asistencia::class),
-            ],
-        ]);
-    }
-
-    public function index(Request $request, Course $course): Response
-    {
-        $this->authorize('manage', [Asistencia::class, $course]);
-
-        $fecha = $request->string('fecha')->toString() ?: now()->toDateString();
-
-        $enrollments = $course->enrollments()
-            ->with('student')
-            ->where('status', 'active')
-            ->get()
-            ->sortBy(fn ($enrollment) => $enrollment->student?->last_name)
-            ->values();
-
-        $asistencias = $course->asistencias()
-            ->whereDate('fecha', $fecha)
-            ->get()
-            ->keyBy('student_id');
-
-        $sheet = $enrollments->map(fn ($enrollment) => [
-            'student' => $enrollment->student,
-            'asistencia' => $asistencias->get($enrollment->student_id),
-        ]);
-
-        return Inertia::render('Asistencias/Index', [
-            'course' => $course->load(['subject', 'teacher']),
-            'fecha' => $fecha,
-            'sheet' => $sheet,
-        ]);
+        return $this->misAsistencias($request);
     }
 
     public function store(Request $request, Course $course): RedirectResponse

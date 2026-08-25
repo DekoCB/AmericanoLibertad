@@ -85,7 +85,10 @@ export default function Show({
                     <div className="flex items-center gap-4 text-sm">
                         {can.manageCourse && (
                             <Link
-                                href={route('courses.asistencias.index', course.id)}
+                                href={route('aula-virtual.show', {
+                                    course: course.id,
+                                    tab: 'asistencia',
+                                })}
                                 className="text-brand-link hover:underline"
                             >
                                 Tomar asistencia

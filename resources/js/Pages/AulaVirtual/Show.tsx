@@ -28,6 +28,8 @@ import {
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useMemo, useRef, useState } from 'react';
 import {
+    Asistencia,
+    AsistenciaSheetRow,
     Course,
     EntregaEvaluacion,
     Evaluation,
@@ -39,6 +41,8 @@ import {
 } from '@/types/models';
 import { formatDate, formatDateTime } from '@/utils/date';
 import SemanaPanel from './SemanaPanel';
+import AsistenciaPanel from './AsistenciaPanel';
+import NotasPanel, { EvaluacionConMiNota } from './NotasPanel';
 
 const tipoBadge: Record<RecursoAula['tipo'], string> = {
     anuncio: 'bg-blue-100 text-blue-800',
@@ -1392,6 +1396,52 @@ function BienvenidaPanel({
     );
 }
 
+type CourseTab = 'aula' | 'asistencia' | 'notas';
+
+function Tabs({
+    tab,
+    setTab,
+}: {
+    tab: CourseTab;
+    setTab: (tab: CourseTab) => void;
+}) {
+    const opciones: { value: CourseTab; label: string }[] = [
+        { value: 'aula', label: 'Aula virtual' },
+        { value: 'asistencia', label: 'Asistencia' },
+        { value: 'notas', label: 'Notas' },
+    ];
+
+    return (
+        <div className="flex gap-6 border-b border-brand-border">
+            {opciones.map((opcion) => {
+                const activo = opcion.value === tab;
+                return (
+                    <button
+                        key={opcion.value}
+                        type="button"
+                        onClick={() => setTab(opcion.value)}
+                        className={`-mb-px border-b-2 pb-3 text-sm font-bold uppercase tracking-wide transition ${
+                            activo
+                                ? 'border-brand-navy text-brand-ink-strong'
+                                : 'border-transparent text-brand-muted hover:text-brand-ink'
+                        }`}
+                    >
+                        {opcion.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function tabInicialDesdeUrl(): CourseTab {
+    if (typeof window === 'undefined') return 'aula';
+
+    const valor = new URLSearchParams(window.location.search).get('tab');
+
+    return valor === 'asistencia' || valor === 'notas' ? valor : 'aula';
+}
+
 export default function Show({
     course,
     recursos,
@@ -1402,6 +1452,11 @@ export default function Show({
     alertas,
     resumenSemanas,
     semanaActual,
+    fechaAsistencia,
+    asistenciaSheet,
+    misAsistencias,
+    evaluacionesCurso,
+    misNotas,
     can,
     isStudent,
 }: {
@@ -1414,9 +1469,21 @@ export default function Show({
     alertas: AlertaRecurso[];
     resumenSemanas: ResumenSemana[];
     semanaActual: number | null;
-    can: { manage: boolean; manageEvaluations: boolean; manageImagen: boolean };
+    fechaAsistencia: string;
+    asistenciaSheet: AsistenciaSheetRow[] | null;
+    misAsistencias: Asistencia[] | null;
+    evaluacionesCurso: Evaluation[] | null;
+    misNotas: EvaluacionConMiNota[] | null;
+    can: {
+        manage: boolean;
+        manageEvaluations: boolean;
+        manageImagen: boolean;
+        manageAsistencia: boolean;
+        manageNotas: boolean;
+    };
     isStudent: boolean;
 }) {
+    const [tab, setTab] = useState<CourseTab>(tabInicialDesdeUrl);
     const [addModalOpen, setAddModalOpen] = useState(false);
     const { delete: destroy } = useForm();
 
@@ -1461,50 +1528,80 @@ export default function Show({
 
             <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="flex flex-col gap-6 lg:flex-row">
-                        <div className="w-full space-y-6 lg:w-72 lg:shrink-0">
-                            {isStudent && <AlertasPanel recursos={alertas} />}
-                            <SemanasNav
-                                course={course}
-                                resumenSemanas={resumenSemanas}
-                                semanaActual={semanaActual}
-                            />
-                        </div>
+                    <Tabs tab={tab} setTab={setTab} />
 
-                        <div className="flex-1 space-y-6">
-                            {semanaActual === null ? (
-                                <BienvenidaPanel
+                    {tab === 'aula' && (
+                        <div className="flex flex-col gap-6 lg:flex-row">
+                            <div className="w-full space-y-6 lg:w-72 lg:shrink-0">
+                                {isStudent && (
+                                    <AlertasPanel recursos={alertas} />
+                                )}
+                                <SemanasNav
                                     course={course}
-                                    recursos={recursos}
-                                    canManage={can.manage}
-                                    canManageImagen={can.manageImagen}
-                                    isStudent={isStudent}
-                                    onDeleteRecurso={deleteRecurso}
-                                    onToggleVisto={toggleVisto}
-                                    onAddRecurso={() => setAddModalOpen(true)}
-                                    semanaSiguiente={semanaSiguiente}
+                                    resumenSemanas={resumenSemanas}
+                                    semanaActual={semanaActual}
                                 />
-                            ) : (
-                                <SemanaPanel
-                                    course={course}
-                                    semana={semanaActual}
-                                    contenidoSemana={contenidoSemana}
-                                    recursos={recursos}
-                                    evaluaciones={evaluaciones}
-                                    foroTemas={foroTemas}
-                                    progresoSemana={progresoSemana}
-                                    canManage={can.manage}
-                                    canManageEvaluations={can.manageEvaluations}
-                                    isStudent={isStudent}
-                                    onDeleteRecurso={deleteRecurso}
-                                    onToggleVisto={toggleVisto}
-                                    onAddRecurso={() => setAddModalOpen(true)}
-                                    semanaAnterior={semanaAnterior}
-                                    semanaSiguiente={semanaSiguiente}
-                                />
-                            )}
+                            </div>
+
+                            <div className="flex-1 space-y-6">
+                                {semanaActual === null ? (
+                                    <BienvenidaPanel
+                                        course={course}
+                                        recursos={recursos}
+                                        canManage={can.manage}
+                                        canManageImagen={can.manageImagen}
+                                        isStudent={isStudent}
+                                        onDeleteRecurso={deleteRecurso}
+                                        onToggleVisto={toggleVisto}
+                                        onAddRecurso={() =>
+                                            setAddModalOpen(true)
+                                        }
+                                        semanaSiguiente={semanaSiguiente}
+                                    />
+                                ) : (
+                                    <SemanaPanel
+                                        course={course}
+                                        semana={semanaActual}
+                                        contenidoSemana={contenidoSemana}
+                                        recursos={recursos}
+                                        evaluaciones={evaluaciones}
+                                        foroTemas={foroTemas}
+                                        progresoSemana={progresoSemana}
+                                        canManage={can.manage}
+                                        canManageEvaluations={
+                                            can.manageEvaluations
+                                        }
+                                        isStudent={isStudent}
+                                        onDeleteRecurso={deleteRecurso}
+                                        onToggleVisto={toggleVisto}
+                                        onAddRecurso={() =>
+                                            setAddModalOpen(true)
+                                        }
+                                        semanaAnterior={semanaAnterior}
+                                        semanaSiguiente={semanaSiguiente}
+                                    />
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {tab === 'asistencia' && (
+                        <AsistenciaPanel
+                            course={course}
+                            fecha={fechaAsistencia}
+                            sheet={asistenciaSheet}
+                            misAsistencias={misAsistencias}
+                            canManage={can.manageAsistencia}
+                        />
+                    )}
+
+                    {tab === 'notas' && (
+                        <NotasPanel
+                            evaluacionesCurso={evaluacionesCurso}
+                            misNotas={misNotas}
+                            canManage={can.manageNotas}
+                        />
+                    )}
                 </div>
             </div>
 

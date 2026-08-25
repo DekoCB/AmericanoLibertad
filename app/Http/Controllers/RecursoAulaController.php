@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\Asistencia;
 use App\Models\Course;
 use App\Models\EntregaEvaluacion;
 use App\Models\Evaluation;
@@ -231,6 +232,69 @@ class RecursoAulaController extends Controller
             ? $course->semanaContenidos()->where('semana', $semanaActual)->first()
             : null;
 
+        $canManageAsistencia = $user->can('manage', [Asistencia::class, $course]);
+        $canManageEvaluations = $user->can('create', [Evaluation::class, $course]);
+        $canManageNotas = $user->can('gradeAny', [Evaluation::class, $course]);
+
+        $fechaAsistencia = $request->query('fecha') ?: now()->toDateString();
+        $asistenciaSheet = null;
+        $misAsistencias = null;
+
+        if ($canManageAsistencia) {
+            $enrollmentsActivos = $course->enrollments()
+                ->with('student')
+                ->where('status', 'active')
+                ->get()
+                ->sortBy(fn ($enrollment) => $enrollment->student?->last_name)
+                ->values();
+
+            $asistenciasFecha = $course->asistencias()
+                ->whereDate('fecha', $fechaAsistencia)
+                ->get()
+                ->keyBy('student_id');
+
+            $asistenciaSheet = $enrollmentsActivos->map(fn ($enrollment) => [
+                'student' => $enrollment->student,
+                'asistencia' => $asistenciasFecha->get($enrollment->student_id),
+            ]);
+        } elseif ($isStudent && $user->student_id) {
+            $misAsistencias = $course->asistencias()
+                ->where('student_id', $user->student_id)
+                ->orderByDesc('fecha')
+                ->get();
+        }
+
+        $evaluacionesCurso = null;
+        $misNotas = null;
+
+        if ($canManageNotas) {
+            $totalEstudiantesActivos = $course->enrollments()->where('status', 'active')->count();
+
+            $evaluacionesCurso = $course->evaluations()
+                ->withCount('grades')
+                ->orderByDesc('date')
+                ->get();
+
+            $evaluacionesCurso->each(function (Evaluation $evaluation) use ($totalEstudiantesActivos) {
+                $evaluation->total_estudiantes = $totalEstudiantesActivos;
+            });
+        } elseif ($isStudent && $user->student_id) {
+            $misGrades = Grade::whereHas('evaluation', fn ($q) => $q->where('course_id', $course->id))
+                ->where('student_id', $user->student_id)
+                ->get()
+                ->keyBy('evaluation_id');
+
+            $misNotas = $course->evaluations()
+                ->orderByDesc('date')
+                ->get()
+                ->map(function (Evaluation $evaluation) use ($misGrades) {
+                    $data = $evaluation->toArray();
+                    $data['mi_grade'] = $misGrades->get($evaluation->id);
+
+                    return $data;
+                });
+        }
+
         return Inertia::render('AulaVirtual/Show', [
             'course' => $course->load(['subject', 'teacher', 'periodoAcademico']),
             'recursos' => $recursos,
@@ -241,10 +305,17 @@ class RecursoAulaController extends Controller
             'alertas' => $alertas,
             'resumenSemanas' => $resumenSemanas,
             'semanaActual' => $semanaActual,
+            'fechaAsistencia' => $fechaAsistencia,
+            'asistenciaSheet' => $asistenciaSheet,
+            'misAsistencias' => $misAsistencias,
+            'evaluacionesCurso' => $evaluacionesCurso,
+            'misNotas' => $misNotas,
             'can' => [
                 'manage' => $request->user()->can('manage', [RecursoAula::class, $course]),
-                'manageEvaluations' => $request->user()->can('create', [Evaluation::class, $course]),
+                'manageEvaluations' => $canManageEvaluations,
                 'manageImagen' => $request->user()->can('manageImagen', Subject::class),
+                'manageAsistencia' => $canManageAsistencia,
+                'manageNotas' => $canManageNotas,
             ],
             'isStudent' => $isStudent,
         ]);
