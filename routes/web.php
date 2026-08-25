@@ -21,6 +21,7 @@ use App\Http\Controllers\IngresoManualController;
 use App\Http\Controllers\MatriculaController;
 use App\Http\Controllers\MisPagosController;
 use App\Http\Controllers\PagoController;
+use App\Http\Controllers\PagoRegistroController;
 use App\Http\Controllers\PeriodoAcademicoController;
 use App\Http\Controllers\PermisoDocenteController;
 use App\Http\Controllers\ProfileController;
@@ -100,6 +101,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('pagos/{pago}/comprobante', [PagoController::class, 'comprobante'])->name('pagos.comprobante');
     Route::get('pagos/{pago}/comprobante-adjunto', [PagoController::class, 'comprobanteAdjunto'])->name('pagos.comprobante-adjunto');
     Route::get('ingresos', [PagoController::class, 'index'])->name('ingresos.index');
+    Route::get('pagos', [PagoRegistroController::class, 'index'])->name('pagos.index');
+    Route::post('pagos/masivo', [PagoRegistroController::class, 'storeMasivo'])->name('pagos.masivo');
     Route::get('mis-pagos', [MisPagosController::class, 'index'])->name('mis-pagos.index');
 
     Route::resource('egresos', EgresoController::class)->except(['show', 'edit', 'update']);

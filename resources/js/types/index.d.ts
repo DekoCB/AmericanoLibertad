@@ -26,6 +26,7 @@ export interface NavPermissions {
     admisiones: boolean;
     notas: boolean;
     matriculas: boolean;
+    pagos: boolean;
     caja: boolean;
     reportes: boolean;
     horarios: boolean;

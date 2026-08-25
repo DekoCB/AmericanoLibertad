@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Cuota;
 use App\Models\IngresoManual;
-use App\Models\Matricula;
 use App\Models\Pago;
 use App\Support\NumeroALetras;
 use Illuminate\Contracts\View\View;
@@ -126,7 +125,8 @@ class PagoController extends Controller
         ]);
 
         if (! $esEstudiante) {
-            $this->aplicarPagoAlSaldo($cuota, (float) $validated['monto']);
+            $cuota->registrarAbono((float) $validated['monto']);
+            $cuota->matricula->recalcularEstado();
         }
 
         return back()->with('success', $esEstudiante
@@ -151,7 +151,8 @@ class PagoController extends Controller
             'fecha_limite_pago' => null,
         ]);
 
-        $this->aplicarPagoAlSaldo($pago->cuota, (float) $pago->monto);
+        $pago->cuota->registrarAbono((float) $pago->monto);
+        $pago->cuota->matricula->recalcularEstado();
 
         return back()->with('success', 'Pago confirmado correctamente.');
     }
@@ -189,7 +190,7 @@ class PagoController extends Controller
         if ($pago->estado === 'confirmado') {
             $cuota->monto_pagado -= $pago->monto;
             $cuota->actualizarEstado();
-            $this->recalcularEstadoMatricula($cuota->matricula);
+            $cuota->matricula->recalcularEstado();
         }
 
         if ($pago->comprobante_path) {
@@ -199,30 +200,5 @@ class PagoController extends Controller
         $pago->delete();
 
         return back()->with('success', 'Pago eliminado correctamente.');
-    }
-
-    private function aplicarPagoAlSaldo(Cuota $cuota, float $monto): void
-    {
-        $cuota->monto_pagado += $monto;
-        $cuota->actualizarEstado();
-
-        $this->recalcularEstadoMatricula($cuota->matricula);
-    }
-
-    private function recalcularEstadoMatricula(Matricula $matricula): void
-    {
-        $cuotas = $matricula->cuotas()->get();
-
-        if ($cuotas->every(fn ($cuota) => $cuota->estado === 'pagado')) {
-            $matricula->estado = 'pagado';
-        } elseif ($cuotas->contains(fn ($cuota) => in_array($cuota->estado, ['parcial', 'pagado'], true))) {
-            $matricula->estado = 'parcial';
-        } elseif ($cuotas->contains(fn ($cuota) => $cuota->estado === 'vencido')) {
-            $matricula->estado = 'vencido';
-        } else {
-            $matricula->estado = 'pendiente';
-        }
-
-        $matricula->save();
     }
 }

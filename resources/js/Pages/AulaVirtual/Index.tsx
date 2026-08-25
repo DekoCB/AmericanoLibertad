@@ -104,10 +104,12 @@ export default function Index({
     const [selectedCarrera, setSelectedCarrera] = useState<string | null>(
         null,
     );
+    const [selectedCiclo, setSelectedCiclo] = useState<number | null>(null);
 
     useEffect(() => {
         setStep('carrera');
         setSelectedCarrera(null);
+        setSelectedCiclo(null);
     }, [selectedPeriod]);
 
     const irAlCurso = (courseId: string) => {
@@ -117,6 +119,26 @@ export default function Index({
 
     const carreraActual = porCarrera.find(
         (grupo) => grupo.carreraName === selectedCarrera,
+    );
+
+    const ciclosDisponibles = useMemo(
+        () =>
+            [
+                ...new Set(
+                    (carreraActual?.subjects ?? [])
+                        .map((s) => s.ciclo)
+                        .filter((c): c is number => c !== null),
+                ),
+            ].sort((a, b) => a - b),
+        [carreraActual],
+    );
+
+    const subjectsFiltrados = useMemo(
+        () =>
+            (carreraActual?.subjects ?? []).filter(
+                (s) => selectedCiclo === null || s.ciclo === selectedCiclo,
+            ),
+        [carreraActual, selectedCiclo],
     );
 
     return (
@@ -131,7 +153,8 @@ export default function Index({
 
             <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    {viewMode !== 'estudiante' && (
+                    {(viewMode === 'docente' ||
+                        (viewMode === 'staff' && step === 'carrera')) && (
                         <div className="max-w-sm">
                             <SearchableSelect
                                 value=""
@@ -196,6 +219,7 @@ export default function Index({
                                         onClick={() => {
                                             setStep('carrera');
                                             setSelectedCarrera(null);
+                                            setSelectedCiclo(null);
                                         }}
                                         className="inline-flex items-center gap-1 text-brand-link hover:underline"
                                     >
@@ -210,6 +234,50 @@ export default function Index({
                                             </span>
                                         </>
                                     )}
+                                </div>
+                            )}
+
+                            {step === 'curso' && ciclosDisponibles.length > 1 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedCiclo(null)}
+                                        className="rounded-lg px-3 py-1 text-xs font-semibold transition"
+                                        style={{
+                                            background:
+                                                selectedCiclo === null
+                                                    ? 'var(--brand-navy)'
+                                                    : 'var(--brand-hover)',
+                                            color:
+                                                selectedCiclo === null
+                                                    ? '#fff'
+                                                    : 'var(--brand-muted)',
+                                        }}
+                                    >
+                                        Todos
+                                    </button>
+                                    {ciclosDisponibles.map((ciclo) => (
+                                        <button
+                                            key={ciclo}
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedCiclo(ciclo)
+                                            }
+                                            className="rounded-lg px-3 py-1 text-xs font-semibold transition"
+                                            style={{
+                                                background:
+                                                    selectedCiclo === ciclo
+                                                        ? 'var(--brand-navy)'
+                                                        : 'var(--brand-hover)',
+                                                color:
+                                                    selectedCiclo === ciclo
+                                                        ? '#fff'
+                                                        : 'var(--brand-muted)',
+                                            }}
+                                        >
+                                            Ciclo {ciclo}
+                                        </button>
+                                    ))}
                                 </div>
                             )}
 
@@ -233,6 +301,7 @@ export default function Index({
                                                         setSelectedCarrera(
                                                             grupo.carreraName,
                                                         );
+                                                        setSelectedCiclo(null);
                                                         setStep('curso');
                                                     }}
                                                     className="block w-full border-b border-r border-brand-border bg-brand-card text-left transition hover:bg-brand-hover"
@@ -280,7 +349,7 @@ export default function Index({
 
                             {step === 'curso' && carreraActual && (
                                 <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
-                                    {carreraActual.subjects.map((group) => (
+                                    {subjectsFiltrados.map((group) => (
                                         <div
                                             key={group.key}
                                             className="relative border-b border-r border-brand-border bg-brand-card"

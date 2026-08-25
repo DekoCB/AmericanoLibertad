@@ -62,4 +62,13 @@ class Cuota extends Model
 
         $this->save();
     }
+
+    /**
+     * Aplica un abono al saldo de la cuota y recalcula su estado.
+     */
+    public function registrarAbono(float $monto): void
+    {
+        $this->monto_pagado += $monto;
+        $this->actualizarEstado();
+    }
 }

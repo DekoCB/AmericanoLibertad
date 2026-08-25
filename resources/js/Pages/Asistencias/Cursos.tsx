@@ -67,6 +67,7 @@ export default function Cursos({
     const [selectedCursoKey, setSelectedCursoKey] = useState<string | null>(
         null,
     );
+    const [selectedCiclo, setSelectedCiclo] = useState<number | null>(null);
 
     const irAlCurso = (courseId: string) => {
         if (!courseId) return;
@@ -78,6 +79,26 @@ export default function Cursos({
     )?.[1];
     const cursoActual = grupoActual?.find(
         (group) => group.key === selectedCursoKey,
+    );
+
+    const ciclosDisponibles = useMemo(
+        () =>
+            [
+                ...new Set(
+                    (grupoActual ?? [])
+                        .map((s) => s.ciclo)
+                        .filter((c): c is number => c !== null),
+                ),
+            ].sort((a, b) => a - b),
+        [grupoActual],
+    );
+
+    const grupoFiltrado = useMemo(
+        () =>
+            (grupoActual ?? []).filter(
+                (s) => selectedCiclo === null || s.ciclo === selectedCiclo,
+            ),
+        [grupoActual, selectedCiclo],
     );
 
     return (
@@ -106,30 +127,33 @@ export default function Cursos({
 
             <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="max-w-sm">
-                        <SearchableSelect
-                            value=""
-                            onChange={irAlCurso}
-                            placeholder="Buscar por sección..."
-                            allLabel="Selecciona una sección"
-                            options={[...courses]
-                                .sort((a, b) => a.name.localeCompare(b.name))
-                                .map((course) => {
-                                    const docente = course.teacher
-                                        ? `${course.teacher.first_name} ${course.teacher.last_name}`
-                                        : 'Sin docente';
-                                    const turno = course.turno
-                                        ? turnoLabels[course.turno]
-                                        : '';
+                    {(viewMode === 'docente' ||
+                        (viewMode === 'staff' && step === 'carrera')) && (
+                        <div className="max-w-sm">
+                            <SearchableSelect
+                                value=""
+                                onChange={irAlCurso}
+                                placeholder="Buscar por sección..."
+                                allLabel="Selecciona una sección"
+                                options={[...courses]
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .map((course) => {
+                                        const docente = course.teacher
+                                            ? `${course.teacher.first_name} ${course.teacher.last_name}`
+                                            : 'Sin docente';
+                                        const turno = course.turno
+                                            ? turnoLabels[course.turno]
+                                            : '';
 
-                                    return {
-                                        value: String(course.id),
-                                        label: `${course.name} — ${course.subject?.name ?? ''} · ${docente}${turno ? ` · ${turno}` : ''}`,
-                                        searchText: `${course.name} ${course.subject?.name ?? ''} ${docente} ${turno}`,
-                                    };
-                                })}
-                        />
-                    </div>
+                                        return {
+                                            value: String(course.id),
+                                            label: `${course.name} — ${course.subject?.name ?? ''} · ${docente}${turno ? ` · ${turno}` : ''}`,
+                                            searchText: `${course.name} ${course.subject?.name ?? ''} ${docente} ${turno}`,
+                                        };
+                                    })}
+                            />
+                        </div>
+                    )}
 
                     {viewMode === 'staff' ? (
                         <div className="space-y-6">
@@ -141,6 +165,7 @@ export default function Cursos({
                                             setStep('carrera');
                                             setSelectedCarrera(null);
                                             setSelectedCursoKey(null);
+                                            setSelectedCiclo(null);
                                         }}
                                         className="inline-flex items-center gap-1 text-brand-link hover:underline"
                                     >
@@ -173,6 +198,50 @@ export default function Cursos({
                                 </div>
                             )}
 
+                            {step === 'curso' && ciclosDisponibles.length > 1 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedCiclo(null)}
+                                        className="rounded-lg px-3 py-1 text-xs font-semibold transition"
+                                        style={{
+                                            background:
+                                                selectedCiclo === null
+                                                    ? 'var(--brand-navy)'
+                                                    : 'var(--brand-hover)',
+                                            color:
+                                                selectedCiclo === null
+                                                    ? '#fff'
+                                                    : 'var(--brand-muted)',
+                                        }}
+                                    >
+                                        Todos
+                                    </button>
+                                    {ciclosDisponibles.map((ciclo) => (
+                                        <button
+                                            key={ciclo}
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedCiclo(ciclo)
+                                            }
+                                            className="rounded-lg px-3 py-1 text-xs font-semibold transition"
+                                            style={{
+                                                background:
+                                                    selectedCiclo === ciclo
+                                                        ? 'var(--brand-navy)'
+                                                        : 'var(--brand-hover)',
+                                                color:
+                                                    selectedCiclo === ciclo
+                                                        ? '#fff'
+                                                        : 'var(--brand-muted)',
+                                            }}
+                                        >
+                                            Ciclo {ciclo}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
                             {step === 'carrera' && (
                                 <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
                                     {porCarrera.map(([carreraName, subjects]) => {
@@ -190,6 +259,7 @@ export default function Cursos({
                                                     setSelectedCarrera(
                                                         carreraName,
                                                     );
+                                                    setSelectedCiclo(null);
                                                     setStep('curso');
                                                 }}
                                                 className="border-b border-r border-brand-border bg-brand-card p-5 text-left transition hover:bg-brand-hover"
@@ -216,7 +286,7 @@ export default function Cursos({
 
                             {step === 'curso' && grupoActual && (
                                 <div className="grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:grid-cols-3">
-                                    {grupoActual.map((group) => (
+                                    {grupoFiltrado.map((group) => (
                                         <button
                                             key={group.key}
                                             type="button"

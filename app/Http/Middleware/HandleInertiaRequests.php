@@ -58,6 +58,7 @@ class HandleInertiaRequests extends Middleware
                     'carreras' => $user->can('viewAny', Carrera::class) && $user->role !== UserRole::Estudiante,
                     'admisiones' => $user->can('viewAny', AdmissionApplication::class),
                     'matriculas' => $user->can('viewAny', Matricula::class),
+                    'pagos' => $user->can('viewAny', Pago::class),
                     'caja' => $user->can('viewAny', Egreso::class),
                     'reportes' => $user->can('viewAny', Egreso::class),
                     'notas' => $user->hasRole(

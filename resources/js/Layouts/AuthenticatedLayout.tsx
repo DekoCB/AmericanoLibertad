@@ -186,6 +186,7 @@ function SidebarNav({
     );
     const financieroVisible = Boolean(
         nav?.matriculas ||
+            nav?.pagos ||
             nav?.caja ||
             nav?.reportes ||
             nav?.registrosHoras ||
@@ -347,6 +348,16 @@ function SidebarNav({
                             icon={<CreditCardIcon />}
                         >
                             Matrículas
+                        </SidebarLink>
+                    )}
+                    {nav?.pagos && (
+                        <SidebarLink
+                            href={route('pagos.index')}
+                            active={route().current('pagos.*')}
+                            collapsed={collapsed}
+                            icon={<CreditCardIcon />}
+                        >
+                            Pagos
                         </SidebarLink>
                     )}
                     {nav?.caja && (

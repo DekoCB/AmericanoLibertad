@@ -64,4 +64,24 @@ class Matricula extends Model
     {
         return $ciclo === 1 ? 50.0 : 150.0;
     }
+
+    /**
+     * Recalcula el estado de la matrícula a partir del estado agregado de sus cuotas.
+     */
+    public function recalcularEstado(): void
+    {
+        $cuotas = $this->cuotas()->get();
+
+        if ($cuotas->every(fn (Cuota $cuota) => $cuota->estado === 'pagado')) {
+            $this->estado = 'pagado';
+        } elseif ($cuotas->contains(fn (Cuota $cuota) => in_array($cuota->estado, ['parcial', 'pagado'], true))) {
+            $this->estado = 'parcial';
+        } elseif ($cuotas->contains(fn (Cuota $cuota) => $cuota->estado === 'vencido')) {
+            $this->estado = 'vencido';
+        } else {
+            $this->estado = 'pendiente';
+        }
+
+        $this->save();
+    }
 }
