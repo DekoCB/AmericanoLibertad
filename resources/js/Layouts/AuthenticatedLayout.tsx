@@ -402,7 +402,7 @@ function SidebarNav({
                             collapsed={collapsed}
                             icon={<ClockIcon />}
                         >
-                            Horas y pagos
+                            Salarios
                         </SidebarLink>
                     )}
                     {nav?.misPagos && (

@@ -178,11 +178,11 @@ export default function Index({
         <AuthenticatedLayout
             header={
                 <PageTitle icon={<ClockIcon />}>
-                    {isDocente ? 'Mis horas y pagos' : 'Horas y pagos docentes'}
+                    {isDocente ? 'Mis salarios' : 'Salarios docentes'}
                 </PageTitle>
             }
         >
-            <Head title="Horas y pagos docentes" />
+            <Head title="Salarios docentes" />
 
             <div className="bg-brand-cream min-h-[calc(100vh-4rem)] py-12">
                 <div className="mx-auto max-w-6xl space-y-6 sm:px-6 lg:px-8">
