@@ -14,7 +14,7 @@ import {
 } from '@/Components/Icons';
 import UserAvatar from '@/Components/UserAvatar';
 import { PageProps } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Course,
     DiaSemana,
@@ -24,8 +24,10 @@ import {
     evaluationTypeLabels,
     Grade,
     Horario,
+    Paginated,
     Student,
 } from '@/types/models';
+import { formatDate } from '@/utils/date';
 import { ReactNode, useMemo, useRef, useState } from 'react';
 
 interface TopEstudiante {
@@ -53,6 +55,15 @@ interface BalancePorMes {
     mes: string;
     ingresos: number;
     egresos: number;
+}
+
+interface DeudorRow {
+    student_id: number;
+    first_name: string;
+    last_name: string;
+    deuda: number;
+    cuotas_pendientes: number;
+    vencimiento_mas_antiguo: string | null;
 }
 
 interface Clima {
@@ -96,6 +107,7 @@ type DashboardProps =
           matriculasPorCiclo: MatriculasPorCiclo[];
           promedioPorPeriodo: PromedioPorPeriodo[];
           balancePorMes: BalancePorMes[];
+          deudores: Paginated<DeudorRow> | null;
       }
     | {
           view: 'docente';
@@ -974,6 +986,110 @@ function MisCalificacionesCard({ grades }: { grades: Grade[] }) {
     );
 }
 
+function ServerPager({
+    currentPage,
+    lastPage,
+    onChange,
+}: {
+    currentPage: number;
+    lastPage: number;
+    onChange: (page: number) => void;
+}) {
+    if (lastPage <= 1) return null;
+
+    return (
+        <div className="mt-auto flex items-center justify-between pt-4">
+            <button
+                type="button"
+                onClick={() => onChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage <= 1}
+                className="flex items-center gap-1 rounded-lg border px-3 py-1 text-xs font-medium transition-all duration-200 hover:bg-brand-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                    borderColor: 'var(--brand-border)',
+                    color: 'var(--brand-ink-strong)',
+                }}
+            >
+                <ChevronLeftIcon className="size-3.5" />
+                Anterior
+            </button>
+            <span className="text-xs" style={{ color: 'var(--brand-muted)' }}>
+                Página {currentPage} de {lastPage}
+            </span>
+            <button
+                type="button"
+                onClick={() => onChange(Math.min(lastPage, currentPage + 1))}
+                disabled={currentPage >= lastPage}
+                className="flex items-center gap-1 rounded-lg border px-3 py-1 text-xs font-medium transition-all duration-200 hover:bg-brand-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                    borderColor: 'var(--brand-border)',
+                    color: 'var(--brand-ink-strong)',
+                }}
+            >
+                Siguiente
+                <ChevronRightIcon className="size-3.5" />
+            </button>
+        </div>
+    );
+}
+
+function DeudoresCard({ deudores }: { deudores: Paginated<DeudorRow> }) {
+    const goToPage = (page: number) => {
+        router.get(
+            route('dashboard'),
+            { deudores_page: page },
+            { only: ['deudores'], preserveState: true, preserveScroll: true },
+        );
+    };
+
+    return (
+        <ListCard title="Deudores">
+            <div key={deudores.current_page} className="animate-fade-in-soft">
+                {deudores.data.map((deudor) => (
+                    <div
+                        key={deudor.student_id}
+                        className="flex items-center justify-between gap-3 border-b py-3 last:border-b-0"
+                        style={{ borderColor: 'var(--brand-border-faint)' }}
+                    >
+                        <div className="min-w-0 flex-1">
+                            <div
+                                className="truncate font-medium"
+                                style={{ color: 'var(--brand-ink-strong)' }}
+                            >
+                                {deudor.first_name} {deudor.last_name}
+                            </div>
+                            <div
+                                className="truncate text-[13px]"
+                                style={{ color: 'var(--brand-muted-soft)' }}
+                            >
+                                {deudor.cuotas_pendientes}{' '}
+                                {deudor.cuotas_pendientes === 1
+                                    ? 'cuota pendiente'
+                                    : 'cuotas pendientes'}
+                                {deudor.vencimiento_mas_antiguo &&
+                                    ` · vence ${formatDate(deudor.vencimiento_mas_antiguo)}`}
+                            </div>
+                        </div>
+                        <div
+                            className="shrink-0 text-sm font-semibold"
+                            style={{ color: 'var(--money-out)' }}
+                        >
+                            S/ {deudor.deuda.toFixed(2)}
+                        </div>
+                    </div>
+                ))}
+                {deudores.data.length === 0 && (
+                    <EmptyRow>No hay estudiantes con deudas pendientes.</EmptyRow>
+                )}
+            </div>
+            <ServerPager
+                currentPage={deudores.current_page}
+                lastPage={deudores.last_page}
+                onChange={goToPage}
+            />
+        </ListCard>
+    );
+}
+
 function MatriculasRecientesCard({
     enrollments,
 }: {
@@ -1761,9 +1877,13 @@ export default function Dashboard(props: DashboardProps) {
                                     data={props.estudiantesPorCarrera}
                                 />
 
-                                <MatriculasRecientesCard
-                                    enrollments={props.recentEnrollments}
-                                />
+                                {props.canViewFinanzas && props.deudores ? (
+                                    <DeudoresCard deudores={props.deudores} />
+                                ) : (
+                                    <MatriculasRecientesCard
+                                        enrollments={props.recentEnrollments}
+                                    />
+                                )}
                             </div>
                         </div>
                     )}

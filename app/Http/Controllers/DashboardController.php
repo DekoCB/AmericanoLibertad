@@ -16,6 +16,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +45,7 @@ class DashboardController extends Controller
             return $this->estudianteDashboard($user);
         }
 
-        return $this->staffDashboard($user);
+        return $this->staffDashboard($request, $user);
     }
 
     private function clima(): ?array
@@ -187,6 +188,31 @@ class DashboardController extends Controller
         ]);
     }
 
+    private function deudores(int $page): LengthAwarePaginator
+    {
+        return DB::table('cuotas')
+            ->join('matriculas', 'matriculas.id', '=', 'cuotas.matricula_id')
+            ->join('students', 'students.id', '=', 'matriculas.student_id')
+            ->whereIn('cuotas.estado', ['pendiente', 'parcial', 'vencido'])
+            ->selectRaw(
+                'students.id as student_id, students.first_name, students.last_name, '
+                . 'SUM(cuotas.monto_programado - cuotas.monto_pagado) as deuda, '
+                . 'COUNT(cuotas.id) as cuotas_pendientes, '
+                . 'MIN(cuotas.fecha_vencimiento) as vencimiento_mas_antiguo'
+            )
+            ->groupBy('students.id', 'students.first_name', 'students.last_name')
+            ->orderByDesc('deuda')
+            ->paginate(5, ['*'], 'deudores_page', $page)
+            ->through(fn ($fila) => [
+                'student_id' => (int) $fila->student_id,
+                'first_name' => $fila->first_name,
+                'last_name' => $fila->last_name,
+                'deuda' => round((float) $fila->deuda, 2),
+                'cuotas_pendientes' => (int) $fila->cuotas_pendientes,
+                'vencimiento_mas_antiguo' => $fila->vencimiento_mas_antiguo,
+            ]);
+    }
+
     private function matriculasPorCiclo(): Collection
     {
         return DB::table('enrollments')
@@ -203,10 +229,11 @@ class DashboardController extends Controller
             ]);
     }
 
-    private function staffDashboard(User $user): Response
+    private function staffDashboard(Request $request, User $user): Response
     {
         $canViewFinanzas = $user->can('viewAny', Egreso::class);
         $inicioMes = now()->startOfMonth()->toDateString();
+        $deudoresPage = (int) $request->input('deudores_page', 1);
 
         return Inertia::render('Dashboard', [
             'view' => 'staff',
@@ -237,6 +264,7 @@ class DashboardController extends Controller
             'matriculasPorCiclo' => $this->matriculasPorCiclo(),
             'promedioPorPeriodo' => $this->promedioPorPeriodo(),
             'balancePorMes' => $canViewFinanzas ? $this->balancePorMes() : [],
+            'deudores' => $canViewFinanzas ? $this->deudores($deudoresPage) : null,
         ]);
     }
 
