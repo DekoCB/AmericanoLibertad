@@ -24,6 +24,8 @@ import {
     evaluationTypeLabels,
     Grade,
     Horario,
+    medioPagoLabels,
+    Pago,
     Paginated,
     Student,
 } from '@/types/models';
@@ -55,6 +57,11 @@ interface BalancePorMes {
     mes: string;
     ingresos: number;
     egresos: number;
+}
+
+interface CobroPorMetodo {
+    medio: Pago['medio'];
+    total: number;
 }
 
 interface DeudorRow {
@@ -108,6 +115,7 @@ type DashboardProps =
           promedioPorPeriodo: PromedioPorPeriodo[];
           balancePorMes: BalancePorMes[];
           deudores: Paginated<DeudorRow> | null;
+          cobrosPorMetodo: CobroPorMetodo[];
       }
     | {
           view: 'docente';
@@ -813,6 +821,104 @@ function MatriculasActivasCard({
             ) : (
                 <div className="mt-6 flex flex-1 items-center justify-center">
                     <EmptyRow>Aún no hay matrículas activas.</EmptyRow>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function CobrosPorMetodoCard({
+    cobrosPorMetodo,
+    className = '',
+}: {
+    cobrosPorMetodo: CobroPorMetodo[];
+    className?: string;
+}) {
+    const totalMes = cobrosPorMetodo.reduce((sum, item) => sum + item.total, 0);
+    const maxTotal = Math.max(1, ...cobrosPorMetodo.map((item) => item.total));
+
+    return (
+        <div
+            className={`flex flex-col rounded-3xl border bg-brand-card p-6 shadow-sm ${className}`}
+            style={{ borderColor: 'var(--brand-border)' }}
+        >
+            <div className="flex items-center gap-3">
+                <span style={{ color: 'var(--matriculas-accent)' }}>
+                    <CreditCardIcon className="size-7" />
+                </span>
+                <div>
+                    <div
+                        className="text-4xl font-bold"
+                        style={{ color: 'var(--brand-ink-strong)' }}
+                    >
+                        S/ {totalMes.toFixed(2)}
+                    </div>
+                    <div
+                        className="text-[13px] font-medium uppercase tracking-wide"
+                        style={{ color: 'var(--brand-muted)' }}
+                    >
+                        Cobrado este mes
+                    </div>
+                </div>
+            </div>
+
+            {cobrosPorMetodo.length > 0 ? (
+                <>
+                    <div
+                        className="mt-2 text-[13px] font-medium"
+                        style={{ color: 'var(--brand-muted-soft)' }}
+                    >
+                        Cobros por método de pago
+                    </div>
+                    <div className="mt-3 flex flex-1 items-end justify-between gap-2">
+                        {cobrosPorMetodo.map((item) => {
+                            const alturaPct = Math.max(
+                                6,
+                                (item.total / maxTotal) * 100,
+                            );
+
+                            return (
+                                <div
+                                    key={item.medio}
+                                    className="flex flex-1 flex-col items-center gap-2"
+                                >
+                                    <span
+                                        className="text-xs font-semibold"
+                                        style={{
+                                            color: 'var(--brand-ink-strong)',
+                                        }}
+                                    >
+                                        S/ {item.total.toFixed(0)}
+                                    </span>
+                                    <div
+                                        className="flex h-32 w-full items-end overflow-hidden rounded-lg"
+                                        style={{
+                                            background: 'var(--brand-hover)',
+                                        }}
+                                    >
+                                        <div
+                                            className="w-full rounded-lg transition-all duration-500"
+                                            style={{
+                                                height: `${alturaPct}%`,
+                                                background:
+                                                    'var(--matriculas-accent)',
+                                            }}
+                                        />
+                                    </div>
+                                    <span
+                                        className="text-[11px]"
+                                        style={{ color: 'var(--brand-muted)' }}
+                                    >
+                                        {medioPagoLabels[item.medio]}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            ) : (
+                <div className="mt-6 flex flex-1 items-center justify-center">
+                    <EmptyRow>Aún no hay cobros registrados este mes.</EmptyRow>
                 </div>
             )}
         </div>
@@ -1821,11 +1927,18 @@ export default function Dashboard(props: DashboardProps) {
                             <DateCard clima={props.clima} />
 
                             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                                <MatriculasActivasCard
-                                    value={props.stats.activeEnrollments}
-                                    porCiclo={props.matriculasPorCiclo}
-                                    className="lg:row-span-2"
-                                />
+                                {props.canViewFinanzas ? (
+                                    <CobrosPorMetodoCard
+                                        cobrosPorMetodo={props.cobrosPorMetodo}
+                                        className="lg:row-span-2"
+                                    />
+                                ) : (
+                                    <MatriculasActivasCard
+                                        value={props.stats.activeEnrollments}
+                                        porCiclo={props.matriculasPorCiclo}
+                                        className="lg:row-span-2"
+                                    />
+                                )}
                                 <ColorStat
                                     label="Estudiantes activos"
                                     value={props.stats.activeStudents}

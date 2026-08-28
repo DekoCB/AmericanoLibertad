@@ -188,6 +188,22 @@ class DashboardController extends Controller
         ]);
     }
 
+    private function cobrosPorMetodo(): Collection
+    {
+        $inicioMes = now()->startOfMonth()->toDateString();
+
+        $totales = Pago::where('fecha', '>=', $inicioMes)
+            ->selectRaw('medio, SUM(monto) as total')
+            ->groupBy('medio')
+            ->pluck('total', 'medio');
+
+        return collect(['efectivo', 'yape', 'plin', 'tarjeta'])
+            ->map(fn ($medio) => [
+                'medio' => $medio,
+                'total' => round((float) ($totales[$medio] ?? 0), 2),
+            ]);
+    }
+
     private function deudores(int $page): LengthAwarePaginator
     {
         return DB::table('cuotas')
@@ -265,6 +281,7 @@ class DashboardController extends Controller
             'promedioPorPeriodo' => $this->promedioPorPeriodo(),
             'balancePorMes' => $canViewFinanzas ? $this->balancePorMes() : [],
             'deudores' => $canViewFinanzas ? $this->deudores($deudoresPage) : null,
+            'cobrosPorMetodo' => $canViewFinanzas ? $this->cobrosPorMetodo() : [],
         ]);
     }
 
