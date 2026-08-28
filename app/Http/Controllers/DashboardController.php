@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\Course;
+use App\Models\Egreso;
 use App\Models\Enrollment;
 use App\Models\Evaluation;
 use App\Models\Grade;
 use App\Models\Horario;
+use App\Models\IngresoManual;
+use App\Models\Pago;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
@@ -41,7 +44,7 @@ class DashboardController extends Controller
             return $this->estudianteDashboard($user);
         }
 
-        return $this->staffDashboard();
+        return $this->staffDashboard($user);
     }
 
     private function clima(): ?array
@@ -140,6 +143,50 @@ class DashboardController extends Controller
             ]);
     }
 
+    private function balancePorMes(): Collection
+    {
+        $mesExpr = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', fecha)"
+            : "DATE_FORMAT(fecha, '%Y-%m')";
+
+        $pagosPorMes = Pago::query()
+            ->selectRaw("{$mesExpr} as mes, SUM(monto) as total")
+            ->groupBy('mes')
+            ->orderByDesc('mes')
+            ->limit(6)
+            ->get()
+            ->keyBy('mes');
+
+        $ingresosManualesPorMes = IngresoManual::query()
+            ->selectRaw("{$mesExpr} as mes, SUM(monto) as total")
+            ->groupBy('mes')
+            ->orderByDesc('mes')
+            ->limit(6)
+            ->get()
+            ->keyBy('mes');
+
+        $egresosPorMes = Egreso::query()
+            ->selectRaw("{$mesExpr} as mes, SUM(monto) as total")
+            ->groupBy('mes')
+            ->orderByDesc('mes')
+            ->limit(6)
+            ->get()
+            ->keyBy('mes');
+
+        $meses = $pagosPorMes->keys()
+            ->merge($ingresosManualesPorMes->keys())
+            ->merge($egresosPorMes->keys())
+            ->unique()
+            ->sort()
+            ->values();
+
+        return $meses->map(fn ($mes) => [
+            'mes' => $mes,
+            'ingresos' => (float) ($pagosPorMes[$mes]->total ?? 0) + (float) ($ingresosManualesPorMes[$mes]->total ?? 0),
+            'egresos' => (float) ($egresosPorMes[$mes]->total ?? 0),
+        ]);
+    }
+
     private function matriculasPorCiclo(): Collection
     {
         return DB::table('enrollments')
@@ -156,11 +203,15 @@ class DashboardController extends Controller
             ]);
     }
 
-    private function staffDashboard(): Response
+    private function staffDashboard(User $user): Response
     {
+        $canViewFinanzas = $user->can('viewAny', Egreso::class);
+        $inicioMes = now()->startOfMonth()->toDateString();
+
         return Inertia::render('Dashboard', [
             'view' => 'staff',
             'clima' => $this->clima(),
+            'canViewFinanzas' => $canViewFinanzas,
             'stats' => [
                 'students' => Student::count(),
                 'activeStudents' => Student::where('status', 'active')->count(),
@@ -169,6 +220,11 @@ class DashboardController extends Controller
                 'courses' => Course::count(),
                 'activeEnrollments' => Enrollment::where('status', 'active')->count(),
                 'averageScore' => round((float) Grade::avg('score'), 1),
+                'balanceMes' => $canViewFinanzas
+                    ? (float) Pago::where('fecha', '>=', $inicioMes)->sum('monto')
+                        + (float) IngresoManual::where('fecha', '>=', $inicioMes)->sum('monto')
+                        - (float) Egreso::where('fecha', '>=', $inicioMes)->sum('monto')
+                    : 0,
             ],
             'recentEnrollments' => Enrollment::with(['student.user', 'course.subject'])
                 ->latest('enrolled_at')
@@ -180,6 +236,7 @@ class DashboardController extends Controller
             'estudiantesPorCarrera' => $this->estudiantesPorCarrera(),
             'matriculasPorCiclo' => $this->matriculasPorCiclo(),
             'promedioPorPeriodo' => $this->promedioPorPeriodo(),
+            'balancePorMes' => $canViewFinanzas ? $this->balancePorMes() : [],
         ]);
     }
 

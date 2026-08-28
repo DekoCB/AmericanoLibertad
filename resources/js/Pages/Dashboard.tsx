@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
     AcademicCapIcon,
     ArrowTrendingUpIcon,
+    BanknotesIcon,
     BookOpenIcon,
     BriefcaseIcon,
     ChevronLeftIcon,
@@ -48,6 +49,12 @@ interface PromedioPorPeriodo {
     promedio: number;
 }
 
+interface BalancePorMes {
+    mes: string;
+    ingresos: number;
+    egresos: number;
+}
+
 interface Clima {
     temperatura: number;
     descripcion: string;
@@ -63,6 +70,7 @@ interface StaffStats {
     courses: number;
     activeEnrollments: number;
     averageScore: number;
+    balanceMes: number;
 }
 
 interface DocenteStats {
@@ -80,12 +88,14 @@ type DashboardProps =
     | {
           view: 'staff';
           clima: Clima | null;
+          canViewFinanzas: boolean;
           stats: StaffStats;
           recentEnrollments: Enrollment[];
           evaluacionesCalendario: Evaluation[];
           estudiantesPorCarrera: EstudiantesPorCarrera[];
           matriculasPorCiclo: MatriculasPorCiclo[];
           promedioPorPeriodo: PromedioPorPeriodo[];
+          balancePorMes: BalancePorMes[];
       }
     | {
           view: 'docente';
@@ -547,6 +557,153 @@ function PromedioLineChart({ data }: { data: PromedioPorPeriodo[] }) {
             >
                 {active.periodo}: {active.promedio}
             </div>
+        </div>
+    );
+}
+
+function BalanceFinancieroBar({
+    value,
+    porMes,
+}: {
+    value: number;
+    porMes: BalancePorMes[];
+}) {
+    return (
+        <div
+            className="flex flex-wrap items-center gap-6 rounded-lg border bg-brand-card p-[22px_26px]"
+            style={{ borderColor: 'var(--brand-border)' }}
+        >
+            <div className="flex shrink-0 items-center gap-4">
+                <span
+                    style={{
+                        color:
+                            value >= 0
+                                ? 'var(--money-in)'
+                                : 'var(--money-out)',
+                    }}
+                >
+                    <BanknotesIcon className="size-6" />
+                </span>
+                <div>
+                    <div
+                        className="text-[30px] font-bold"
+                        style={{
+                            color:
+                                value >= 0
+                                    ? 'var(--money-in)'
+                                    : 'var(--money-out)',
+                        }}
+                    >
+                        S/ {value.toFixed(2)}
+                    </div>
+                    <div
+                        className="text-sm"
+                        style={{ color: 'var(--brand-muted)' }}
+                    >
+                        Balance del mes (ingresos - egresos)
+                    </div>
+                </div>
+            </div>
+
+            {porMes.length > 0 && (
+                <div className="h-64 min-w-[220px] flex-1">
+                    <BalanceMensualChart data={porMes} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+function BalanceMensualChart({ data }: { data: BalancePorMes[] }) {
+    const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+    const maxValue = Math.max(
+        1,
+        ...data.flatMap((item) => [item.ingresos, item.egresos]),
+    );
+    const activeIndex = hoverIndex ?? data.length - 1;
+    const active = data[activeIndex];
+
+    return (
+        <div className="flex h-full flex-col">
+            <div
+                className="flex flex-1 items-end justify-between gap-3"
+                onMouseLeave={() => setHoverIndex(null)}
+            >
+                {data.map((item, index) => {
+                    const alturaIngresos = Math.max(
+                        2,
+                        (item.ingresos / maxValue) * 100,
+                    );
+                    const alturaEgresos = Math.max(
+                        2,
+                        (item.egresos / maxValue) * 100,
+                    );
+                    const isActive = index === activeIndex;
+
+                    return (
+                        <div
+                            key={item.mes}
+                            className="flex flex-1 cursor-pointer flex-col items-center gap-2"
+                            onMouseEnter={() => setHoverIndex(index)}
+                        >
+                            <div className="flex h-40 w-full items-end justify-center gap-1">
+                                <div
+                                    className="w-3 rounded-t-sm transition-[height]"
+                                    style={{
+                                        height: `${alturaIngresos}%`,
+                                        background: 'var(--money-in)',
+                                        opacity: isActive ? 1 : 0.75,
+                                    }}
+                                />
+                                <div
+                                    className="w-3 rounded-t-sm transition-[height]"
+                                    style={{
+                                        height: `${alturaEgresos}%`,
+                                        background: 'var(--money-out)',
+                                        opacity: isActive ? 1 : 0.75,
+                                    }}
+                                />
+                            </div>
+                            <span
+                                className="whitespace-nowrap text-[11px]"
+                                style={{
+                                    color: isActive
+                                        ? 'var(--brand-ink-strong)'
+                                        : 'var(--brand-muted)',
+                                    fontWeight: isActive ? 700 : 400,
+                                }}
+                            >
+                                {item.mes}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {active && (
+                <div className="mt-2 flex items-center justify-center gap-4 text-xs">
+                    <span
+                        className="flex items-center gap-1.5"
+                        style={{ color: 'var(--brand-ink)' }}
+                    >
+                        <span
+                            className="size-2.5 rounded-full"
+                            style={{ background: 'var(--money-in)' }}
+                        />
+                        Ingresos: S/ {active.ingresos.toFixed(2)}
+                    </span>
+                    <span
+                        className="flex items-center gap-1.5"
+                        style={{ color: 'var(--brand-ink)' }}
+                    >
+                        <span
+                            className="size-2.5 rounded-full"
+                            style={{ background: 'var(--money-out)' }}
+                        />
+                        Egresos: S/ {active.egresos.toFixed(2)}
+                    </span>
+                </div>
+            )}
         </div>
     );
 }
@@ -1583,10 +1740,17 @@ export default function Dashboard(props: DashboardProps) {
                                 />
                             </div>
 
-                            <PromedioGeneralBar
-                                value={props.stats.averageScore}
-                                porPeriodo={props.promedioPorPeriodo}
-                            />
+                            {props.canViewFinanzas ? (
+                                <BalanceFinancieroBar
+                                    value={props.stats.balanceMes}
+                                    porMes={props.balancePorMes}
+                                />
+                            ) : (
+                                <PromedioGeneralBar
+                                    value={props.stats.averageScore}
+                                    porPeriodo={props.promedioPorPeriodo}
+                                />
+                            )}
 
                             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
                                 <EvaluacionesCalendarCard
