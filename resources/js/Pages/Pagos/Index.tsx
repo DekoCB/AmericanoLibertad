@@ -35,6 +35,7 @@ type PagoReciente = {
     fecha: string;
     student_name: string;
     monto: number;
+    saldo_restante: number | null;
     comprobante_url: string;
 };
 
@@ -113,6 +114,12 @@ function PagosRecientes({ pagos }: { pagos: PagoReciente[] }) {
                                             {info.label} · {pago.fecha} · S/{' '}
                                             {pago.monto.toFixed(2)}
                                         </p>
+                                        <p className="text-xs text-brand-muted">
+                                            {pago.saldo_restante === null ||
+                                            pago.saldo_restante <= 0
+                                                ? 'Cuota saldada'
+                                                : `Saldo pendiente S/ ${pago.saldo_restante.toFixed(2)}`}
+                                        </p>
                                     </div>
                                 </div>
                                 <a
@@ -143,15 +150,31 @@ function IndividualTab({
 }) {
     const [studentId, setStudentId] = useState('');
     const [cuotaId, setCuotaId] = useState('');
+    const [dividir, setDividir] = useState(false);
+    const [medio1, setMedio1] = useState('efectivo');
+    const [monto1, setMonto1] = useState('');
+    const [medio2, setMedio2] = useState('yape');
 
-    const { data, setData, post, processing, errors, reset } = useForm({
-        monto: '',
-        medio: 'efectivo',
-        monto_efectivo: '',
-        monto_yape: '0',
-        fecha: new Date().toISOString().slice(0, 10),
-        nota: '',
-    });
+    const { data, setData, post, processing, errors, reset, transform } =
+        useForm({
+            monto: '',
+            medio: 'efectivo',
+            monto_efectivo: '',
+            monto_yape: '0',
+            fecha: new Date().toISOString().slice(0, 10),
+            nota: '',
+            medios: [] as { medio: string; monto: number }[],
+        });
+
+    const opcionesMedio = [
+        { value: 'efectivo', label: medioPagoLabels.efectivo },
+        { value: 'yape', label: medioPagoLabels.yape },
+        { value: 'plin', label: medioPagoLabels.plin },
+        { value: 'tarjeta', label: medioPagoLabels.tarjeta },
+    ];
+
+    const totalPago = parseFloat(data.monto) || 0;
+    const monto2 = Math.max(totalPago - (parseFloat(monto1) || 0), 0);
 
     const estudiantes = useMemo(() => {
         const map = new Map<
@@ -189,6 +212,8 @@ function IndividualTab({
         setCuotaId('');
         setData('monto', '');
         setData('monto_efectivo', '');
+        setDividir(false);
+        setMonto1('');
     };
 
     const elegirCuota = (value: string) => {
@@ -206,12 +231,27 @@ function IndividualTab({
         e.preventDefault();
         if (!cuotaSeleccionada) return;
 
+        if (dividir) {
+            transform((formData) => ({
+                ...formData,
+                medio: 'mixto',
+                medios: [
+                    { medio: medio1, monto: parseFloat(monto1) || 0 },
+                    { medio: medio2, monto: monto2 },
+                ],
+            }));
+        } else {
+            transform((formData) => ({ ...formData, medios: [] }));
+        }
+
         post(route('cuotas.pagos.store', cuotaSeleccionada.cuota_id), {
             preserveScroll: true,
             onSuccess: () => {
                 reset();
                 setStudentId('');
                 setCuotaId('');
+                setDividir(false);
+                setMonto1('');
             },
         });
     };
@@ -286,43 +326,104 @@ function IndividualTab({
                                 </p>
                             </div>
 
-                            <div>
-                                <InputLabel
-                                    htmlFor="medio"
-                                    value="Medio de pago"
-                                />
-                                <div className="mt-1">
-                                    <SelectMenu
-                                        id="medio"
-                                        value={data.medio}
-                                        onChange={(value) =>
-                                            setData('medio', value)
-                                        }
-                                        options={[
-                                            {
-                                                value: 'efectivo',
-                                                label: medioPagoLabels.efectivo,
-                                            },
-                                            {
-                                                value: 'yape',
-                                                label: medioPagoLabels.yape,
-                                            },
-                                            {
-                                                value: 'plin',
-                                                label: medioPagoLabels.plin,
-                                            },
-                                            {
-                                                value: 'tarjeta',
-                                                label: medioPagoLabels.tarjeta,
-                                            },
-                                        ]}
+                            <div className="sm:col-span-2">
+                                <label className="flex items-center gap-2 text-sm text-brand-ink">
+                                    <input
+                                        type="checkbox"
+                                        checked={dividir}
+                                        onChange={(e) => {
+                                            setDividir(e.target.checked);
+                                            if (e.target.checked) {
+                                                setMonto1(
+                                                    (totalPago / 2).toFixed(2),
+                                                );
+                                            }
+                                        }}
+                                        className="size-4 rounded border-brand-border text-brand-navy focus:ring-brand-navy"
+                                    />
+                                    Dividir este pago entre 2 medios
+                                </label>
+                            </div>
+
+                            {!dividir ? (
+                                <div>
+                                    <InputLabel
+                                        htmlFor="medio"
+                                        value="Medio de pago"
+                                    />
+                                    <div className="mt-1">
+                                        <SelectMenu
+                                            id="medio"
+                                            value={data.medio}
+                                            onChange={(value) =>
+                                                setData('medio', value)
+                                            }
+                                            options={opcionesMedio}
+                                        />
+                                    </div>
+                                    <InputError
+                                        message={errors.medio}
+                                        className="mt-1"
                                     />
                                 </div>
-                                <InputError
-                                    message={errors.medio}
-                                    className="mt-1"
-                                />
-                            </div>
+                            ) : (
+                                <div className="sm:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <InputLabel value="Medio 1" />
+                                        <div className="mt-1">
+                                            <SelectMenu
+                                                value={medio1}
+                                                onChange={(value) => {
+                                                    setMedio1(value);
+                                                    if (value === medio2) {
+                                                        setMedio2(
+                                                            opcionesMedio.find(
+                                                                (o) =>
+                                                                    o.value !==
+                                                                    value,
+                                                            )?.value ??
+                                                                medio2,
+                                                        );
+                                                    }
+                                                }}
+                                                options={opcionesMedio}
+                                            />
+                                        </div>
+                                        <TextInput
+                                            type="number"
+                                            step="0.01"
+                                            min={0.01}
+                                            max={totalPago}
+                                            className="mt-2 block w-full"
+                                            value={monto1}
+                                            onChange={(e) =>
+                                                setMonto1(e.target.value)
+                                            }
+                                        />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Medio 2" />
+                                        <div className="mt-1">
+                                            <SelectMenu
+                                                value={medio2}
+                                                onChange={(value) =>
+                                                    setMedio2(value)
+                                                }
+                                                options={opcionesMedio.filter(
+                                                    (o) => o.value !== medio1,
+                                                )}
+                                            />
+                                        </div>
+                                        <p className="mt-2 rounded-lg border border-brand-border bg-brand-hover px-3 py-2 text-sm text-brand-ink">
+                                            S/ {monto2.toFixed(2)}
+                                        </p>
+                                    </div>
+                                    <InputError
+                                        message={errors.medios}
+                                        className="sm:col-span-2"
+                                    />
+                                </div>
+                            )}
 
                             <div>
                                 <InputLabel

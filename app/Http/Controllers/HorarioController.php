@@ -90,6 +90,37 @@ class HorarioController extends Controller
         ]);
     }
 
+    public function grid(Request $request, string $aula): Response
+    {
+        $user = $request->user();
+        $this->authorize('viewAny', Course::class);
+
+        $esDocente = $user->hasRole(UserRole::Docente);
+
+        $horarios = Horario::query()
+            ->where('aula', $aula)
+            ->when($esDocente, fn ($q) => $q->whereHas('course', fn ($q2) => $q2->where('teacher_id', $user->teacher_id)))
+            ->with('course.subject')
+            ->get();
+
+        $cursos = Course::query()
+            ->when($esDocente, fn ($q) => $q->where('teacher_id', $user->teacher_id))
+            ->with(['subject.carrera', 'teacher'])
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Horarios/Grid', [
+            'aula' => $aula,
+            'horarios' => $horarios,
+            'cursos' => $cursos,
+            'horaMin' => self::HORA_MIN,
+            'horaMax' => self::HORA_MAX,
+            'can' => [
+                'manage' => $user->can('manage', Horario::class),
+            ],
+        ]);
+    }
+
     private function miHorario(Request $request): Response
     {
         $this->authorize('viewOwn', Horario::class);
@@ -160,6 +191,10 @@ class HorarioController extends Controller
         $validated = $this->validateSlot($request);
         $aula = $this->resolveAula($validated);
 
+        if ($this->existeSolape($aula->nombre, $validated['dia_semana'], $validated['hora_inicio'], $validated['hora_fin'])) {
+            return back()->with('error', 'Ya existe una clase en esa aula, día y horario.');
+        }
+
         $course->horarios()->create([
             'dia_semana' => $validated['dia_semana'],
             'hora_inicio' => $validated['hora_inicio'],
@@ -180,6 +215,10 @@ class HorarioController extends Controller
 
         $validated = $this->validateSlot($request);
         $aula = $this->resolveAula($validated);
+
+        if ($this->existeSolape($aula->nombre, $validated['dia_semana'], $validated['hora_inicio'], $validated['hora_fin'], $horario->id)) {
+            return back()->with('error', 'Ya existe una clase en esa aula, día y horario.');
+        }
 
         $horario->update([
             'dia_semana' => $validated['dia_semana'],
@@ -229,6 +268,17 @@ class HorarioController extends Controller
         }
 
         return Aula::firstOrCreate(['nombre' => trim($validated['aula_nombre'])]);
+    }
+
+    private function existeSolape(string $aula, string $diaSemana, string $horaInicio, string $horaFin, ?int $exceptHorarioId = null): bool
+    {
+        return Horario::query()
+            ->where('aula', $aula)
+            ->where('dia_semana', $diaSemana)
+            ->when($exceptHorarioId, fn ($q) => $q->where('id', '!=', $exceptHorarioId))
+            ->where('hora_inicio', '<', $horaFin)
+            ->where('hora_fin', '>', $horaInicio)
+            ->exists();
     }
 
     public function exportarAula(Request $request, string $aula): StreamedResponse

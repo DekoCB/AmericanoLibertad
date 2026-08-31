@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pago extends Model
 {
@@ -58,5 +59,10 @@ class Pago extends Model
     public function confirmadoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmado_por');
+    }
+
+    public function medios(): HasMany
+    {
+        return $this->hasMany(PagoMedio::class);
     }
 }

@@ -151,6 +151,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('horarios/mi-horario/exportar', [HorarioController::class, 'exportarPropio'])
         ->name('horarios.propio.exportar');
     Route::post('horarios/aulas', [HorarioController::class, 'registrarAula'])->name('horarios.aulas.store');
+    Route::get('horarios/aulas/{aula}/grid', [HorarioController::class, 'grid'])->name('horarios.aulas.grid');
     Route::get('horarios/aulas/{aula}/exportar', [HorarioController::class, 'exportarAula'])
         ->name('horarios.aulas.exportar');
     Route::post('horarios/aulas/{aula}/importar', [HorarioController::class, 'importarAula'])

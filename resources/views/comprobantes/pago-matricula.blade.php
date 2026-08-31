@@ -146,6 +146,15 @@
             margin: 2px 0;
         }
 
+        .info-adicional ul {
+            margin: 2px 0 6px;
+            padding-left: 18px;
+        }
+
+        .info-adicional li {
+            margin: 1px 0;
+        }
+
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -311,6 +320,25 @@
             </div>
         </div>
 
+        <hr class="punteada">
+
+        <div class="totales">
+            <div class="fila-total">
+                <span>SALDO PENDIENTE</span>
+                <span>S/ {{ number_format($cuota->saldoRestante(), 2) }}</span>
+            </div>
+            <div class="fila-total">
+                <span>ESTADO DE LA CUOTA</span>
+                <span>{{ match ($cuota->estado) {
+                    'pendiente' => 'PENDIENTE',
+                    'parcial' => 'PAGO PARCIAL',
+                    'pagado' => 'PAGADO COMPLETO',
+                    'vencido' => 'VENCIDO',
+                    default => mb_strtoupper($cuota->estado),
+                } }}</span>
+            </div>
+        </div>
+
         <div class="son">SON: {{ $montoEnLetras }}</div>
 
         <hr>
@@ -334,6 +362,13 @@
                 'mixto' => 'MIXTO',
                 default => mb_strtoupper($pago->medio),
             } }}</p>
+            @if ($pago->medio === 'mixto' && $pago->medios->isNotEmpty())
+                <ul>
+                    @foreach ($pago->medios as $detalleMedio)
+                        <li>{{ mb_strtoupper($detalleMedio->medio) }}: S/ {{ number_format($detalleMedio->monto, 2) }}</li>
+                    @endforeach
+                </ul>
+            @endif
             <p><strong>Vendedor:</strong> {{ $pago->registradoPor?->name ?? '-' }}</p>
         </div>
 

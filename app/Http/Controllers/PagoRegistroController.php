@@ -54,7 +54,7 @@ class PagoRegistroController extends Controller
             ->values();
 
         $pagosRecientes = Pago::query()
-            ->with('student:id,first_name,last_name')
+            ->with(['student:id,first_name,last_name', 'cuota'])
             ->latest('created_at')
             ->take(10)
             ->get()
@@ -66,6 +66,7 @@ class PagoRegistroController extends Controller
                     ? trim($pago->student->first_name.' '.$pago->student->last_name)
                     : 'Estudiante eliminado',
                 'monto' => (float) $pago->monto,
+                'saldo_restante' => $pago->cuota?->saldoRestante(),
                 'comprobante_url' => route('pagos.comprobante', $pago->id),
             ]);
 

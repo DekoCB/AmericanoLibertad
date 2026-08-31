@@ -10,6 +10,7 @@ import {
     ArrowUpTrayIcon,
     CalendarDaysIcon,
     EyeIcon,
+    PencilIcon,
 } from '@/Components/Icons';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEvent, useMemo, useRef, useState } from 'react';
@@ -179,6 +180,13 @@ function AulaCard({
 
                 {canManage && (
                     <>
+                        <a
+                            href={route('horarios.aulas.grid', aula)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-brand-border px-3 py-2 text-[12px] font-semibold uppercase tracking-widest text-brand-ink transition hover:bg-brand-hover"
+                        >
+                            <PencilIcon className="size-4" />
+                            Editar horario
+                        </a>
                         <SecondaryButton
                             type="button"
                             onClick={abrirSelector}

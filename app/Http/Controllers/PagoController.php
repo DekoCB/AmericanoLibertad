@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -90,9 +91,12 @@ class PagoController extends Controller
 
         $validated = $request->validate([
             'monto' => ['required', 'numeric', 'min:0.01', 'max:' . $cuota->saldoRestante()],
-            'medio' => ['required', Rule::in(['efectivo', 'yape', 'plin', 'tarjeta'])],
+            'medio' => ['required', Rule::in(['efectivo', 'yape', 'plin', 'tarjeta', 'mixto'])],
             'monto_efectivo' => ['required_if:medio,efectivo', 'nullable', 'numeric', 'min:0'],
             'monto_yape' => ['required_if:medio,yape', 'nullable', 'numeric', 'min:0'],
+            'medios' => ['nullable', 'array'],
+            'medios.*.medio' => ['required_with:medios', Rule::in(['efectivo', 'yape', 'plin', 'tarjeta'])],
+            'medios.*.monto' => ['required_with:medios', 'numeric', 'min:0.01'],
             'fecha' => [$esEstudiante ? 'nullable' : 'required', 'date'],
             'nota' => ['nullable', 'string', 'max:500'],
             'comprobante' => [
@@ -101,11 +105,33 @@ class PagoController extends Controller
             ],
         ]);
 
+        if ($validated['medio'] === 'mixto') {
+            $medios = collect($validated['medios'] ?? []);
+
+            if ($medios->count() !== 2) {
+                throw ValidationException::withMessages([
+                    'medios' => 'Debes ingresar exactamente 2 medios de pago.',
+                ]);
+            }
+
+            if ($medios->pluck('medio')->unique()->count() !== 2) {
+                throw ValidationException::withMessages([
+                    'medios' => 'Los dos medios de pago deben ser distintos entre sí.',
+                ]);
+            }
+
+            if (round($medios->sum('monto'), 2) !== round((float) $validated['monto'], 2)) {
+                throw ValidationException::withMessages([
+                    'medios' => 'La suma de los dos medios debe ser igual al monto a pagar.',
+                ]);
+            }
+        }
+
         $comprobantePath = $request->hasFile('comprobante')
             ? $request->file('comprobante')->store('comprobantes-pago', 'local')
             : null;
 
-        Pago::create([
+        $pago = Pago::create([
             'cuota_id' => $cuota->id,
             'student_id' => $cuota->matricula->student_id,
             'registrado_por' => $esEstudiante ? null : $user->id,
@@ -123,6 +149,15 @@ class PagoController extends Controller
                 ? now()->addDays(7)->toDateString()
                 : null,
         ]);
+
+        if ($validated['medio'] === 'mixto') {
+            $pago->medios()->createMany(
+                collect($validated['medios'])->map(fn (array $m) => [
+                    'medio' => $m['medio'],
+                    'monto' => $m['monto'],
+                ])->all()
+            );
+        }
 
         if (! $esEstudiante) {
             $cuota->registrarAbono((float) $validated['monto']);
@@ -161,7 +196,7 @@ class PagoController extends Controller
     {
         $this->authorize('view', $pago);
 
-        $pago->load(['cuota.matricula.student', 'cuota.matricula.carrera', 'registradoPor']);
+        $pago->load(['cuota.matricula.student', 'cuota.matricula.carrera', 'registradoPor', 'medios']);
 
         return view('comprobantes.pago-matricula', [
             'pago' => $pago,
