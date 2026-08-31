@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageTitle from '@/Components/PageTitle';
-import TextInput from '@/Components/TextInput';
+import InputLabel from '@/Components/InputLabel';
+import SelectMenu from '@/Components/SelectMenu';
 import { ChevronLeftIcon, XMarkIcon, CalendarDaysIcon } from '@/Components/Icons';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { DragEvent, useMemo, useState } from 'react';
@@ -47,8 +48,10 @@ export default function Grid({
     can: { manage: boolean };
 }) {
     const { flash } = usePage<PageProps>().props;
-    const [busqueda, setBusqueda] = useState('');
     const [celdaActiva, setCeldaActiva] = useState<string | null>(null);
+    const [carreraId, setCarreraId] = useState('');
+    const [ciclo, setCiclo] = useState('');
+    const [materiaId, setMateriaId] = useState('');
 
     const horas = useMemo(() => {
         const lista: number[] = [];
@@ -56,13 +59,51 @@ export default function Grid({
         return lista;
     }, [horaMin, horaMax]);
 
+    const carrerasDisponibles = useMemo(() => {
+        const map = new Map<number, string>();
+        cursos.forEach((c) => {
+            if (c.subject?.carrera) {
+                map.set(c.subject.carrera.id, c.subject.carrera.name);
+            }
+        });
+        return Array.from(map.entries())
+            .map(([id, name]) => ({ id, name }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [cursos]);
+
+    const ciclosDisponibles = useMemo(
+        () =>
+            [
+                ...new Set(
+                    cursos
+                        .filter((c) => String(c.subject?.carrera_id) === carreraId)
+                        .map((c) => c.subject?.ciclo)
+                        .filter((v): v is number => v != null),
+                ),
+            ].sort((a, b) => a - b),
+        [cursos, carreraId],
+    );
+
+    const materiasDisponibles = useMemo(() => {
+        const map = new Map<number, string>();
+        cursos
+            .filter(
+                (c) =>
+                    String(c.subject?.carrera_id) === carreraId &&
+                    String(c.subject?.ciclo) === ciclo,
+            )
+            .forEach((c) => {
+                if (c.subject) map.set(c.subject.id, c.subject.name);
+            });
+        return Array.from(map.entries())
+            .map(([id, name]) => ({ id, name }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [cursos, carreraId, ciclo]);
+
     const cursosFiltrados = useMemo(() => {
-        const texto = busqueda.trim().toLowerCase();
-        if (!texto) return cursos;
-        return cursos.filter((c) =>
-            `${c.subject?.name ?? ''} ${c.name}`.toLowerCase().includes(texto),
-        );
-    }, [cursos, busqueda]);
+        if (!carreraId || !ciclo || !materiaId) return [];
+        return cursos.filter((c) => String(c.subject_id) === materiaId);
+    }, [cursos, carreraId, ciclo, materiaId]);
 
     const horarioEn = (dia: DiaSemana, hora: number) =>
         horarios.find(
@@ -174,29 +215,83 @@ export default function Grid({
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-                        <div className="rounded-lg border border-brand-border bg-brand-card p-4">
-                            <h3 className="font-bold text-brand-ink-strong">
-                                Cursos
-                            </h3>
-                            <p className="mt-1 text-xs text-brand-muted">
-                                {can.manage
-                                    ? 'Arrastra un curso hacia la celda del horario que le corresponda.'
-                                    : 'Vista de solo lectura.'}
-                            </p>
+                    <div className="rounded-lg border border-brand-border bg-brand-card p-4">
+                        <h3 className="font-bold text-brand-ink-strong">
+                            Filtrar cursos
+                        </h3>
+                        <p className="mt-1 text-xs text-brand-muted">
+                            {can.manage
+                                ? 'Filtra por carrera, ciclo y curso, y arrastra la sección deseada hacia la celda del horario que le corresponda.'
+                                : 'Vista de solo lectura.'}
+                        </p>
 
-                            <div className="mt-3">
-                                <TextInput
-                                    className="block w-full"
-                                    placeholder="Buscar curso o sección..."
-                                    value={busqueda}
-                                    onChange={(e) =>
-                                        setBusqueda(e.target.value)
-                                    }
-                                />
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div>
+                                <InputLabel htmlFor="carrera" value="Carrera" />
+                                <div className="mt-1">
+                                    <SelectMenu
+                                        id="carrera"
+                                        value={carreraId}
+                                        onChange={(value) => {
+                                            setCarreraId(value);
+                                            setCiclo('');
+                                            setMateriaId('');
+                                        }}
+                                        placeholder="Selecciona una carrera"
+                                        options={carrerasDisponibles.map((c) => ({
+                                            value: String(c.id),
+                                            label: c.name,
+                                        }))}
+                                    />
+                                </div>
                             </div>
 
-                            <div className="mt-3 max-h-[560px] space-y-1.5 overflow-y-auto">
+                            <div>
+                                <InputLabel htmlFor="ciclo" value="Ciclo" />
+                                <div className="mt-1">
+                                    <SelectMenu
+                                        id="ciclo"
+                                        value={ciclo}
+                                        onChange={(value) => {
+                                            setCiclo(value);
+                                            setMateriaId('');
+                                        }}
+                                        placeholder={
+                                            carreraId
+                                                ? 'Selecciona un ciclo'
+                                                : 'Elige una carrera primero'
+                                        }
+                                        options={ciclosDisponibles.map((c) => ({
+                                            value: String(c),
+                                            label: `Ciclo ${c}`,
+                                        }))}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="materia" value="Curso" />
+                                <div className="mt-1">
+                                    <SelectMenu
+                                        id="materia"
+                                        value={materiaId}
+                                        onChange={setMateriaId}
+                                        placeholder={
+                                            ciclo
+                                                ? 'Selecciona un curso'
+                                                : 'Elige un ciclo primero'
+                                        }
+                                        options={materiasDisponibles.map((m) => ({
+                                            value: String(m.id),
+                                            label: m.name,
+                                        }))}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {carreraId && ciclo && materiaId ? (
+                            <div className="mt-4 flex flex-wrap gap-2">
                                 {cursosFiltrados.map((course) => (
                                     <div
                                         key={course.id}
@@ -223,145 +318,151 @@ export default function Grid({
                                     </div>
                                 ))}
                                 {cursosFiltrados.length === 0 && (
-                                    <p className="py-4 text-center text-xs text-brand-muted">
-                                        No se encontraron cursos.
+                                    <p className="py-2 text-xs text-brand-muted">
+                                        No se encontraron secciones para este
+                                        curso.
                                     </p>
                                 )}
                             </div>
-                        </div>
+                        ) : (
+                            <p className="mt-4 text-xs text-brand-muted">
+                                Selecciona carrera, ciclo y curso para ver las
+                                secciones disponibles.
+                            </p>
+                        )}
+                    </div>
 
-                        <div className="overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
-                            <div
-                                className="grid min-w-[860px]"
-                                style={{
-                                    gridTemplateColumns: `88px repeat(${ORDEN_DIAS.length}, 1fr)`,
-                                    gridTemplateRows: `auto repeat(${horas.length}, 56px)`,
-                                }}
-                            >
-                                <div className="border-b border-r border-brand-border bg-brand-thead" />
-                                {ORDEN_DIAS.map((dia, i) => (
-                                    <div
-                                        key={dia}
-                                        className="border-b border-brand-border bg-brand-thead px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-brand-muted"
-                                        style={{
-                                            gridColumn: i + 2,
-                                            gridRow: 1,
-                                        }}
-                                    >
-                                        {diaSemanaLabels[dia]}
-                                    </div>
-                                ))}
+                    <div className="mt-6 overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
+                        <div
+                            className="grid min-w-[860px]"
+                            style={{
+                                gridTemplateColumns: `88px repeat(${ORDEN_DIAS.length}, 1fr)`,
+                                gridTemplateRows: `auto repeat(${horas.length}, 56px)`,
+                            }}
+                        >
+                            <div className="border-b border-r border-brand-border bg-brand-thead" />
+                            {ORDEN_DIAS.map((dia, i) => (
+                                <div
+                                    key={dia}
+                                    className="border-b border-brand-border bg-brand-thead px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-brand-muted"
+                                    style={{
+                                        gridColumn: i + 2,
+                                        gridRow: 1,
+                                    }}
+                                >
+                                    {diaSemanaLabels[dia]}
+                                </div>
+                            ))}
 
-                                {horas.map((hora, hi) => (
-                                    <div
-                                        key={`label-${hora}`}
-                                        className="border-r border-t border-brand-border-faint px-2 py-1 text-right text-[11px] text-brand-muted"
-                                        style={{ gridColumn: 1, gridRow: hi + 2 }}
-                                    >
-                                        {horaLabel(hora)}
-                                    </div>
-                                ))}
+                            {horas.map((hora, hi) => (
+                                <div
+                                    key={`label-${hora}`}
+                                    className="border-r border-t border-brand-border-faint px-2 py-1 text-right text-[11px] text-brand-muted"
+                                    style={{ gridColumn: 1, gridRow: hi + 2 }}
+                                >
+                                    {horaLabel(hora)}
+                                </div>
+                            ))}
 
-                                {ORDEN_DIAS.map((dia, di) =>
-                                    horas.map((hora, hi) => {
-                                        const key = `${dia}-${hora}`;
-                                        const ocupada = horarioEn(dia, hora);
-                                        const cubierta = horarios.some((h) => {
-                                            if (h.dia_semana !== dia) return false;
-                                            const inicio = Number(
-                                                h.hora_inicio.slice(0, 2),
-                                            );
-                                            return (
-                                                hora > inicio &&
-                                                hora < inicio + duracionEnHoras(h)
-                                            );
-                                        });
-
-                                        if (cubierta) {
-                                            return null;
-                                        }
-
-                                        return (
-                                            <div
-                                                key={key}
-                                                onDragOver={(e) => {
-                                                    if (!can.manage || ocupada) return;
-                                                    e.preventDefault();
-                                                    setCeldaActiva(key);
-                                                }}
-                                                onDragLeave={() =>
-                                                    setCeldaActiva((c) =>
-                                                        c === key ? null : c,
-                                                    )
-                                                }
-                                                onDrop={(e) => {
-                                                    if (!can.manage || ocupada) return;
-                                                    onDrop(e, dia, hora);
-                                                }}
-                                                className={`relative border-b border-r border-brand-border-faint p-1 transition-colors ${
-                                                    celdaActiva === key
-                                                        ? 'bg-brand-hover'
-                                                        : ''
-                                                }`}
-                                                style={{
-                                                    gridColumn: di + 2,
-                                                    gridRow: `${hi + 2} / span ${
-                                                        ocupada
-                                                            ? duracionEnHoras(ocupada)
-                                                            : 1
-                                                    }`,
-                                                }}
-                                            >
-                                                {ocupada && (
-                                                    <div
-                                                        draggable={can.manage}
-                                                        onDragStart={(e) =>
-                                                            onDragStartChip(
-                                                                e,
-                                                                ocupada,
-                                                            )
-                                                        }
-                                                        className={`group flex h-full flex-col justify-center rounded-md bg-brand-navy px-2 py-1 text-white ${
-                                                            can.manage
-                                                                ? 'cursor-grab active:cursor-grabbing'
-                                                                : ''
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-start justify-between gap-1">
-                                                            <p className="truncate text-[11px] font-semibold leading-tight">
-                                                                {ocupada.course
-                                                                    ?.subject
-                                                                    ?.name ??
-                                                                    'Sin curso'}
-                                                            </p>
-                                                            {can.manage && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        quitar(
-                                                                            ocupada,
-                                                                        )
-                                                                    }
-                                                                    className="shrink-0 opacity-70 hover:opacity-100"
-                                                                    aria-label="Quitar clase"
-                                                                    title="Quitar clase"
-                                                                >
-                                                                    <XMarkIcon className="size-3.5" />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        <p className="truncate text-[10px] text-white/80">
-                                                            {ocupada.course
-                                                                ?.name ??
-                                                                'Sin sección'}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
+                            {ORDEN_DIAS.map((dia, di) =>
+                                horas.map((hora, hi) => {
+                                    const key = `${dia}-${hora}`;
+                                    const ocupada = horarioEn(dia, hora);
+                                    const cubierta = horarios.some((h) => {
+                                        if (h.dia_semana !== dia) return false;
+                                        const inicio = Number(
+                                            h.hora_inicio.slice(0, 2),
                                         );
-                                    }),
-                                )}
-                            </div>
+                                        return (
+                                            hora > inicio &&
+                                            hora < inicio + duracionEnHoras(h)
+                                        );
+                                    });
+
+                                    if (cubierta) {
+                                        return null;
+                                    }
+
+                                    return (
+                                        <div
+                                            key={key}
+                                            onDragOver={(e) => {
+                                                if (!can.manage || ocupada) return;
+                                                e.preventDefault();
+                                                setCeldaActiva(key);
+                                            }}
+                                            onDragLeave={() =>
+                                                setCeldaActiva((c) =>
+                                                    c === key ? null : c,
+                                                )
+                                            }
+                                            onDrop={(e) => {
+                                                if (!can.manage || ocupada) return;
+                                                onDrop(e, dia, hora);
+                                            }}
+                                            className={`relative border-b border-r border-brand-border-faint p-1 transition-colors ${
+                                                celdaActiva === key
+                                                    ? 'bg-brand-hover'
+                                                    : ''
+                                            }`}
+                                            style={{
+                                                gridColumn: di + 2,
+                                                gridRow: `${hi + 2} / span ${
+                                                    ocupada
+                                                        ? duracionEnHoras(ocupada)
+                                                        : 1
+                                                }`,
+                                            }}
+                                        >
+                                            {ocupada && (
+                                                <div
+                                                    draggable={can.manage}
+                                                    onDragStart={(e) =>
+                                                        onDragStartChip(
+                                                            e,
+                                                            ocupada,
+                                                        )
+                                                    }
+                                                    className={`group flex h-full flex-col justify-center rounded-md bg-brand-navy px-2 py-1 text-white ${
+                                                        can.manage
+                                                            ? 'cursor-grab active:cursor-grabbing'
+                                                            : ''
+                                                    }`}
+                                                >
+                                                    <div className="flex items-start justify-between gap-1">
+                                                        <p className="truncate text-[11px] font-semibold leading-tight">
+                                                            {ocupada.course
+                                                                ?.subject
+                                                                ?.name ??
+                                                                'Sin curso'}
+                                                        </p>
+                                                        {can.manage && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    quitar(
+                                                                        ocupada,
+                                                                    )
+                                                                }
+                                                                className="shrink-0 opacity-70 hover:opacity-100"
+                                                                aria-label="Quitar clase"
+                                                                title="Quitar clase"
+                                                            >
+                                                                <XMarkIcon className="size-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <p className="truncate text-[10px] text-white/80">
+                                                        {ocupada.course
+                                                            ?.name ??
+                                                            'Sin sección'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                }),
+                            )}
                         </div>
                     </div>
                 </div>
