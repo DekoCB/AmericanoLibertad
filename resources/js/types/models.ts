@@ -359,13 +359,15 @@ export interface Pago {
     monto_yape: number;
     fecha: string;
     nota: string | null;
-    estado: 'declarado' | 'confirmado';
+    estado: 'pendiente' | 'confirmado' | 'rechazado';
     comprobante_path: string | null;
     confirmado_por: number | null;
     confirmado_at: string | null;
     fecha_limite_pago: string | null;
+    motivo_rechazo: string | null;
     student?: Student;
     cuota?: Cuota;
+    recibo?: { id: number; numero_recibo: string } | null;
 }
 
 export interface Cuota {
@@ -444,8 +446,9 @@ export const medioPagoLabels: Record<Pago['medio'], string> = {
 };
 
 export const pagoEstadoLabels: Record<Pago['estado'], string> = {
-    declarado: 'Esperando confirmación',
+    pendiente: 'Pendiente de aprobación',
     confirmado: 'Confirmado',
+    rechazado: 'Rechazado',
 };
 
 export const egresoCategoriaLabels: Record<Egreso['categoria'], string> = {

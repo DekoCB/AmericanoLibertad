@@ -6,9 +6,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Cuota extends Model
 {
+    private const MESES = [
+        1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+        5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+        9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
+    ];
     /** @use HasFactory<\Database\Factories\CuotaFactory> */
     use HasFactory;
 
@@ -70,5 +76,10 @@ class Cuota extends Model
     {
         $this->monto_pagado += $monto;
         $this->actualizarEstado();
+    }
+
+    public static function nombreMes(Carbon $fecha): string
+    {
+        return self::MESES[(int) $fecha->format('n')].' '.$fecha->format('Y');
     }
 }

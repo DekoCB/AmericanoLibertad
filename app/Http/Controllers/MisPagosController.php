@@ -18,7 +18,7 @@ class MisPagosController extends Controller
         abort_unless($user->hasRole(UserRole::Estudiante) && $user->student_id !== null, 403);
 
         $matriculas = Matricula::where('student_id', $user->student_id)
-            ->with(['carrera', 'cuotas.pagos'])
+            ->with(['carrera', 'cuotas.pagos.recibo'])
             ->latest('fecha_matricula')
             ->get();
 

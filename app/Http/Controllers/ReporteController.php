@@ -6,6 +6,8 @@ use App\Models\Carrera;
 use App\Models\Cuota;
 use App\Models\Egreso;
 use App\Models\Pago;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,26 +21,40 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReporteController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Egreso::class);
+
+        $carreraId = $request->integer('carrera_id') ?: null;
+        $ciclo = $request->integer('ciclo') ?: null;
+        $deudoresPage = (int) $request->input('deudores_page', 1);
 
         return Inertia::render('Reportes/Index', [
             'ingresosPorPeriodo' => $this->ingresosPorPeriodo(),
             'moraPorCarrera' => $this->moraPorCarrera(),
             'proyeccionCobranza' => $this->proyeccionCobranza(),
+            'deudores' => $this->deudores($carreraId, $ciclo, $deudoresPage),
+            'carreras' => Carrera::orderBy('name')->get(['id', 'name', 'total_ciclos']),
+            'filters' => [
+                'carrera_id' => $carreraId,
+                'ciclo' => $ciclo,
+            ],
         ]);
     }
 
-    public function exportar(): StreamedResponse
+    public function exportar(Request $request): StreamedResponse
     {
         $this->authorize('viewAny', Egreso::class);
+
+        $carreraId = $request->integer('carrera_id') ?: null;
+        $ciclo = $request->integer('ciclo') ?: null;
 
         $spreadsheet = new Spreadsheet();
 
         $this->llenarHojaIngresos($spreadsheet->getActiveSheet(), $this->ingresosPorPeriodo());
         $this->llenarHojaMora($spreadsheet->createSheet(), $this->moraPorCarrera());
         $this->llenarHojaProyeccion($spreadsheet->createSheet(), $this->proyeccionCobranza());
+        $this->llenarHojaDeudores($spreadsheet->createSheet(), $this->deudoresTodos($carreraId, $ciclo));
         $spreadsheet->setActiveSheetIndex(0);
 
         $writer = new Xlsx($spreadsheet);
@@ -55,6 +71,7 @@ class ReporteController extends Controller
     private function ingresosPorPeriodo(): array
     {
         return Pago::query()
+            ->where('estado', 'confirmado')
             ->selectRaw("DATE_FORMAT(fecha, '%Y-%m') as periodo, COUNT(*) as cantidad, SUM(monto) as total")
             ->groupBy('periodo')
             ->orderByDesc('periodo')
@@ -106,6 +123,60 @@ class ReporteController extends Controller
                 'monto_esperado' => (float) $fila->monto_esperado,
             ])
             ->all();
+    }
+
+    private function deudoresQuery(?int $carreraId, ?int $ciclo): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('cuotas')
+            ->join('matriculas', 'matriculas.id', '=', 'cuotas.matricula_id')
+            ->join('students', 'students.id', '=', 'matriculas.student_id')
+            ->join('carreras', 'carreras.id', '=', 'matriculas.carrera_id')
+            ->whereIn('cuotas.estado', ['pendiente', 'parcial', 'vencido'])
+            ->when($carreraId, fn ($q) => $q->where('matriculas.carrera_id', $carreraId))
+            ->when($ciclo, fn ($q) => $q->where('matriculas.ciclo', $ciclo))
+            ->selectRaw(
+                'students.id as student_id, students.first_name, students.last_name, students.document_number, '
+                . 'carreras.name as carrera_name, matriculas.ciclo as ciclo, '
+                . 'SUM(cuotas.monto_programado - cuotas.monto_pagado) as deuda, '
+                . 'COUNT(cuotas.id) as cuotas_pendientes, '
+                . 'MIN(cuotas.fecha_vencimiento) as vencimiento_mas_antiguo'
+            )
+            ->groupBy('students.id', 'students.first_name', 'students.last_name', 'students.document_number', 'carreras.name', 'matriculas.ciclo')
+            ->orderByDesc('deuda');
+    }
+
+    private function deudores(?int $carreraId, ?int $ciclo, int $page): LengthAwarePaginator
+    {
+        return $this->deudoresQuery($carreraId, $ciclo)
+            ->paginate(10, ['*'], 'deudores_page', $page)
+            ->through(fn ($fila) => [
+                'student_id' => (int) $fila->student_id,
+                'first_name' => $fila->first_name,
+                'last_name' => $fila->last_name,
+                'document_number' => $fila->document_number,
+                'carrera_name' => $fila->carrera_name,
+                'ciclo' => (int) $fila->ciclo,
+                'deuda' => round((float) $fila->deuda, 2),
+                'cuotas_pendientes' => (int) $fila->cuotas_pendientes,
+                'vencimiento_mas_antiguo' => $fila->vencimiento_mas_antiguo,
+            ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function deudoresTodos(?int $carreraId, ?int $ciclo): array
+    {
+        return $this->deudoresQuery($carreraId, $ciclo)->get()->map(fn ($fila) => [
+            'first_name' => $fila->first_name,
+            'last_name' => $fila->last_name,
+            'document_number' => $fila->document_number,
+            'carrera_name' => $fila->carrera_name,
+            'ciclo' => (int) $fila->ciclo,
+            'deuda' => round((float) $fila->deuda, 2),
+            'cuotas_pendientes' => (int) $fila->cuotas_pendientes,
+            'vencimiento_mas_antiguo' => $fila->vencimiento_mas_antiguo,
+        ])->all();
     }
 
     private function estiloHoja(Worksheet $sheet, string $titulo, array $encabezados): void
@@ -177,6 +248,26 @@ class ReporteController extends Controller
         }
 
         $this->bordear($sheet, $fila - 1, 3);
+    }
+
+    private function llenarHojaDeudores(Worksheet $sheet, array $filas): void
+    {
+        $sheet->setTitle('Deudores');
+        $this->estiloHoja($sheet, 'DEUDORES', ['Estudiante', 'DNI', 'Carrera', 'Ciclo', 'Cuotas pendientes', 'Deuda (S/)', 'Vencimiento más antiguo']);
+
+        $fila = 4;
+        foreach ($filas as $registro) {
+            $sheet->setCellValue("A{$fila}", trim($registro['first_name'].' '.$registro['last_name']));
+            $sheet->setCellValue("B{$fila}", $registro['document_number']);
+            $sheet->setCellValue("C{$fila}", $registro['carrera_name']);
+            $sheet->setCellValue("D{$fila}", $registro['ciclo']);
+            $sheet->setCellValue("E{$fila}", $registro['cuotas_pendientes']);
+            $sheet->setCellValue("F{$fila}", $registro['deuda']);
+            $sheet->setCellValue("G{$fila}", $registro['vencimiento_mas_antiguo']);
+            $fila++;
+        }
+
+        $this->bordear($sheet, $fila - 1, 7);
     }
 
     private function bordear(Worksheet $sheet, int $ultimaFila, int $columnas): void

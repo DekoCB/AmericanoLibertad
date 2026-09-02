@@ -15,6 +15,7 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\BloqueoAccesoService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -32,6 +33,8 @@ class DashboardController extends Controller
     private const CLIMA_LATITUD = -6.7418;
 
     private const CLIMA_LONGITUD = -79.7007;
+
+    public function __construct(private readonly BloqueoAccesoService $bloqueos) {}
 
     public function index(Request $request): Response
     {
@@ -151,6 +154,7 @@ class DashboardController extends Controller
             : "DATE_FORMAT(fecha, '%Y-%m')";
 
         $pagosPorMes = Pago::query()
+            ->where('estado', 'confirmado')
             ->selectRaw("{$mesExpr} as mes, SUM(monto) as total")
             ->groupBy('mes')
             ->orderByDesc('mes')
@@ -192,7 +196,8 @@ class DashboardController extends Controller
     {
         $inicioMes = now()->startOfMonth()->toDateString();
 
-        $totales = Pago::where('fecha', '>=', $inicioMes)
+        $totales = Pago::where('estado', 'confirmado')
+            ->where('fecha', '>=', $inicioMes)
             ->selectRaw('medio, SUM(monto) as total')
             ->groupBy('medio')
             ->pluck('total', 'medio');
@@ -264,7 +269,7 @@ class DashboardController extends Controller
                 'activeEnrollments' => Enrollment::where('status', 'active')->count(),
                 'averageScore' => round((float) Grade::avg('score'), 1),
                 'balanceMes' => $canViewFinanzas
-                    ? (float) Pago::where('fecha', '>=', $inicioMes)->sum('monto')
+                    ? (float) Pago::where('estado', 'confirmado')->where('fecha', '>=', $inicioMes)->sum('monto')
                         + (float) IngresoManual::where('fecha', '>=', $inicioMes)->sum('monto')
                         - (float) Egreso::where('fecha', '>=', $inicioMes)->sum('monto')
                     : 0,
@@ -335,6 +340,7 @@ class DashboardController extends Controller
     private function estudianteDashboard(User $user): Response
     {
         $student = Student::with('carrera')->find($user->student_id);
+        $bloqueoActivo = $student ? $this->bloqueos->bloqueoActivoDe($student) : null;
 
         $enrollments = Enrollment::with(['course.subject', 'course.teacher'])
             ->where('student_id', $user->student_id)
@@ -357,6 +363,7 @@ class DashboardController extends Controller
                 'averageScore' => round((float) Grade::where('student_id', $user->student_id)->avg('score'), 1),
             ],
             'studentCarrera' => $student?->carrera?->name,
+            'bloqueoAcceso' => $bloqueoActivo ? ['motivo' => $bloqueoActivo->motivo] : null,
             'myCourses' => $enrollments->pluck('course'),
             'myGrades' => $grades,
             'evaluacionesCalendario' => Evaluation::with('course.subject')

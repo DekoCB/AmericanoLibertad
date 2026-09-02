@@ -197,6 +197,7 @@ export default function NotasPanel({
     libreta,
     canManage,
     canManageEstructura,
+    bloqueoPorMora,
 }: {
     course: Course;
     evaluacionesCurso: Evaluation[] | null;
@@ -204,6 +205,7 @@ export default function NotasPanel({
     libreta: Libreta | null;
     canManage: boolean;
     canManageEstructura: boolean;
+    bloqueoPorMora?: { motivo: string | null } | null;
 }) {
     const [vista, setVista] = useState<VistaNotas>('evaluacion');
 
@@ -221,6 +223,24 @@ export default function NotasPanel({
                         canManageEstructura={canManageEstructura}
                     />
                 ) : null}
+            </div>
+        );
+    }
+
+    if (bloqueoPorMora) {
+        return (
+            <div className="rounded-lg border border-red-300 bg-red-50 p-6 text-center">
+                <p className="font-bold text-red-900">
+                    Acceso a notas restringido
+                </p>
+                <p className="mt-1 text-sm text-red-800">
+                    Tienes cuotas vencidas sin pagar
+                    {bloqueoPorMora.motivo
+                        ? ` (${bloqueoPorMora.motivo})`
+                        : ''}
+                    . Regulariza tu situación de pagos para volver a ver tus
+                    notas.
+                </p>
             </div>
         );
     }

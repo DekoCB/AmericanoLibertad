@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Pago extends Model
 {
@@ -27,6 +28,7 @@ class Pago extends Model
         'confirmado_por',
         'confirmado_at',
         'fecha_limite_pago',
+        'motivo_rechazo',
     ];
 
     protected function casts(): array
@@ -64,5 +66,10 @@ class Pago extends Model
     public function medios(): HasMany
     {
         return $this->hasMany(PagoMedio::class);
+    }
+
+    public function recibo(): HasOne
+    {
+        return $this->hasOne(Recibo::class);
     }
 }

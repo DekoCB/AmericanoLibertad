@@ -5,7 +5,7 @@ import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
-import { PencilIcon, PlusIcon } from '@/Components/Icons';
+import { ArrowDownTrayIcon, PencilIcon, PlusIcon } from '@/Components/Icons';
 import { useForm } from '@inertiajs/react';
 import { Fragment, FormEvent, useState } from 'react';
 import { Course, Libreta, LibretaGrupo } from '@/types/models';
@@ -96,6 +96,25 @@ export default function LibretaNotas({
 
     return (
         <div className="space-y-4">
+            {canGrade && (
+                <div className="flex flex-wrap justify-end gap-3">
+                    <a
+                        href={route('aula-virtual.libreta.excel', course.id)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-brand-border px-3 py-2 text-xs font-semibold uppercase tracking-widest text-brand-ink transition hover:bg-brand-hover"
+                    >
+                        <ArrowDownTrayIcon className="size-4" />
+                        Descargar Excel
+                    </a>
+                    <a
+                        href={route('aula-virtual.libreta.pdf', course.id)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-brand-border px-3 py-2 text-xs font-semibold uppercase tracking-widest text-brand-ink transition hover:bg-brand-hover"
+                    >
+                        <ArrowDownTrayIcon className="size-4" />
+                        Descargar PDF
+                    </a>
+                </div>
+            )}
+
             <div className="overflow-hidden overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
                 <table className="min-w-full divide-y divide-brand-border-faint text-center">
                     <thead className="bg-brand-thead">

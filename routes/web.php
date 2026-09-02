@@ -99,8 +99,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('cuotas/{cuota}/pagos', [PagoController::class, 'store'])->name('cuotas.pagos.store');
     Route::delete('cuotas/{cuota}/pagos/{pago}', [PagoController::class, 'destroy'])->name('cuotas.pagos.destroy');
     Route::patch('pagos/{pago}/confirmar', [PagoController::class, 'confirmar'])->name('pagos.confirmar');
+    Route::patch('pagos/{pago}/rechazar', [PagoController::class, 'rechazar'])->name('pagos.rechazar');
+    Route::post('pagos/confirmar-varios', [PagoController::class, 'confirmarVarios'])->name('pagos.confirmar-varios');
     Route::get('pagos/{pago}/comprobante', [PagoController::class, 'comprobante'])->name('pagos.comprobante');
     Route::get('pagos/{pago}/comprobante-adjunto', [PagoController::class, 'comprobanteAdjunto'])->name('pagos.comprobante-adjunto');
+    Route::get('pagos/{pago}/recibo', [PagoController::class, 'reciboDescargar'])->name('pagos.recibo');
     Route::get('ingresos', [PagoController::class, 'index'])->name('ingresos.index');
     Route::get('pagos', [PagoRegistroController::class, 'index'])->name('pagos.index');
     Route::post('pagos/masivo', [PagoRegistroController::class, 'storeMasivo'])->name('pagos.masivo');
@@ -172,6 +175,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('aula-virtual/{course}/semana/{semana}/contenido', [RecursoAulaController::class, 'updateContenido'])->name('aula-virtual.contenido.update');
     Route::post('aula-virtual/recursos/{recurso}/visto', [RecursoAulaController::class, 'toggleVisto'])->name('aula-virtual.recursos.visto');
     Route::delete('aula-virtual/{course}/{recurso}', [RecursoAulaController::class, 'destroy'])->name('aula-virtual.destroy');
+    Route::get('aula-virtual/{course}/libreta/excel', [RecursoAulaController::class, 'exportarLibretaExcel'])->name('aula-virtual.libreta.excel');
+    Route::get('aula-virtual/{course}/libreta/pdf', [RecursoAulaController::class, 'exportarLibretaPdf'])->name('aula-virtual.libreta.pdf');
 
     // Foro por semana
     Route::post('aula-virtual/{course}/semana/{semana}/foro', [ForoController::class, 'store'])->name('aula-virtual.foro.store');

@@ -31,7 +31,7 @@ type Carrera = { id: number; name: string };
 
 type PagoReciente = {
     id: number;
-    estado: 'declarado' | 'confirmado';
+    estado: 'pendiente' | 'confirmado' | 'rechazado';
     fecha: string;
     student_name: string;
     monto: number;
@@ -79,7 +79,8 @@ const estadoPagoInfo: Record<
     { label: string; dot: string }
 > = {
     confirmado: { label: 'Pagado', dot: 'bg-green-500' },
-    declarado: { label: 'Por confirmar', dot: 'bg-amber-500' },
+    pendiente: { label: 'Pendiente de aprobación', dot: 'bg-amber-500' },
+    rechazado: { label: 'Rechazado', dot: 'bg-red-500' },
 };
 
 function PagosRecientes({ pagos }: { pagos: PagoReciente[] }) {
@@ -151,9 +152,10 @@ function IndividualTab({
     const [studentId, setStudentId] = useState('');
     const [cuotaId, setCuotaId] = useState('');
     const [dividir, setDividir] = useState(false);
-    const [medio1, setMedio1] = useState('efectivo');
-    const [monto1, setMonto1] = useState('');
-    const [medio2, setMedio2] = useState('yape');
+    const [partes, setPartes] = useState<{ medio: string; monto: string }[]>([
+        { medio: 'efectivo', monto: '' },
+        { medio: 'yape', monto: '' },
+    ]);
 
     const { data, setData, post, processing, errors, reset, transform } =
         useForm({
@@ -174,7 +176,50 @@ function IndividualTab({
     ];
 
     const totalPago = parseFloat(data.monto) || 0;
-    const monto2 = Math.max(totalPago - (parseFloat(monto1) || 0), 0);
+
+    // La última parte no se edita a mano: absorbe lo que falte para llegar
+    // al total, así la suma nunca se desincroniza del monto ya validado
+    // contra el saldo de la cuota.
+    const montoUltimaParte = Math.max(
+        totalPago -
+            partes
+                .slice(0, -1)
+                .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0),
+        0,
+    );
+
+    const medioDisponibleNoUsado = (excluirIndice: number) =>
+        opcionesMedio.find(
+            (o) =>
+                !partes.some(
+                    (p, i) => i !== excluirIndice && p.medio === o.value,
+                ),
+        )?.value ?? opcionesMedio[0].value;
+
+    const agregarParte = () => {
+        if (partes.length >= opcionesMedio.length) return;
+        setPartes((prev) => [
+            ...prev,
+            { medio: medioDisponibleNoUsado(-1), monto: '' },
+        ]);
+    };
+
+    const quitarParte = (indice: number) => {
+        if (partes.length <= 2) return;
+        setPartes((prev) => prev.filter((_, i) => i !== indice));
+    };
+
+    const cambiarMedioParte = (indice: number, medio: string) => {
+        setPartes((prev) =>
+            prev.map((p, i) => (i === indice ? { ...p, medio } : p)),
+        );
+    };
+
+    const cambiarMontoParte = (indice: number, monto: string) => {
+        setPartes((prev) =>
+            prev.map((p, i) => (i === indice ? { ...p, monto } : p)),
+        );
+    };
 
     const estudiantes = useMemo(() => {
         const map = new Map<
@@ -213,7 +258,10 @@ function IndividualTab({
         setData('monto', '');
         setData('monto_efectivo', '');
         setDividir(false);
-        setMonto1('');
+        setPartes([
+            { medio: 'efectivo', monto: '' },
+            { medio: 'yape', monto: '' },
+        ]);
     };
 
     const elegirCuota = (value: string) => {
@@ -235,10 +283,13 @@ function IndividualTab({
             transform((formData) => ({
                 ...formData,
                 medio: 'mixto',
-                medios: [
-                    { medio: medio1, monto: parseFloat(monto1) || 0 },
-                    { medio: medio2, monto: monto2 },
-                ],
+                medios: partes.map((p, i) => ({
+                    medio: p.medio,
+                    monto:
+                        i === partes.length - 1
+                            ? montoUltimaParte
+                            : parseFloat(p.monto) || 0,
+                })),
             }));
         } else {
             transform((formData) => ({ ...formData, medios: [] }));
@@ -251,7 +302,10 @@ function IndividualTab({
                 setStudentId('');
                 setCuotaId('');
                 setDividir(false);
-                setMonto1('');
+                setPartes([
+                    { medio: 'efectivo', monto: '' },
+                    { medio: 'yape', monto: '' },
+                ]);
             },
         });
     };
@@ -331,17 +385,12 @@ function IndividualTab({
                                     <input
                                         type="checkbox"
                                         checked={dividir}
-                                        onChange={(e) => {
-                                            setDividir(e.target.checked);
-                                            if (e.target.checked) {
-                                                setMonto1(
-                                                    (totalPago / 2).toFixed(2),
-                                                );
-                                            }
-                                        }}
+                                        onChange={(e) =>
+                                            setDividir(e.target.checked)
+                                        }
                                         className="size-4 rounded border-brand-border text-brand-navy focus:ring-brand-navy"
                                     />
-                                    Dividir este pago entre 2 medios
+                                    Dividir este pago entre varios medios
                                 </label>
                             </div>
 
@@ -367,60 +416,112 @@ function IndividualTab({
                                     />
                                 </div>
                             ) : (
-                                <div className="sm:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <InputLabel value="Medio 1" />
-                                        <div className="mt-1">
-                                            <SelectMenu
-                                                value={medio1}
-                                                onChange={(value) => {
-                                                    setMedio1(value);
-                                                    if (value === medio2) {
-                                                        setMedio2(
-                                                            opcionesMedio.find(
-                                                                (o) =>
-                                                                    o.value !==
+                                <div className="sm:col-span-2 space-y-3">
+                                    {partes.map((parte, indice) => {
+                                        const esUltima =
+                                            indice === partes.length - 1;
+
+                                        return (
+                                            <div
+                                                key={indice}
+                                                className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                                            >
+                                                <div>
+                                                    <InputLabel
+                                                        value={`Medio ${indice + 1}`}
+                                                    />
+                                                    <div className="mt-1">
+                                                        <SelectMenu
+                                                            value={
+                                                                parte.medio
+                                                            }
+                                                            onChange={(
+                                                                value,
+                                                            ) =>
+                                                                cambiarMedioParte(
+                                                                    indice,
                                                                     value,
-                                                            )?.value ??
-                                                                medio2,
-                                                        );
+                                                                )
+                                                            }
+                                                            options={opcionesMedio.filter(
+                                                                (o) =>
+                                                                    o.value ===
+                                                                        parte.medio ||
+                                                                    !partes.some(
+                                                                        (p) =>
+                                                                            p.medio ===
+                                                                            o.value,
+                                                                    ),
+                                                            )}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <InputLabel
+                                                        value={
+                                                            esUltima
+                                                                ? 'Monto (calculado)'
+                                                                : 'Monto'
+                                                        }
+                                                    />
+                                                    {esUltima ? (
+                                                        <p className="mt-1 rounded-lg border border-brand-border bg-brand-hover px-3 py-2 text-sm text-brand-ink">
+                                                            S/{' '}
+                                                            {montoUltimaParte.toFixed(
+                                                                2,
+                                                            )}
+                                                        </p>
+                                                    ) : (
+                                                        <TextInput
+                                                            type="number"
+                                                            step="0.01"
+                                                            min={0.01}
+                                                            max={totalPago}
+                                                            className="mt-1 block w-full"
+                                                            value={
+                                                                parte.monto
+                                                            }
+                                                            onChange={(e) =>
+                                                                cambiarMontoParte(
+                                                                    indice,
+                                                                    e.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                        />
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        quitarParte(indice)
                                                     }
-                                                }}
-                                                options={opcionesMedio}
-                                            />
-                                        </div>
-                                        <TextInput
-                                            type="number"
-                                            step="0.01"
-                                            min={0.01}
-                                            max={totalPago}
-                                            className="mt-2 block w-full"
-                                            value={monto1}
-                                            onChange={(e) =>
-                                                setMonto1(e.target.value)
-                                            }
-                                        />
-                                    </div>
-                                    <div>
-                                        <InputLabel value="Medio 2" />
-                                        <div className="mt-1">
-                                            <SelectMenu
-                                                value={medio2}
-                                                onChange={(value) =>
-                                                    setMedio2(value)
-                                                }
-                                                options={opcionesMedio.filter(
-                                                    (o) => o.value !== medio1,
-                                                )}
-                                            />
-                                        </div>
-                                        <p className="mt-2 rounded-lg border border-brand-border bg-brand-hover px-3 py-2 text-sm text-brand-ink">
-                                            S/ {monto2.toFixed(2)}
-                                        </p>
-                                    </div>
+                                                    disabled={
+                                                        partes.length <= 2
+                                                    }
+                                                    className="rounded-lg border border-brand-border px-3 py-2 text-sm text-brand-muted hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    Quitar
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+
+                                    <button
+                                        type="button"
+                                        onClick={agregarParte}
+                                        disabled={
+                                            partes.length >=
+                                            opcionesMedio.length
+                                        }
+                                        className="text-xs font-semibold text-brand-link hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        + Agregar otro medio
+                                    </button>
+
                                     <InputError
                                         message={errors.medios}
-                                        className="sm:col-span-2"
+                                        className="block"
                                     />
                                 </div>
                             )}

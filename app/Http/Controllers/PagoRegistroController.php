@@ -54,7 +54,7 @@ class PagoRegistroController extends Controller
             ->values();
 
         $pagosRecientes = Pago::query()
-            ->with(['student:id,first_name,last_name', 'cuota'])
+            ->with(['student:id,first_name,last_name', 'cuota', 'recibo'])
             ->latest('created_at')
             ->take(10)
             ->get()
@@ -67,7 +67,9 @@ class PagoRegistroController extends Controller
                     : 'Estudiante eliminado',
                 'monto' => (float) $pago->monto,
                 'saldo_restante' => $pago->cuota?->saldoRestante(),
-                'comprobante_url' => route('pagos.comprobante', $pago->id),
+                'comprobante_url' => $pago->recibo
+                    ? route('pagos.recibo', $pago->id)
+                    : route('pagos.comprobante', $pago->id),
             ]);
 
         return Inertia::render('Pagos/Index', [
@@ -115,13 +117,8 @@ class PagoRegistroController extends Controller
                     'monto_yape' => $validated['medio'] === 'yape' ? $monto : 0,
                     'fecha' => $validated['fecha'],
                     'nota' => $validated['nota'] ?? null,
-                    'estado' => 'confirmado',
-                    'confirmado_por' => $user->id,
-                    'confirmado_at' => now(),
+                    'estado' => 'pendiente',
                 ]);
-
-                $cuota->registrarAbono($monto);
-                $cuota->matricula->recalcularEstado();
 
                 $registrados++;
                 $total += $monto;
@@ -132,7 +129,7 @@ class PagoRegistroController extends Controller
             return back()->with('error', 'No se registró ningún pago: los montos ya no coinciden con el saldo pendiente. Actualiza la página e intenta de nuevo.');
         }
 
-        $mensaje = sprintf('Se registraron %d pago%s por S/ %s.', $registrados, $registrados === 1 ? '' : 's', number_format($total, 2));
+        $mensaje = sprintf('Se registraron %d pago%s por S/ %s, pendientes de aprobación.', $registrados, $registrados === 1 ? '' : 's', number_format($total, 2));
 
         if ($omitidos > 0) {
             $mensaje .= " {$omitidos} fila(s) se omitieron porque el saldo ya no las cubría.";

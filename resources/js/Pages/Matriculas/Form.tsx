@@ -34,6 +34,7 @@ export default function Form({
         turno: '',
         period: '',
         monto_matricula: '50',
+        monto_pension: '150',
         fecha_matricula: today,
     });
 
@@ -186,6 +187,33 @@ export default function Form({
                         message={errors.monto_matricula}
                         className="mt-2"
                     />
+                </div>
+
+                <div>
+                    <InputLabel
+                        htmlFor="monto_pension"
+                        value="Monto de pensión mensual (tarifario sugerido: S/ 150)"
+                    />
+                    <TextInput
+                        id="monto_pension"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        className="mt-1 block w-full"
+                        value={data.monto_pension}
+                        onChange={(e) =>
+                            setData('monto_pension', e.target.value)
+                        }
+                    />
+                    <InputError
+                        message={errors.monto_pension}
+                        className="mt-2"
+                    />
+                    <p className="mt-1 text-xs text-brand-muted">
+                        Se generarán automáticamente 4 cuotas de pensión
+                        mensuales con este monto, además de la cuota de
+                        matrícula (plan de 5 cuotas en total).
+                    </p>
                 </div>
             </div>
 

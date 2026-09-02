@@ -20,6 +20,7 @@ class CajaController extends Controller
             : "DATE_FORMAT(fecha, '%Y-%m')";
 
         $pagosPorMes = Pago::query()
+            ->where('estado', 'confirmado')
             ->selectRaw("{$mesExpr} as mes, SUM(monto) as total")
             ->groupBy('mes')
             ->orderByDesc('mes')
@@ -61,6 +62,7 @@ class CajaController extends Controller
 
         $ingresosPorTipoCuota = Pago::query()
             ->join('cuotas', 'cuotas.id', '=', 'pagos.cuota_id')
+            ->where('pagos.estado', 'confirmado')
             ->where('pagos.fecha', '>=', $inicioMes)
             ->selectRaw('cuotas.tipo as tipo, SUM(pagos.monto) as total')
             ->groupBy('cuotas.tipo')
@@ -91,7 +93,7 @@ class CajaController extends Controller
             ],
         ];
 
-        $pagosRecientes = Pago::with('student')->latest('fecha')->limit(8)->get()
+        $pagosRecientes = Pago::where('estado', 'confirmado')->with('student')->latest('fecha')->limit(8)->get()
             ->map(fn (Pago $pago) => [
                 'tipo' => 'pago',
                 'id' => $pago->id,
@@ -118,10 +120,10 @@ class CajaController extends Controller
 
         return Inertia::render('Caja/Index', [
             'stats' => [
-                'ingresosHoy' => (float) Pago::whereDate('fecha', $hoy)->sum('monto')
+                'ingresosHoy' => (float) Pago::where('estado', 'confirmado')->whereDate('fecha', $hoy)->sum('monto')
                     + (float) IngresoManual::whereDate('fecha', $hoy)->sum('monto'),
                 'egresosHoy' => (float) Egreso::whereDate('fecha', $hoy)->sum('monto'),
-                'ingresosMes' => (float) Pago::where('fecha', '>=', $inicioMes)->sum('monto')
+                'ingresosMes' => (float) Pago::where('estado', 'confirmado')->where('fecha', '>=', $inicioMes)->sum('monto')
                     + (float) IngresoManual::where('fecha', '>=', $inicioMes)->sum('monto'),
                 'egresosMes' => (float) Egreso::where('fecha', '>=', $inicioMes)->sum('monto'),
             ],

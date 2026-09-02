@@ -34,8 +34,9 @@ const estadoBadge: Record<Cuota['estado'], string> = {
 };
 
 const pagoBadge: Record<Pago['estado'], string> = {
-    declarado: 'bg-amber-100 text-amber-800',
+    pendiente: 'bg-amber-100 text-amber-800',
     confirmado: 'bg-green-100 text-green-800',
+    rechazado: 'bg-red-100 text-red-800',
 };
 
 function MedioPagoInfo({
@@ -476,7 +477,7 @@ export default function Index({
                                                                                 ]
                                                                             }
                                                                             {pago.estado ===
-                                                                                'declarado' &&
+                                                                                'pendiente' &&
                                                                                 pago.fecha_limite_pago &&
                                                                                 ` · límite ${formatDate(pago.fecha_limite_pago)}`}
                                                                         </div>
@@ -495,7 +496,9 @@ export default function Index({
                                                                             'confirmado' ? (
                                                                                 <a
                                                                                     href={route(
-                                                                                        'pagos.comprobante',
+                                                                                        pago.recibo
+                                                                                            ? 'pagos.recibo'
+                                                                                            : 'pagos.comprobante',
                                                                                         pago.id,
                                                                                     )}
                                                                                     target="_blank"

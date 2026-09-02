@@ -16,21 +16,47 @@ export default function Index({
     conceptos,
     filters,
     can,
-    pagosDeclaradosPendientes = [],
+    pagosPendientes = [],
 }: {
     pagos: Paginated<Pago>;
     conceptos: { value: string; label: string }[];
     filters: { concepto?: string };
     can: { createIngresoManual: boolean; confirmarPagos: boolean };
-    pagosDeclaradosPendientes?: Pago[];
+    pagosPendientes?: Pago[];
 }) {
     const [concepto, setConcepto] = useState(filters.concepto ?? '');
     const [creatingIngreso, setCreatingIngreso] = useState(false);
+    const [seleccionados, setSeleccionados] = useState<number[]>([]);
     const confirmForm = useForm({});
+    const rechazarForm = useForm({ motivo: '' });
+    const variosForm = useForm<{ pago_ids: number[] }>({ pago_ids: [] });
 
     const confirmarPago = (pago: Pago) => {
-        if (!confirm('¿Confirmar este pago en efectivo?')) return;
+        if (!confirm('¿Aprobar este pago?')) return;
         confirmForm.patch(route('pagos.confirmar', pago.id));
+    };
+
+    const rechazarPago = (pago: Pago) => {
+        const motivo = window.prompt('Motivo del rechazo:');
+        if (!motivo) return;
+        rechazarForm.transform((data) => ({ ...data, motivo }));
+        rechazarForm.patch(route('pagos.rechazar', pago.id));
+    };
+
+    const toggleSeleccionado = (pagoId: number, checked: boolean) => {
+        setSeleccionados((prev) =>
+            checked ? [...prev, pagoId] : prev.filter((id) => id !== pagoId),
+        );
+    };
+
+    const aprobarSeleccionados = () => {
+        if (seleccionados.length === 0) return;
+        if (!confirm(`¿Aprobar ${seleccionados.length} pago(s)?`)) return;
+
+        variosForm.transform((data) => ({ ...data, pago_ids: seleccionados }));
+        variosForm.post(route('pagos.confirmar-varios'), {
+            onSuccess: () => setSeleccionados([]),
+        });
     };
 
     const changeConcepto = (nuevoConcepto: string) => {
@@ -81,18 +107,42 @@ export default function Index({
                         )}
                     </div>
 
-                    {can.confirmarPagos &&
-                        pagosDeclaradosPendientes.length > 0 && (
-                            <div className="rounded-lg border border-amber-300 bg-amber-50 p-6">
-                                <h3 className="mb-4 text-lg font-bold text-amber-900">
-                                    Pagos en efectivo pendientes de confirmar
+                    {can.confirmarPagos && pagosPendientes.length > 0 && (
+                        <div className="rounded-lg border border-amber-300 bg-amber-50 p-6">
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                <h3 className="text-lg font-bold text-amber-900">
+                                    Pagos pendientes de aprobación
                                 </h3>
-                                <ul className="divide-y divide-amber-200">
-                                    {pagosDeclaradosPendientes.map((pago) => (
-                                        <li
-                                            key={pago.id}
-                                            className="flex items-center justify-between py-2"
-                                        >
+                                {seleccionados.length > 0 && (
+                                    <PrimaryButton
+                                        onClick={aprobarSeleccionados}
+                                        disabled={variosForm.processing}
+                                    >
+                                        Aprobar seleccionados (
+                                        {seleccionados.length})
+                                    </PrimaryButton>
+                                )}
+                            </div>
+                            <ul className="divide-y divide-amber-200">
+                                {pagosPendientes.map((pago) => (
+                                    <li
+                                        key={pago.id}
+                                        className="flex items-center justify-between gap-3 py-2"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={seleccionados.includes(
+                                                    pago.id,
+                                                )}
+                                                onChange={(e) =>
+                                                    toggleSeleccionado(
+                                                        pago.id,
+                                                        e.target.checked,
+                                                    )
+                                                }
+                                                className="size-4 rounded border-amber-400 text-brand-navy focus:ring-brand-navy"
+                                            />
                                             <div className="text-sm">
                                                 <span className="font-medium text-amber-900">
                                                     {pago.student
@@ -104,14 +154,30 @@ export default function Index({
                                                     {Number(
                                                         pago.monto,
                                                     ).toFixed(2)}{' '}
-                                                    · límite{' '}
-                                                    {pago.fecha_limite_pago
-                                                        ? formatDate(
-                                                              pago.fecha_limite_pago,
-                                                          )
-                                                        : '—'}
+                                                    ·{' '}
+                                                    {
+                                                        medioPagoLabels[
+                                                            pago.medio
+                                                        ]
+                                                    }
+                                                    {pago.registrado_por ===
+                                                        null &&
+                                                        pago.fecha_limite_pago &&
+                                                        ` · límite ${formatDate(pago.fecha_limite_pago)}`}
                                                 </span>
                                             </div>
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-2">
+                                            <SecondaryButton
+                                                onClick={() =>
+                                                    rechazarPago(pago)
+                                                }
+                                                disabled={
+                                                    rechazarForm.processing
+                                                }
+                                            >
+                                                Rechazar
+                                            </SecondaryButton>
                                             <SecondaryButton
                                                 onClick={() =>
                                                     confirmarPago(pago)
@@ -120,13 +186,14 @@ export default function Index({
                                                     confirmForm.processing
                                                 }
                                             >
-                                                Confirmar
+                                                Aprobar
                                             </SecondaryButton>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
                     <div className="overflow-hidden overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
                         <table className="min-w-full divide-y divide-brand-border-faint">
@@ -175,7 +242,9 @@ export default function Index({
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
                                             <a
                                                 href={route(
-                                                    'pagos.comprobante',
+                                                    pago.recibo
+                                                        ? 'pagos.recibo'
+                                                        : 'pagos.comprobante',
                                                     pago.id,
                                                 )}
                                                 target="_blank"

@@ -9,15 +9,19 @@ use App\Models\Enrollment;
 use App\Models\Matricula;
 use App\Models\Pago;
 use App\Models\Student;
+use App\Services\BloqueoAccesoService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class MatriculaController extends Controller
 {
+    public function __construct(private readonly BloqueoAccesoService $bloqueos) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Matricula::class);
@@ -73,18 +77,24 @@ class MatriculaController extends Controller
 
         $validated = $this->validateMatricula($request);
 
-        $matricula = Matricula::create($validated);
+        DB::transaction(function () use ($validated) {
+            $matricula = Matricula::create($validated);
 
-        $matricula->cuotas()->create([
-            'tipo' => 'matricula',
-            'mes' => null,
-            'monto_programado' => $matricula->monto_matricula,
-            'monto_pagado' => 0,
-            'fecha_vencimiento' => $matricula->fecha_matricula,
-            'estado' => 'pendiente',
-        ]);
+            $matricula->cuotas()->create([
+                'tipo' => 'matricula',
+                'mes' => null,
+                'monto_programado' => $matricula->monto_matricula,
+                'monto_pagado' => 0,
+                'fecha_vencimiento' => $matricula->fecha_matricula,
+                'estado' => 'pendiente',
+            ]);
 
-        return redirect()->route('matriculas.index')->with('success', 'Matrícula registrada correctamente.');
+            $matricula->generarCuotasPension($matricula->monto_pension);
+
+            $this->bloqueos->evaluarYDesbloquear($matricula->student);
+        });
+
+        return redirect()->route('matriculas.index')->with('success', 'Matrícula registrada correctamente con su plan de 5 cuotas (matrícula + 4 pensiones).');
     }
 
     public function show(Request $request, Matricula $matricula): Response
@@ -200,6 +210,7 @@ class MatriculaController extends Controller
             'turno' => ['required', Rule::in(['mañana', 'tarde', 'noche'])],
             'period' => ['required', 'string', 'max:20'],
             'monto_matricula' => ['required', 'numeric', 'min:0'],
+            'monto_pension' => ['required', 'numeric', 'min:0'],
             'fecha_matricula' => ['required', 'date'],
         ]);
 

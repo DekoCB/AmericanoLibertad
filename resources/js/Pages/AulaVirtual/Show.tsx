@@ -1462,6 +1462,7 @@ export default function Show({
     evaluacionesCurso,
     misNotas,
     libreta,
+    bloqueoPorMora,
     can,
     isStudent,
 }: {
@@ -1480,6 +1481,7 @@ export default function Show({
     evaluacionesCurso: Evaluation[] | null;
     misNotas: EvaluacionConMiNota[] | null;
     libreta: Libreta | null;
+    bloqueoPorMora?: { motivo: string | null } | null;
     can: {
         manage: boolean;
         manageEvaluations: boolean;
@@ -1609,6 +1611,7 @@ export default function Show({
                             libreta={libreta}
                             canManage={can.manageNotas}
                             canManageEstructura={can.manageEvaluations}
+                            bloqueoPorMora={bloqueoPorMora}
                         />
                     )}
                 </div>

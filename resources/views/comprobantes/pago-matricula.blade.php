@@ -205,12 +205,14 @@
     </style>
 </head>
 <body>
-    <div class="no-print">
-        <button onclick="window.print()">Imprimir / Guardar como PDF</button>
-    </div>
+    @unless($paraPdf ?? false)
+        <div class="no-print">
+            <button onclick="window.print()">Imprimir / Guardar como PDF</button>
+        </div>
+    @endunless
 
     <div class="sheet">
-        <img class="logo" src="{{ asset('images/Logo.png') }}" alt="Logo">
+        <img class="logo" src="{{ $logoSrc ?? asset('images/Logo.png') }}" alt="Logo">
 
         <div class="cabecera">
             <div class="razon">Instituto Educativo Superior Americano Libertad</div>

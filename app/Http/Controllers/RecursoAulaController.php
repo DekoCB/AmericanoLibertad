@@ -13,16 +13,28 @@ use App\Models\QuizIntento;
 use App\Models\RecursoAula;
 use App\Models\RecursoVisto;
 use App\Models\SemanaContenido;
+use App\Models\Student;
 use App\Models\Subject;
+use App\Services\BloqueoAccesoService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RecursoAulaController extends Controller
 {
+    public function __construct(private readonly BloqueoAccesoService $bloqueos) {}
+
     private const TOTAL_SEMANAS = 20;
 
     public function index(Request $request): Response
@@ -296,109 +308,19 @@ class RecursoAulaController extends Controller
                 });
         }
 
-        $libreta = null;
+        $bloqueoPorMora = null;
 
-        if ($canManageNotas) {
-            $gruposNotas = $course->gruposNotas()
-                ->with(['evaluaciones' => fn ($q) => $q->orderBy('date')->orderBy('id')])
-                ->orderBy('id')
-                ->get();
+        if ($isStudent && $user->student_id) {
+            $student = Student::find($user->student_id);
 
-            $evaluationIds = $gruposNotas->flatMap(fn (GrupoNotas $grupo) => $grupo->evaluaciones->pluck('id'));
-
-            $gradesByEvaluation = Grade::whereIn('evaluation_id', $evaluationIds)
-                ->get()
-                ->groupBy('evaluation_id')
-                ->map(fn ($grades) => $grades->keyBy('student_id'));
-
-            $gruposData = $gruposNotas->map(function (GrupoNotas $grupo) {
-                $contadorC = 0;
-                $contadorE = 0;
-
-                $evaluaciones = $grupo->evaluaciones->map(function (Evaluation $evaluacion) use (&$contadorC, &$contadorE) {
-                    if ($evaluacion->type === 'comportamiento') {
-                        $label = 'NOTA';
-                    } elseif ($evaluacion->type === 'exam') {
-                        $contadorE++;
-                        $label = 'E' . $contadorE;
-                    } else {
-                        $contadorC++;
-                        $label = 'C' . $contadorC;
-                    }
-
-                    return [
-                        'id' => $evaluacion->id,
-                        'label' => $label,
-                        'name' => $evaluacion->name,
-                        'max_score' => $evaluacion->max_score,
-                        'weight' => (float) $evaluacion->weight,
-                    ];
-                })->values();
-
-                return [
-                    'id' => $grupo->id,
-                    'nombre' => $grupo->nombre,
-                    'peso' => (float) $grupo->peso,
-                    'tipo' => $grupo->tipo,
-                    'evaluaciones' => $evaluaciones,
-                ];
-            })->values();
-
-            $estudiantesActivos = $course->enrollments()
-                ->with('student')
-                ->where('status', 'active')
-                ->get()
-                ->sortBy(fn ($enrollment) => $enrollment->student?->last_name)
-                ->values();
-
-            $filas = $estudiantesActivos->map(function ($enrollment) use ($gruposNotas, $gradesByEvaluation) {
-                $studentId = $enrollment->student_id;
-                $notas = [];
-                $promediosPorGrupo = [];
-
-                foreach ($gruposNotas as $grupo) {
-                    $sumaPonderada = 0;
-                    $sumaPesos = 0;
-
-                    foreach ($grupo->evaluaciones as $evaluacion) {
-                        $grade = $gradesByEvaluation->get($evaluacion->id)?->get($studentId);
-                        $notas[$evaluacion->id] = $grade ? (float) $grade->score : null;
-
-                        if ($grade) {
-                            $sumaPonderada += ($grade->score / $evaluacion->max_score) * 20 * $evaluacion->weight;
-                            $sumaPesos += $evaluacion->weight;
-                        }
-                    }
-
-                    $promediosPorGrupo[$grupo->id] = $sumaPesos > 0 ? round($sumaPonderada / $sumaPesos, 2) : null;
-                }
-
-                $sumaFinalPonderada = 0;
-                $sumaFinalPesos = 0;
-
-                foreach ($gruposNotas as $grupo) {
-                    $promedio = $promediosPorGrupo[$grupo->id];
-
-                    if ($promedio !== null) {
-                        $sumaFinalPonderada += $promedio * $grupo->peso;
-                        $sumaFinalPesos += $grupo->peso;
-                    }
-                }
-
-                return [
-                    'student_id' => $studentId,
-                    'nombre' => trim($enrollment->student->first_name . ' ' . $enrollment->student->last_name),
-                    'notas' => $notas,
-                    'promediosPorGrupo' => $promediosPorGrupo,
-                    'promedioFinal' => $sumaFinalPesos > 0 ? round($sumaFinalPonderada / $sumaFinalPesos, 2) : null,
-                ];
-            });
-
-            $libreta = [
-                'grupos' => $gruposData,
-                'filas' => $filas,
-            ];
+            if ($student && $this->bloqueos->estaBloqueado($student)) {
+                $bloqueo = $this->bloqueos->bloqueoActivoDe($student);
+                $bloqueoPorMora = ['motivo' => $bloqueo?->motivo];
+                $misNotas = null;
+            }
         }
+
+        $libreta = $canManageNotas ? $this->construirLibreta($course) : null;
 
         return Inertia::render('AulaVirtual/Show', [
             'course' => $course->load(['subject', 'teacher', 'periodoAcademico']),
@@ -416,6 +338,7 @@ class RecursoAulaController extends Controller
             'evaluacionesCurso' => $evaluacionesCurso,
             'misNotas' => $misNotas,
             'libreta' => $libreta,
+            'bloqueoPorMora' => $bloqueoPorMora,
             'can' => [
                 'manage' => $request->user()->can('manage', [RecursoAula::class, $course]),
                 'manageEvaluations' => $canManageEvaluations,
@@ -558,5 +481,248 @@ class RecursoAulaController extends Controller
         return redirect()
             ->route('aula-virtual.show', ['course' => $course, 'semana' => $semana])
             ->with('success', 'Recurso eliminado correctamente.');
+    }
+
+    /**
+     * @return array{grupos: \Illuminate\Support\Collection, filas: \Illuminate\Support\Collection}
+     */
+    private function construirLibreta(Course $course): array
+    {
+        $gruposNotas = $course->gruposNotas()
+            ->with(['evaluaciones' => fn ($q) => $q->orderBy('date')->orderBy('id')])
+            ->orderBy('id')
+            ->get();
+
+        $evaluationIds = $gruposNotas->flatMap(fn (GrupoNotas $grupo) => $grupo->evaluaciones->pluck('id'));
+
+        $gradesByEvaluation = Grade::whereIn('evaluation_id', $evaluationIds)
+            ->get()
+            ->groupBy('evaluation_id')
+            ->map(fn ($grades) => $grades->keyBy('student_id'));
+
+        $gruposData = $gruposNotas->map(function (GrupoNotas $grupo) {
+            $contadorC = 0;
+            $contadorE = 0;
+
+            $evaluaciones = $grupo->evaluaciones->map(function (Evaluation $evaluacion) use (&$contadorC, &$contadorE) {
+                if ($evaluacion->type === 'comportamiento') {
+                    $label = 'NOTA';
+                } elseif ($evaluacion->type === 'exam') {
+                    $contadorE++;
+                    $label = 'E' . $contadorE;
+                } else {
+                    $contadorC++;
+                    $label = 'C' . $contadorC;
+                }
+
+                return [
+                    'id' => $evaluacion->id,
+                    'label' => $label,
+                    'name' => $evaluacion->name,
+                    'max_score' => $evaluacion->max_score,
+                    'weight' => (float) $evaluacion->weight,
+                ];
+            })->values();
+
+            return [
+                'id' => $grupo->id,
+                'nombre' => $grupo->nombre,
+                'peso' => (float) $grupo->peso,
+                'tipo' => $grupo->tipo,
+                'evaluaciones' => $evaluaciones,
+            ];
+        })->values();
+
+        $estudiantesActivos = $course->enrollments()
+            ->with('student')
+            ->where('status', 'active')
+            ->get()
+            ->sortBy(fn ($enrollment) => $enrollment->student?->last_name)
+            ->values();
+
+        $filas = $estudiantesActivos->map(function ($enrollment) use ($gruposNotas, $gradesByEvaluation) {
+            $studentId = $enrollment->student_id;
+            $notas = [];
+            $promediosPorGrupo = [];
+
+            foreach ($gruposNotas as $grupo) {
+                $sumaPonderada = 0;
+                $sumaPesos = 0;
+
+                foreach ($grupo->evaluaciones as $evaluacion) {
+                    $grade = $gradesByEvaluation->get($evaluacion->id)?->get($studentId);
+                    $notas[$evaluacion->id] = $grade ? (float) $grade->score : null;
+
+                    if ($grade) {
+                        $sumaPonderada += ($grade->score / $evaluacion->max_score) * 20 * $evaluacion->weight;
+                        $sumaPesos += $evaluacion->weight;
+                    }
+                }
+
+                $promediosPorGrupo[$grupo->id] = $sumaPesos > 0 ? round($sumaPonderada / $sumaPesos, 2) : null;
+            }
+
+            $sumaFinalPonderada = 0;
+            $sumaFinalPesos = 0;
+
+            foreach ($gruposNotas as $grupo) {
+                $promedio = $promediosPorGrupo[$grupo->id];
+
+                if ($promedio !== null) {
+                    $sumaFinalPonderada += $promedio * $grupo->peso;
+                    $sumaFinalPesos += $grupo->peso;
+                }
+            }
+
+            return [
+                'student_id' => $studentId,
+                'nombre' => trim($enrollment->student->first_name . ' ' . $enrollment->student->last_name),
+                'notas' => $notas,
+                'promediosPorGrupo' => $promediosPorGrupo,
+                'promedioFinal' => $sumaFinalPesos > 0 ? round($sumaFinalPonderada / $sumaFinalPesos, 2) : null,
+            ];
+        });
+
+        return [
+            'grupos' => $gruposData,
+            'filas' => $filas,
+        ];
+    }
+
+    public function exportarLibretaExcel(Request $request, Course $course): StreamedResponse
+    {
+        $this->authorize('gradeAny', [Evaluation::class, $course]);
+
+        $libreta = $this->construirLibreta($course);
+        $spreadsheet = $this->generarSpreadsheetLibreta($course, $libreta);
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'libreta-notas-' . Str::slug($course->name) . '.xlsx';
+
+        return new StreamedResponse(function () use ($writer) {
+            $writer->save('php://output');
+        }, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    public function exportarLibretaPdf(Request $request, Course $course): \Illuminate\Http\Response
+    {
+        $this->authorize('gradeAny', [Evaluation::class, $course]);
+
+        $libreta = $this->construirLibreta($course);
+        $course->loadMissing('subject');
+
+        $pdf = Pdf::loadView('pdf.libreta-notas', [
+            'course' => $course,
+            'libreta' => $libreta,
+        ])->setPaper('a4', 'landscape');
+
+        $filename = 'libreta-notas-' . Str::slug($course->name) . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    private function generarSpreadsheetLibreta(Course $course, array $libreta): Spreadsheet
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Libreta de notas');
+
+        $grupos = $libreta['grupos'];
+        $filas = $libreta['filas'];
+
+        $columnasPorGrupo = $grupos->map(fn ($grupo) => max(1, count($grupo['evaluaciones'])) + 1);
+        $totalColumnas = 2 + $columnasPorGrupo->sum();
+        $ultimaColumna = $this->columnaExcel($totalColumnas);
+
+        $sheet->setCellValue('A1', mb_strtoupper('LIBRETA DE NOTAS — ' . $course->name));
+        $sheet->mergeCells("A1:{$ultimaColumna}1");
+        $sheet->getStyle('A1')->getFont()->setSize(14)->setBold(true);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Fila 3: encabezado agrupado. Fila 4: sub-encabezado (evaluaciones + "Prom").
+        $sheet->setCellValue('A3', '#');
+        $sheet->mergeCells('A3:A4');
+        $sheet->setCellValue('B3', 'ESTUDIANTES');
+        $sheet->mergeCells('B3:B4');
+
+        $columna = 3;
+
+        foreach ($grupos as $grupo) {
+            $inicio = $columna;
+            foreach ($grupo['evaluaciones'] as $evaluacion) {
+                $sheet->setCellValue($this->columnaExcel($columna) . '4', $evaluacion['label']);
+                $columna++;
+            }
+            if (count($grupo['evaluaciones']) === 0) {
+                $columna++;
+            }
+            $sheet->setCellValue($this->columnaExcel($columna) . '4', 'PROM');
+            $finGrupoEval = $columna - 1;
+            $columna++;
+
+            $tituloGrupo = mb_strtoupper($grupo['nombre']) . ' (' . number_format($grupo['peso'], 2) . '%)';
+
+            if ($finGrupoEval >= $inicio) {
+                $sheet->mergeCells($this->columnaExcel($inicio) . '3:' . $this->columnaExcel($finGrupoEval) . '3');
+            }
+            $sheet->setCellValue($this->columnaExcel($inicio) . '3', $tituloGrupo);
+        }
+
+        $sheet->getStyle("A3:{$ultimaColumna}4")->getFont()->setBold(true);
+        $sheet->getStyle("A3:{$ultimaColumna}4")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("A3:{$ultimaColumna}4")->getFill()
+            ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E5E7EB');
+
+        $fila = 5;
+        foreach ($filas as $index => $filaData) {
+            $sheet->setCellValue("A{$fila}", $index + 1);
+            $sheet->setCellValue("B{$fila}", $filaData['nombre']);
+
+            $columna = 3;
+            foreach ($grupos as $grupo) {
+                foreach ($grupo['evaluaciones'] as $evaluacion) {
+                    $nota = $filaData['notas'][$evaluacion['id']] ?? null;
+                    $sheet->setCellValue($this->columnaExcel($columna) . $fila, $nota ?? '');
+                    $columna++;
+                }
+                if (count($grupo['evaluaciones']) === 0) {
+                    $columna++;
+                }
+                $promedio = $filaData['promediosPorGrupo'][$grupo['id']] ?? null;
+                $sheet->setCellValue($this->columnaExcel($columna) . $fila, $promedio ?? '');
+                $columna++;
+            }
+
+            $fila++;
+        }
+
+        $ultimaFila = $fila - 1;
+        if ($ultimaFila >= 5) {
+            $sheet->getStyle("A3:{$ultimaColumna}{$ultimaFila}")
+                ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        }
+
+        $sheet->getColumnDimension('A')->setWidth(6);
+        $sheet->getColumnDimension('B')->setWidth(30);
+        foreach (range(3, $totalColumnas) as $numeroColumna) {
+            $sheet->getColumnDimension($this->columnaExcel($numeroColumna))->setWidth(10);
+        }
+
+        return $spreadsheet;
+    }
+
+    private function columnaExcel(int $numero): string
+    {
+        $letra = '';
+        while ($numero > 0) {
+            $numero--;
+            $letra = chr(65 + ($numero % 26)) . $letra;
+            $numero = intdiv($numero, 26);
+        }
+
+        return $letra;
     }
 }

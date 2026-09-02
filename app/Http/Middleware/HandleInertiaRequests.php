@@ -94,7 +94,7 @@ class HandleInertiaRequests extends Middleware
         )->whereIn('estado', ['pendiente', 'vencido', 'parcial'])->count();
 
         $efectivoPorConfirmar = Pago::where('student_id', $user->student_id)
-            ->where('estado', 'declarado')
+            ->where('estado', 'pendiente')
             ->where('medio', 'efectivo')
             ->whereNotNull('fecha_limite_pago')
             ->get(['id', 'monto', 'fecha_limite_pago'])

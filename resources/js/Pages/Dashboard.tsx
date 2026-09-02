@@ -130,6 +130,7 @@ type DashboardProps =
           clima: Clima | null;
           stats: EstudianteStats;
           studentCarrera: string | null;
+          bloqueoAcceso: { motivo: string | null } | null;
           myCourses: Course[];
           myGrades: Grade[];
           evaluacionesCalendario: Evaluation[];
@@ -2049,6 +2050,23 @@ export default function Dashboard(props: DashboardProps) {
 
                     {props.view === 'estudiante' && (
                         <div className="space-y-5">
+                            {props.bloqueoAcceso && (
+                                <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+                                    <p className="font-bold text-red-900">
+                                        Acceso restringido por mora
+                                    </p>
+                                    <p className="mt-1 text-sm text-red-800">
+                                        Tienes cuotas vencidas sin pagar
+                                        {props.bloqueoAcceso.motivo
+                                            ? ` (${props.bloqueoAcceso.motivo})`
+                                            : ''}
+                                        . Algunas secciones, como tus notas,
+                                        estarán ocultas hasta que regularices
+                                        tu situación de pagos.
+                                    </p>
+                                </div>
+                            )}
+
                             <DateCard clima={props.clima} />
 
                             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

@@ -6,10 +6,13 @@ use App\Enums\UserRole;
 use App\Models\Cuota;
 use App\Models\IngresoManual;
 use App\Models\Pago;
+use App\Services\BloqueoAccesoService;
+use App\Services\ReciboService;
 use App\Support\NumeroALetras;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -19,12 +22,18 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PagoController extends Controller
 {
+    public function __construct(
+        private readonly BloqueoAccesoService $bloqueos,
+        private readonly ReciboService $recibos,
+    ) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Pago::class);
 
         $pagos = Pago::query()
-            ->with(['student', 'cuota.matricula'])
+            ->where('estado', 'confirmado')
+            ->with(['student', 'cuota.matricula', 'recibo'])
             ->when($request->string('concepto')->toString(), function ($query, $concepto) {
                 $query->whereHas('cuota', function ($q) use ($concepto) {
                     if ($concepto === 'matricula') {
@@ -44,9 +53,9 @@ class PagoController extends Controller
             'pagos' => $pagos,
             'conceptos' => $this->conceptosDisponibles(),
             'filters' => $request->only(['concepto']),
-            'pagosDeclaradosPendientes' => Pago::where('estado', 'declarado')
+            'pagosPendientes' => Pago::where('estado', 'pendiente')
                 ->with('student')
-                ->orderBy('fecha_limite_pago')
+                ->oldest('created_at')
                 ->get(),
             'can' => [
                 'createIngresoManual' => $request->user()->can('create', IngresoManual::class),
@@ -108,15 +117,15 @@ class PagoController extends Controller
         if ($validated['medio'] === 'mixto') {
             $medios = collect($validated['medios'] ?? []);
 
-            if ($medios->count() !== 2) {
+            if ($medios->count() < 2) {
                 throw ValidationException::withMessages([
-                    'medios' => 'Debes ingresar exactamente 2 medios de pago.',
+                    'medios' => 'Debes ingresar al menos 2 medios de pago.',
                 ]);
             }
 
-            if ($medios->pluck('medio')->unique()->count() !== 2) {
+            if ($medios->pluck('medio')->unique()->count() !== $medios->count()) {
                 throw ValidationException::withMessages([
-                    'medios' => 'Los dos medios de pago deben ser distintos entre sí.',
+                    'medios' => 'Los medios de pago deben ser distintos entre sí.',
                 ]);
             }
 
@@ -141,10 +150,8 @@ class PagoController extends Controller
             'monto_yape' => $validated['monto_yape'] ?? 0,
             'fecha' => $esEstudiante ? now()->toDateString() : $validated['fecha'],
             'nota' => $validated['nota'] ?? null,
-            'estado' => $esEstudiante ? 'declarado' : 'confirmado',
+            'estado' => 'pendiente',
             'comprobante_path' => $comprobantePath,
-            'confirmado_por' => $esEstudiante ? null : $user->id,
-            'confirmado_at' => $esEstudiante ? null : now(),
             'fecha_limite_pago' => ($esEstudiante && $validated['medio'] === 'efectivo')
                 ? now()->addDays(7)->toDateString()
                 : null,
@@ -159,21 +166,14 @@ class PagoController extends Controller
             );
         }
 
-        if (! $esEstudiante) {
-            $cuota->registrarAbono((float) $validated['monto']);
-            $cuota->matricula->recalcularEstado();
-        }
-
-        return back()->with('success', $esEstudiante
-            ? 'Pago declarado. El área administrativa lo confirmará luego de verificarlo.'
-            : 'Pago registrado correctamente.');
+        return back()->with('success', 'Pago registrado. Queda pendiente de aprobación.');
     }
 
     public function confirmar(Request $request, Pago $pago): RedirectResponse
     {
         $this->authorize('confirm', $pago);
 
-        abort_if($pago->estado === 'confirmado', 409);
+        abort_if($pago->estado !== 'pendiente', 409);
 
         if ((float) $pago->monto > $pago->cuota->saldoRestante()) {
             return back()->with('error', 'El saldo de la cuota ya no cubre este pago; revisa otros pagos pendientes antes de confirmar.');
@@ -188,22 +188,98 @@ class PagoController extends Controller
 
         $pago->cuota->registrarAbono((float) $pago->monto);
         $pago->cuota->matricula->recalcularEstado();
+        $this->bloqueos->evaluarYDesbloquear($pago->student);
+        $this->recibos->emitir($pago);
 
         return back()->with('success', 'Pago confirmado correctamente.');
+    }
+
+    public function rechazar(Request $request, Pago $pago): RedirectResponse
+    {
+        $this->authorize('confirm', $pago);
+
+        abort_if($pago->estado !== 'pendiente', 409);
+
+        $validated = $request->validate([
+            'motivo' => ['required', 'string', 'max:500'],
+        ]);
+
+        $pago->update([
+            'estado' => 'rechazado',
+            'motivo_rechazo' => $validated['motivo'],
+            'confirmado_por' => $request->user()->id,
+            'confirmado_at' => now(),
+            'fecha_limite_pago' => null,
+        ]);
+
+        $this->bloqueos->evaluarYDesbloquear($pago->student);
+
+        return back()->with('success', 'Pago rechazado.');
+    }
+
+    public function confirmarVarios(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'pago_ids' => ['required', 'array', 'min:1'],
+            'pago_ids.*' => ['integer', 'exists:pagos,id'],
+        ]);
+
+        $user = $request->user();
+        $aprobados = 0;
+        $omitidos = 0;
+
+        DB::transaction(function () use ($validated, $user, &$aprobados, &$omitidos) {
+            $pagos = Pago::with(['cuota.matricula', 'student'])
+                ->whereIn('id', $validated['pago_ids'])
+                ->where('estado', 'pendiente')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($pagos as $pago) {
+                $this->authorize('confirm', $pago);
+
+                if ((float) $pago->monto > $pago->cuota->saldoRestante()) {
+                    $omitidos++;
+                    continue;
+                }
+
+                $pago->update([
+                    'estado' => 'confirmado',
+                    'confirmado_por' => $user->id,
+                    'confirmado_at' => now(),
+                    'fecha_limite_pago' => null,
+                ]);
+
+                $pago->cuota->registrarAbono((float) $pago->monto);
+                $pago->cuota->matricula->recalcularEstado();
+                $this->bloqueos->evaluarYDesbloquear($pago->student);
+                $this->recibos->emitir($pago);
+
+                $aprobados++;
+            }
+        });
+
+        $mensaje = sprintf('Se aprobaron %d pago%s.', $aprobados, $aprobados === 1 ? '' : 's');
+
+        if ($omitidos > 0) {
+            $mensaje .= " {$omitidos} se omitieron porque el saldo ya no los cubría.";
+        }
+
+        return back()->with($aprobados > 0 ? 'success' : 'error', $mensaje);
     }
 
     public function comprobante(Pago $pago): View
     {
         $this->authorize('view', $pago);
 
-        $pago->load(['cuota.matricula.student', 'cuota.matricula.carrera', 'registradoPor', 'medios']);
+        $pago->load(['cuota.matricula.student', 'cuota.matricula.carrera', 'registradoPor', 'medios', 'recibo']);
 
         return view('comprobantes.pago-matricula', [
             'pago' => $pago,
             'cuota' => $pago->cuota,
             'matricula' => $pago->cuota->matricula,
             'student' => $pago->cuota->matricula->student,
-            'numeroBoleta' => 'B001-' . str_pad((string) $pago->id, 8, '0', STR_PAD_LEFT),
+            'numeroBoleta' => $pago->recibo?->numero_recibo ?? 'B001-' . str_pad((string) $pago->id, 8, '0', STR_PAD_LEFT),
             'montoEnLetras' => NumeroALetras::convertir((float) $pago->monto),
         ]);
     }
@@ -218,6 +294,18 @@ class PagoController extends Controller
         return Storage::disk('local')->response($pago->comprobante_path);
     }
 
+    public function reciboDescargar(Pago $pago): StreamedResponse
+    {
+        $this->authorize('view', $pago);
+
+        $recibo = $pago->recibo;
+
+        abort_unless($recibo, 404);
+        abort_unless(Storage::disk('local')->exists($recibo->pdf_path), 404);
+
+        return Storage::disk('local')->response($recibo->pdf_path, "{$recibo->numero_recibo}.pdf");
+    }
+
     public function destroy(Cuota $cuota, Pago $pago): RedirectResponse
     {
         $this->authorize('delete', $pago);
@@ -230,6 +318,10 @@ class PagoController extends Controller
 
         if ($pago->comprobante_path) {
             Storage::disk('local')->delete($pago->comprobante_path);
+        }
+
+        if ($pago->recibo) {
+            Storage::disk('local')->delete($pago->recibo->pdf_path);
         }
 
         $pago->delete();
