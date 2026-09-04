@@ -177,6 +177,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('aula-virtual/{course}/{recurso}', [RecursoAulaController::class, 'destroy'])->name('aula-virtual.destroy');
     Route::get('aula-virtual/{course}/libreta/excel', [RecursoAulaController::class, 'exportarLibretaExcel'])->name('aula-virtual.libreta.excel');
     Route::get('aula-virtual/{course}/libreta/pdf', [RecursoAulaController::class, 'exportarLibretaPdf'])->name('aula-virtual.libreta.pdf');
+    Route::get('aula-virtual/{course}/libreta/mia/pdf', [RecursoAulaController::class, 'exportarMiLibretaPdf'])->name('aula-virtual.libreta.mia.pdf');
 
     // Foro por semana
     Route::post('aula-virtual/{course}/semana/{semana}/foro', [ForoController::class, 'store'])->name('aula-virtual.foro.store');

@@ -624,6 +624,37 @@ class RecursoAulaController extends Controller
         return $pdf->download($filename);
     }
 
+    public function exportarMiLibretaPdf(Request $request, Course $course): \Illuminate\Http\Response
+    {
+        $user = $request->user();
+        abort_unless($user->hasRole(UserRole::Estudiante) && $user->student_id, 403);
+
+        $inscrito = $course->enrollments()
+            ->where('student_id', $user->student_id)
+            ->where('status', 'active')
+            ->exists();
+        abort_unless($inscrito, 403);
+
+        $student = Student::find($user->student_id);
+        abort_if($student && $this->bloqueos->estaBloqueado($student), 403, 'Acceso a notas restringido por mora.');
+
+        $libreta = $this->construirLibreta($course);
+        $libreta['filas'] = $libreta['filas']
+            ->filter(fn (array $fila) => $fila['student_id'] === $user->student_id)
+            ->values();
+
+        $course->loadMissing('subject');
+
+        $pdf = Pdf::loadView('pdf.libreta-notas', [
+            'course' => $course,
+            'libreta' => $libreta,
+        ])->setPaper('a4', 'landscape');
+
+        $filename = 'mi-libreta-notas-' . Str::slug($course->name) . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
     private function generarSpreadsheetLibreta(Course $course, array $libreta): Spreadsheet
     {
         $spreadsheet = new Spreadsheet();

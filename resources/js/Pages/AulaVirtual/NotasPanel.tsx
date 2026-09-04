@@ -1,4 +1,5 @@
 import CalificarModal from '@/Components/CalificarModal';
+import { ArrowDownTrayIcon } from '@/Components/Icons';
 import { Course, Evaluation, Grade, Libreta, evaluationTypeLabels } from '@/types/models';
 import { formatDate } from '@/utils/date';
 import { useState } from 'react';
@@ -86,67 +87,85 @@ function TablaEvaluaciones({ evaluaciones }: { evaluaciones: Evaluation[] }) {
     );
 }
 
-function MisNotas({ misNotas }: { misNotas: EvaluacionConMiNota[] }) {
+function MisNotas({
+    courseId,
+    misNotas,
+}: {
+    courseId: number;
+    misNotas: EvaluacionConMiNota[];
+}) {
     return (
-        <div className="overflow-hidden overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
-            <table className="min-w-full divide-y divide-brand-border-faint">
-                <thead className="bg-brand-thead">
-                    <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                            Evaluación
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                            Fecha
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                            Nota
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
-                            Comentario
-                        </th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-brand-border-faint">
-                    {misNotas.map((evaluacion) => (
-                        <tr key={evaluacion.id}>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        className={`rounded-lg px-2 py-0.5 text-xs font-medium ${tipoBadge[evaluacion.type]}`}
-                                    >
-                                        {evaluationTypeLabels[evaluacion.type]}
-                                    </span>
-                                    <span className="font-medium text-brand-ink-strong">
-                                        {evaluacion.name}
-                                    </span>
-                                </div>
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
-                                {formatDate(evaluacion.date)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
-                                {evaluacion.mi_grade
-                                    ? `${evaluacion.mi_grade.score} / ${evaluacion.max_score}`
-                                    : 'Sin calificar'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-brand-muted">
-                                {evaluacion.mi_grade?.comments ?? '—'}
-                            </td>
-                        </tr>
-                    ))}
-                    {misNotas.length === 0 && (
+        <div className="space-y-4">
+            <div className="flex justify-end">
+                <a
+                    href={route('aula-virtual.libreta.mia.pdf', courseId)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-brand-border px-3 py-2 text-xs font-semibold uppercase tracking-widest text-brand-ink transition hover:bg-brand-hover"
+                >
+                    <ArrowDownTrayIcon className="size-4" />
+                    Descargar mi libreta (PDF)
+                </a>
+            </div>
+
+            <div className="overflow-hidden overflow-x-auto rounded-lg border border-brand-border bg-brand-card">
+                <table className="min-w-full divide-y divide-brand-border-faint">
+                    <thead className="bg-brand-thead">
                         <tr>
-                            <td
-                                colSpan={4}
-                                className="px-4 py-6 text-center text-sm text-brand-muted"
-                            >
-                                No hay evaluaciones registradas para esta
-                                sección.
-                            </td>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                Evaluación
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                Fecha
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                Nota
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-brand-muted">
+                                Comentario
+                            </th>
                         </tr>
-                    )}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody className="divide-y divide-brand-border-faint">
+                        {misNotas.map((evaluacion) => (
+                            <tr key={evaluacion.id}>
+                                <td className="whitespace-nowrap px-4 py-3 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span
+                                            className={`rounded-lg px-2 py-0.5 text-xs font-medium ${tipoBadge[evaluacion.type]}`}
+                                        >
+                                            {evaluationTypeLabels[evaluacion.type]}
+                                        </span>
+                                        <span className="font-medium text-brand-ink-strong">
+                                            {evaluacion.name}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3 text-sm text-brand-ink">
+                                    {formatDate(evaluacion.date)}
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-brand-ink-strong">
+                                    {evaluacion.mi_grade
+                                        ? `${evaluacion.mi_grade.score} / ${evaluacion.max_score}`
+                                        : 'Sin calificar'}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-brand-muted">
+                                    {evaluacion.mi_grade?.comments ?? '—'}
+                                </td>
+                            </tr>
+                        ))}
+                        {misNotas.length === 0 && (
+                            <tr>
+                                <td
+                                    colSpan={4}
+                                    className="px-4 py-6 text-center text-sm text-brand-muted"
+                                >
+                                    No hay evaluaciones registradas para esta
+                                    sección.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
@@ -246,7 +265,7 @@ export default function NotasPanel({
     }
 
     if (misNotas) {
-        return <MisNotas misNotas={misNotas} />;
+        return <MisNotas courseId={course.id} misNotas={misNotas} />;
     }
 
     return null;
