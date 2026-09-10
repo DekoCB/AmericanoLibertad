@@ -415,7 +415,7 @@ new #[Layout('layouts.app')] class extends Component
         <div class="mt-1 flex items-center gap-2">
             <h1 class="font-display text-2xl text-ink">{{ $curso->horario->curso->nombre }}</h1>
         </div>
-        <p class="mt-1 text-sm text-ink-dim">{{ $curso->horario->grado->nombre }} · {{ $curso->horario->ciclo->nombre }} · {{ $curso->horario->docente->name }}</p>
+        <p class="mt-1 text-sm text-ink-dim">{{ $curso->horario->carrera->name }} · Ciclo {{ $curso->horario->ciclo_curricular }} · {{ $curso->horario->ciclo->nombre }} · {{ $curso->horario->docente->name }}</p>
     </x-slot>
 
     @if (session('status'))

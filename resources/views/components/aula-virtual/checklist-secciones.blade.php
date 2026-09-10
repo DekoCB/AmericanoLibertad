@@ -2,11 +2,11 @@
 
 {{--
     Checklist "subir también a" compartido entre material, clase grabada,
-    tarea y foro: otros cursos virtuales del mismo curso académico, grado y
-    ciclo -- para replicar de una sola vez en vez de repetir la carga uno
-    por uno. Como curso/grado/ciclo ya son iguales para todas las opciones
-    (eso es justo lo que las agrupa), lo único que distingue cada fila es
-    el aula y quién la dicta.
+    tarea y foro: otros cursos virtuales del mismo curso académico, carrera,
+    ciclo curricular y ciclo -- para replicar de una sola vez en vez de
+    repetir la carga uno por uno. Como curso/carrera/ciclo ya son iguales
+    para todas las opciones (eso es justo lo que las agrupa), lo único que
+    distingue cada fila es el aula y quién la dicta.
 --}}
 @if ($secciones->count() > 1)
     <div>
@@ -20,7 +20,7 @@
                         wire:model="{{ $campo }}"
                         class="rounded border-border text-accent focus:ring-accent"
                     >
-                    Aula {{ $cursoOpcion->horario->grado->letraAula() }} · {{ $cursoOpcion->horario->docente->name }}
+                    {{ $cursoOpcion->horario->aula->nombre }} · {{ $cursoOpcion->horario->docente->name }}
                 </label>
             @endforeach
         </div>
