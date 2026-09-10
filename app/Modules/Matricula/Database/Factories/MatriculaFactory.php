@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Matricula\Database\Factories;
 
+use App\Models\Carrera;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Matricula\Enums\EstadoMatriculaEnum;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
@@ -23,7 +23,8 @@ class MatriculaFactory extends Factory
         return [
             'estudiante_id' => Estudiante::factory(),
             'ciclo_id' => Ciclo::factory(),
-            'grado_id' => Grado::factory(),
+            'carrera_id' => Carrera::factory(),
+            'ciclo_curricular' => $this->faker->numberBetween(1, 6),
             'fecha_matricula' => now(),
             'estado' => EstadoMatriculaEnum::APROBADA,
         ];

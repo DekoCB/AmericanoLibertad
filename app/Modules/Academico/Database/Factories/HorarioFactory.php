@@ -9,7 +9,6 @@ use App\Modules\Academico\Enums\DiaSemanaEnum;
 use App\Modules\Academico\Models\Aula;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -20,6 +19,10 @@ class HorarioFactory extends Factory
 {
     protected $model = Horario::class;
 
+    /**
+     * carrera_id/ciclo_curricular no se declaran acá: Horario los deriva
+     * solos del curso_id (ver Horario::booted()).
+     */
     public function definition(): array
     {
         return [
@@ -27,7 +30,6 @@ class HorarioFactory extends Factory
             'docente_id' => User::factory(),
             'aula_id' => Aula::factory(),
             'ciclo_id' => Ciclo::factory(),
-            'grado_id' => Grado::factory(),
         ];
     }
 

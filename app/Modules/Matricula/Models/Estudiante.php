@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Matricula\Models;
 
+use App\Models\Carrera;
 use App\Models\User;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Identidad\Support\Auditable;
 use App\Modules\Matricula\Database\Factories\EstudianteFactory;
 use App\Modules\Matricula\Enums\EstadoCivilEnum;
@@ -50,7 +50,8 @@ class Estudiante extends Model implements HasMedia
         'celular',
         'email',
         'estado',
-        'grado_actual_id',
+        'carrera_actual_id',
+        'ciclo_actual',
         'ciclos_completados',
         'observaciones',
     ];
@@ -81,11 +82,11 @@ class Estudiante extends Model implements HasMedia
     }
 
     /**
-     * @return BelongsTo<Grado, $this>
+     * @return BelongsTo<Carrera, $this>
      */
-    public function gradoActual(): BelongsTo
+    public function carreraActual(): BelongsTo
     {
-        return $this->belongsTo(Grado::class, 'grado_actual_id');
+        return $this->belongsTo(Carrera::class, 'carrera_actual_id');
     }
 
     /**

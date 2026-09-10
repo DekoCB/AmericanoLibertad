@@ -6,7 +6,6 @@ use App\Modules\Academico\Enums\FranjaHorarioEnum;
 use App\Modules\Academico\Models\Aula;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\HorarioDia;
 use App\Modules\Academico\Services\HorarioService;
@@ -34,8 +33,6 @@ new #[Layout('layouts.app')] class extends Component
     public string $aulaId = '';
 
     public string $cicloId = '';
-
-    public string $gradoId = '';
 
     /**
      * Al crear: las franjas institucionales marcadas (pueden combinarse
@@ -130,7 +127,7 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->resetValidation();
         $this->reset([
-            'editandoId', 'cursoId', 'docenteId', 'aulaId', 'gradoId',
+            'editandoId', 'cursoId', 'docenteId', 'aulaId',
             'franjasSeleccionadas', 'diasSueltosSeleccionados',
             'horaInicioHoraPorDia', 'horaInicioMinutoPorDia', 'horaFinHoraPorDia', 'horaFinMinutoPorDia',
         ]);
@@ -153,7 +150,6 @@ new #[Layout('layouts.app')] class extends Component
         $this->resetValidation();
         $this->editandoId = $horario->id;
         $this->cicloId = (string) $horario->ciclo_id;
-        $this->gradoId = (string) $horario->grado_id;
         $this->cursoId = (string) $horario->curso_id;
         $this->docenteId = (string) $horario->docente_id;
         $this->aulaId = (string) $horario->aula_id;
@@ -208,7 +204,6 @@ new #[Layout('layouts.app')] class extends Component
             'docenteId' => 'required|integer|exists:users,id',
             'aulaId' => 'required|integer|exists:aulas,id',
             'cicloId' => 'required|integer|exists:ciclos,id',
-            'gradoId' => 'required|integer|exists:grados,id',
         ];
 
         if ($this->editandoId === null) {
@@ -239,7 +234,6 @@ new #[Layout('layouts.app')] class extends Component
             'docente_id' => (int) $this->docenteId,
             'aula_id' => (int) $this->aulaId,
             'ciclo_id' => (int) $this->cicloId,
-            'grado_id' => (int) $this->gradoId,
             'dias' => $diasParaGuardar,
         ];
 
@@ -286,12 +280,11 @@ new #[Layout('layouts.app')] class extends Component
 
         return [
             'ciclos' => Ciclo::query()->orderByDesc('fecha_inicio')->get(),
-            'horariosPorFranja' => $this->agruparPorFranjaYGrado($horarios),
+            'horariosPorFranja' => $this->agruparPorFranjaYCarrera($horarios),
             'horarioDiasPorDia' => $this->agruparDiasParaLaGrilla($horarios),
             'cursos' => Curso::query()->where('activo', true)->orderBy('nombre')->get(),
             'docentes' => User::role('docente')->orderBy('name')->get(),
             'aulas' => Aula::query()->where('activa', true)->orderBy('nombre')->get(),
-            'grados' => Grado::query()->where('activo', true)->orderBy('nombre')->get(),
             'cursoTieneFranjasRestringidas' => $this->cursoId !== '' && ! empty(Curso::query()->find($this->cursoId)?->franjas_permitidas),
             'franjas' => $this->franjasDisponibles(),
             'horas' => $this->horasDisponibles(),
@@ -304,21 +297,24 @@ new #[Layout('layouts.app')] class extends Component
     /**
      * La vista organizada como la institución realmente trabaja: primero
      * por franja (Lunes-Miércoles / Martes-Jueves / Domingo), y dentro de
-     * cada una por grado -- así se ven de una los grupos A y B de un mismo
-     * grado, en vez de una tabla plana ordenada por curso.
+     * cada una por carrera y ciclo -- así se ven de una los horarios de un
+     * mismo ciclo de una carrera, en vez de una tabla plana ordenada por
+     * curso.
      *
      * @param  Collection<int, Horario>  $horarios
-     * @return Collection<int, array{label: string, porGrado: Collection<string, Collection<int, Horario>>}>
+     * @return Collection<int, array{label: string, porCarrera: Collection<string, Collection<int, Horario>>}>
      */
-    private function agruparPorFranjaYGrado($horarios)
+    private function agruparPorFranjaYCarrera($horarios)
     {
+        $etiqueta = fn (Horario $horario) => $horario->carrera->name.' · Ciclo '.$horario->curso->cicloRomano();
+
         $grupos = collect(FranjaHorarioEnum::cases())
-            ->mapWithKeys(function (FranjaHorarioEnum $franja) use ($horarios) {
+            ->mapWithKeys(function (FranjaHorarioEnum $franja) use ($horarios, $etiqueta) {
                 $deLaFranja = $horarios->filter(fn (Horario $horario) => $horario->franja() === $franja);
 
                 return [$franja->value => [
                     'label' => $franja->label(),
-                    'porGrado' => $deLaFranja->groupBy(fn (Horario $horario) => $horario->grado->nombre)->sortKeys(),
+                    'porCarrera' => $deLaFranja->groupBy($etiqueta)->sortKeys(),
                 ]];
             });
 
@@ -327,11 +323,11 @@ new #[Layout('layouts.app')] class extends Component
         if ($sinFranja->isNotEmpty()) {
             $grupos['otros'] = [
                 'label' => 'Otros días',
-                'porGrado' => $sinFranja->groupBy(fn (Horario $horario) => $horario->grado->nombre)->sortKeys(),
+                'porCarrera' => $sinFranja->groupBy($etiqueta)->sortKeys(),
             ];
         }
 
-        return $grupos->filter(fn (array $grupo) => $grupo['porGrado']->isNotEmpty());
+        return $grupos->filter(fn (array $grupo) => $grupo['porCarrera']->isNotEmpty());
     }
 
     /**
@@ -398,9 +394,9 @@ new #[Layout('layouts.app')] class extends Component
             <div class="mb-6">
                 <h2 class="mb-2 font-display text-lg text-ink">{{ $grupoFranja['label'] }}</h2>
 
-                @foreach ($grupoFranja['porGrado'] as $nombreGrado => $horariosDelGrado)
+                @foreach ($grupoFranja['porCarrera'] as $nombreCarrera => $horariosDeLaCarrera)
                     <div class="mb-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-                        <div class="border-b border-border bg-surface-2 px-4 py-2 font-display text-sm text-ink">{{ $nombreGrado }}</div>
+                        <div class="border-b border-border bg-surface-2 px-4 py-2 font-display text-sm text-ink">{{ $nombreCarrera }}</div>
                         <table class="min-w-full divide-y divide-border text-sm">
                             <thead class="bg-surface-2">
                                 <tr>
@@ -412,7 +408,7 @@ new #[Layout('layouts.app')] class extends Component
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border">
-                                @foreach ($horariosDelGrado->sortBy(fn ($horario) => $horario->curso->nombre) as $horario)
+                                @foreach ($horariosDeLaCarrera->sortBy(fn ($horario) => $horario->curso->nombre) as $horario)
                                     <tr wire:key="horario-{{ $horario->id }}">
                                         <td class="px-4 py-3 font-medium text-ink">{{ $horario->curso->nombre }}</td>
                                         <td class="px-4 py-3 text-ink-dim">{{ $horario->docente->name }}</td>
@@ -461,7 +457,7 @@ new #[Layout('layouts.app')] class extends Component
                         >
                             <p class="font-medium text-ink">{{ $horarioDia->horario->curso->nombre }}</p>
                             <p class="text-ink-dim">{{ $horarioDia->horario->docente->name }}</p>
-                            <p class="text-ink-faint">{{ $horarioDia->horario->grado->nombre }} · {{ substr($horarioDia->hora_inicio, 0, 5) }}–{{ substr($horarioDia->hora_fin, 0, 5) }}</p>
+                            <p class="text-ink-faint">{{ $horarioDia->horario->carrera->name }} · Ciclo {{ $horarioDia->horario->curso->cicloRomano() }} · {{ substr($horarioDia->hora_inicio, 0, 5) }}–{{ substr($horarioDia->hora_fin, 0, 5) }}</p>
                         </div>
                     @endforeach
                 </div>
@@ -494,27 +490,15 @@ new #[Layout('layouts.app')] class extends Component
                 <h2 class="font-display text-lg text-ink">{{ $editandoId === null ? 'Nuevo horario' : 'Editar horario' }}</h2>
 
                 <form wire:submit="guardar" class="mt-4 space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <x-input-label for="cicloId" value="Ciclo" />
-                            <x-select-input
-                                wire:model="cicloId"
-                                id="cicloId"
-                                class="mt-1 block w-full"
-                                :options="collect($ciclos)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])"
-                            />
-                            <x-input-error :messages="$errors->get('cicloId')" class="mt-1" />
-                        </div>
-                        <div>
-                            <x-input-label for="gradoId" value="Grado" />
-                            <x-select-input
-                                wire:model="gradoId"
-                                id="gradoId"
-                                class="mt-1 block w-full"
-                                :options="collect($grados)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])"
-                            />
-                            <x-input-error :messages="$errors->get('gradoId')" class="mt-1" />
-                        </div>
+                    <div>
+                        <x-input-label for="cicloId" value="Ciclo" />
+                        <x-select-input
+                            wire:model="cicloId"
+                            id="cicloId"
+                            class="mt-1 block w-full"
+                            :options="collect($ciclos)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])"
+                        />
+                        <x-input-error :messages="$errors->get('cicloId')" class="mt-1" />
                     </div>
 
                     <div>
@@ -526,6 +510,11 @@ new #[Layout('layouts.app')] class extends Component
                             :options="collect($cursos)->mapWithKeys(fn ($curso) => [$curso->id => $curso->nombre.' ('.$curso->codigo.')'])"
                         />
                         <x-input-error :messages="$errors->get('cursoId')" class="mt-1" />
+                        {{-- Carrera/ciclo curricular ya no se eligen aparte: los deriva Horario del curso elegido (ver Horario::booted()). --}}
+                        @php $cursoElegido = $this->cursoId !== '' ? \App\Modules\Academico\Models\Curso::find($this->cursoId) : null; @endphp
+                        @if ($cursoElegido?->carrera)
+                            <p class="mt-1 text-xs text-ink-faint">{{ $cursoElegido->carrera->name }} · Ciclo {{ $cursoElegido->cicloRomano() }}</p>
+                        @endif
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">

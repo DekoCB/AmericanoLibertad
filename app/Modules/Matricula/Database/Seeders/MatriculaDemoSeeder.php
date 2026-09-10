@@ -48,7 +48,8 @@ class MatriculaDemoSeeder extends Seeder
 
             $service->matricular($estudianteMayor, new RegistrarMatriculaData(
                 cicloId: $ciclo->id,
-                gradoId: $horario->grado_id,
+                carreraId: $horario->carrera_id,
+                cicloCurricular: $horario->ciclo_curricular,
                 observaciones: null,
                 registradoPor: null,
             ));
@@ -86,7 +87,8 @@ class MatriculaDemoSeeder extends Seeder
 
             $service->matricular($estudianteMenor, new RegistrarMatriculaData(
                 cicloId: $ciclo->id,
-                gradoId: $horario->grado_id,
+                carreraId: $horario->carrera_id,
+                cicloCurricular: $horario->ciclo_curricular,
                 observaciones: null,
                 registradoPor: null,
             ));

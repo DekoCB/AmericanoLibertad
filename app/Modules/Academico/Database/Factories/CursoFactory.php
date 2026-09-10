@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Academico\Database\Factories;
 
+use App\Models\Carrera;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -34,7 +34,9 @@ class CursoFactory extends Factory
             // GradoFactory::orden y AulaFactory::nombre, ver el comentario
             // en GradoFactory.
             'codigo' => 'CUR-'.str_pad((string) (Curso::count() + 1), 3, '0', STR_PAD_LEFT),
-            'grado_id' => Grado::factory(),
+            'carrera_id' => Carrera::factory(),
+            'ciclo_curricular' => $this->faker->numberBetween(1, 6),
+            'creditos' => $this->faker->randomFloat(1, 1, 8),
             'horas' => $this->faker->numberBetween(60, 120),
             'activo' => true,
         ];

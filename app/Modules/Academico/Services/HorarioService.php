@@ -29,7 +29,10 @@ class HorarioService
     }
 
     /**
-     * @param  array{curso_id: int, docente_id: int, aula_id: int, ciclo_id: int, grado_id: int, dias: list<array{dia_semana: DiaSemanaEnum, hora_inicio: string, hora_fin: string}>}  $datos
+     * carrera_id/ciclo_curricular no se reciben acá: Horario los deriva
+     * solo del curso_id elegido (ver Horario::booted()).
+     *
+     * @param  array{curso_id: int, docente_id: int, aula_id: int, ciclo_id: int, dias: list<array{dia_semana: DiaSemanaEnum, hora_inicio: string, hora_fin: string}>}  $datos
      */
     public function crear(array $datos): Horario
     {
@@ -41,7 +44,6 @@ class HorarioService
                 'docente_id' => $datos['docente_id'],
                 'aula_id' => $datos['aula_id'],
                 'ciclo_id' => $datos['ciclo_id'],
-                'grado_id' => $datos['grado_id'],
             ]);
 
             $horario->dias()->createMany($datos['dias']);
@@ -57,7 +59,7 @@ class HorarioService
     }
 
     /**
-     * @param  array{curso_id: int, docente_id: int, aula_id: int, ciclo_id: int, grado_id: int, dias: list<array{dia_semana: DiaSemanaEnum, hora_inicio: string, hora_fin: string}>}  $datos
+     * @param  array{curso_id: int, docente_id: int, aula_id: int, ciclo_id: int, dias: list<array{dia_semana: DiaSemanaEnum, hora_inicio: string, hora_fin: string}>}  $datos
      */
     public function actualizar(Horario $horario, array $datos): Horario
     {
@@ -69,7 +71,6 @@ class HorarioService
                 'docente_id' => $datos['docente_id'],
                 'aula_id' => $datos['aula_id'],
                 'ciclo_id' => $datos['ciclo_id'],
-                'grado_id' => $datos['grado_id'],
             ]);
 
             $horario->dias()->delete();
@@ -161,7 +162,6 @@ class HorarioService
             'docente_id' => $horario->docente_id,
             'aula_id' => $horario->aula_id,
             'ciclo_id' => $horario->ciclo_id,
-            'grado_id' => $horario->grado_id,
             'dias' => $dias,
         ]);
     }

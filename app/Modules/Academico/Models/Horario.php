@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Academico\Models;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Database\Factories\HorarioFactory;
 use App\Modules\Academico\Enums\FranjaHorarioEnum;
@@ -23,11 +24,12 @@ use Illuminate\Support\Carbon;
  * @property int $docente_id
  * @property int $aula_id
  * @property int $ciclo_id
- * @property int $grado_id
+ * @property int $carrera_id
+ * @property int $ciclo_curricular
  * @property-read Curso $curso
  * @property-read User $docente
  * @property-read Aula $aula
- * @property-read Grado $grado
+ * @property-read Carrera $carrera
  * @property-read Collection<int, HorarioDia> $dias
  */
 class Horario extends Model
@@ -40,12 +42,31 @@ class Horario extends Model
         'docente_id',
         'aula_id',
         'ciclo_id',
-        'grado_id',
+        'carrera_id',
+        'ciclo_curricular',
     ];
 
     protected static function newFactory(): HorarioFactory
     {
         return HorarioFactory::new();
+    }
+
+    /**
+     * carrera_id/ciclo_curricular no son un segundo select independiente en
+     * los formularios: siempre se derivan del curso_id elegido, para que no
+     * puedan quedar desalineados del curso real (el bug que tenía esto
+     * cuando el campo era grado_id, un select suelto sin ninguna
+     * validación cruzada con el curso).
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Horario $horario) {
+            if ($horario->isDirty('curso_id')) {
+                $curso = Curso::query()->findOrFail($horario->curso_id);
+                $horario->carrera_id = $curso->carrera_id;
+                $horario->ciclo_curricular = $curso->ciclo_curricular;
+            }
+        });
     }
 
     public function curso(): BelongsTo
@@ -71,9 +92,9 @@ class Horario extends Model
         return $this->belongsTo(Ciclo::class);
     }
 
-    public function grado(): BelongsTo
+    public function carrera(): BelongsTo
     {
-        return $this->belongsTo(Grado::class);
+        return $this->belongsTo(Carrera::class);
     }
 
     /**
@@ -95,13 +116,15 @@ class Horario extends Model
     }
 
     /**
-     * Los horarios que corresponden a una matrícula: mismo grado y ciclo.
-     * Complementa a Matricula::scopeDelHorario(), la misma regla vista
-     * desde el otro lado.
+     * Los horarios que corresponden a una matrícula: misma carrera, ciclo
+     * curricular y ciclo (periodo de matrícula). Complementa a
+     * Matricula::scopeDelHorario(), la misma regla vista desde el otro lado.
      */
     public function scopeDeLaMatricula(Builder $query, Matricula $matricula): Builder
     {
-        return $query->where('grado_id', $matricula->grado_id)->where('ciclo_id', $matricula->ciclo_id);
+        return $query->where('carrera_id', $matricula->carrera_id)
+            ->where('ciclo_curricular', $matricula->ciclo_curricular)
+            ->where('ciclo_id', $matricula->ciclo_id);
     }
 
     /**

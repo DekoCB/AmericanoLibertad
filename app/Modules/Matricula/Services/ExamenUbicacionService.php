@@ -10,7 +10,7 @@ use App\Modules\Matricula\Models\ExamenUbicacion;
 class ExamenUbicacionService
 {
     /**
-     * @param  array{fecha: string, costo: float, resultado: ?string, grado_asignado_id: ?int, observaciones: ?string}  $datos
+     * @param  array{fecha: string, costo: float, resultado: ?string, carrera_asignada_id: ?int, ciclo_asignado: ?int, observaciones: ?string}  $datos
      */
     public function registrar(Estudiante $estudiante, array $datos): ExamenUbicacion
     {

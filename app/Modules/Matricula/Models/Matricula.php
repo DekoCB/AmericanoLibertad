@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Matricula\Models;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Siagie;
 use App\Modules\Identidad\Support\Auditable;
@@ -26,14 +26,15 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int $id
  * @property int $estudiante_id
  * @property int $ciclo_id
- * @property int $grado_id
+ * @property int $carrera_id
+ * @property int $ciclo_curricular
  * @property int|null $siagie_id
  * @property Carbon $fecha_matricula
  * @property Carbon|null $fecha_fin_estudio
  * @property EstadoMatriculaEnum $estado
  * @property-read Estudiante|null $estudiante
  * @property-read Ciclo $ciclo
- * @property-read Grado $grado
+ * @property-read Carrera $carrera
  * @property-read Siagie|null $siagie
  */
 class Matricula extends Model implements HasMedia
@@ -44,7 +45,8 @@ class Matricula extends Model implements HasMedia
     protected $fillable = [
         'estudiante_id',
         'ciclo_id',
-        'grado_id',
+        'carrera_id',
+        'ciclo_curricular',
         'siagie_id',
         'fecha_matricula',
         'fecha_fin_estudio',
@@ -83,9 +85,9 @@ class Matricula extends Model implements HasMedia
         return $this->belongsTo(Ciclo::class);
     }
 
-    public function grado(): BelongsTo
+    public function carrera(): BelongsTo
     {
-        return $this->belongsTo(Grado::class);
+        return $this->belongsTo(Carrera::class);
     }
 
     /**
@@ -122,14 +124,11 @@ class Matricula extends Model implements HasMedia
     }
 
     /**
-     * Las matrículas que cuentan para un horario dado: mismo grado y
-     * ciclo, aprobadas. El aula (Grupo A/B) ya no hace falta compararla
-     * aparte -- la determina el grado (ver Grado::letraAula()), siempre
-     * igual dentro de un mismo grado y ciclo, así que coincidir por
-     * grado_id ya basta.
+     * Las matrículas que cuentan para un horario dado: misma carrera, ciclo
+     * curricular y ciclo (periodo de matrícula), aprobadas.
      *
      * Cuando el curso de este horario tiene paralelos (otro Horario con el
-     * mismo curso_id+grado_id+ciclo_id), esa coincidencia por grado+ciclo
+     * mismo curso_id+carrera_id+ciclo_curricular+ciclo_id), esa coincidencia
      * ya no basta para saber a cuál sección pertenece cada estudiante: ahí
      * además se exige la asignación explícita en matricula_horario. Si el
      * curso no tiene paralelos, nadie necesita asignación (sigue siendo
@@ -139,12 +138,14 @@ class Matricula extends Model implements HasMedia
     {
         $tieneParalelos = Horario::query()
             ->where('curso_id', $horario->curso_id)
-            ->where('grado_id', $horario->grado_id)
+            ->where('carrera_id', $horario->carrera_id)
+            ->where('ciclo_curricular', $horario->ciclo_curricular)
             ->where('ciclo_id', $horario->ciclo_id)
             ->where('id', '!=', $horario->id)
             ->exists();
 
-        return $query->where('grado_id', $horario->grado_id)
+        return $query->where('carrera_id', $horario->carrera_id)
+            ->where('ciclo_curricular', $horario->ciclo_curricular)
             ->where('ciclo_id', $horario->ciclo_id)
             ->where('estado', 'aprobada')
             ->when(

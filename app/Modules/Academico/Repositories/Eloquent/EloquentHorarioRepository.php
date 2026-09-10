@@ -22,7 +22,7 @@ class EloquentHorarioRepository extends BaseRepository implements HorarioReposit
      */
     protected function query(): Builder
     {
-        return Horario::query()->with(['curso', 'docente', 'aula', 'ciclo', 'grado', 'dias']);
+        return Horario::query()->with(['curso', 'docente', 'aula', 'ciclo', 'carrera', 'dias']);
     }
 
     public function enAulaQueSolapan(int $aulaId, int $cicloId, DiaSemanaEnum $dia, string $horaInicio, string $horaFin, ?int $exceptoHorarioId = null): Collection

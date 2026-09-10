@@ -12,11 +12,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Un aula, opcionalmente atada a un Grupo (Ciclo) y una letra (A/B): las
- * aulas "de grupo" son las que alojan a los grados de ese grupo (A =
- * grados 1-2, B = grados 3-4). ciclo_id/letra son nullable para no romper
- * aulas sueltas creadas antes de este esquema.
+ * Un aula, opcionalmente atada a un Ciclo(Grupo) y a una letra -- resabio de
+ * cuando existían solo 2 secciones fijas (A/B) para los 4 grados del viejo
+ * modelo EBA. Con Carrera reemplazando a Grado ya no hay una sección fija:
+ * las aulas quedan libres, cualquiera se puede asignar a cualquier horario.
+ * `letra` se deja sin usar (nullable) por si el instituto igual nombra sus
+ * aulas con letras, pero ningún código depende ya de su valor.
  *
+
  * @property int $id
  * @property int|null $ciclo_id
  * @property string|null $letra

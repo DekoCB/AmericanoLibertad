@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Matricula\Services;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\PeriodoMatricula;
 use App\Modules\Identidad\DTOs\CrearUsuarioData;
@@ -138,7 +138,7 @@ class MatriculaService
     public function matricular(Estudiante $estudiante, RegistrarMatriculaData $data): Matricula
     {
         $ciclo = Ciclo::query()->findOrFail($data->cicloId);
-        $grado = Grado::query()->findOrFail($data->gradoId);
+        $carrera = Carrera::query()->findOrFail($data->carreraId);
 
         if ($ciclo->modalidad !== ModalidadCicloEnum::ANUAL) {
             $this->validarPeriodoDeMatriculaAbierto($ciclo);
@@ -155,11 +155,12 @@ class MatriculaService
             ? $ciclo->fecha_fin
             : $fechaMatricula->clone()->addMonths($estudiante->es_menor_edad ? 8 : 6);
 
-        return DB::transaction(function () use ($estudiante, $ciclo, $grado, $data, $fechaMatricula, $fechaFinEstudio) {
+        return DB::transaction(function () use ($estudiante, $ciclo, $carrera, $data, $fechaMatricula, $fechaFinEstudio) {
             $matricula = $this->matriculas->create([
                 'estudiante_id' => $estudiante->id,
                 'ciclo_id' => $ciclo->id,
-                'grado_id' => $grado->id,
+                'carrera_id' => $carrera->id,
+                'ciclo_curricular' => $data->cicloCurricular,
                 'siagie_id' => $data->siagieId,
                 'fecha_matricula' => $fechaMatricula,
                 'fecha_fin_estudio' => $fechaFinEstudio,
@@ -168,7 +169,7 @@ class MatriculaService
                 'registrado_por' => $data->registradoPor,
             ]);
 
-            $estudiante->update(['grado_actual_id' => $grado->id]);
+            $estudiante->update(['carrera_actual_id' => $carrera->id, 'ciclo_actual' => $data->cicloCurricular]);
 
             event(new EstudianteMatriculado($matricula));
 
@@ -214,13 +215,14 @@ class MatriculaService
         $horario = Horario::query()
             ->where('id', $horarioId)
             ->where('curso_id', $cursoId)
-            ->where('grado_id', $matricula->grado_id)
+            ->where('carrera_id', $matricula->carrera_id)
+            ->where('ciclo_curricular', $matricula->ciclo_curricular)
             ->where('ciclo_id', $matricula->ciclo_id)
             ->first();
 
         if ($horario === null) {
             throw ValidationException::withMessages([
-                'horario' => 'El horario seleccionado no pertenece a ese curso, grado y ciclo.',
+                'horario' => 'El horario seleccionado no pertenece a ese curso, carrera y ciclo.',
             ]);
         }
 
@@ -329,10 +331,10 @@ class MatriculaService
 
     /**
      * Matricula estudiantes ya existentes (identificados por DNI) en un
-     * mismo ciclo, cada uno en el grado indicado en su fila. Reutiliza
-     * matricular(), así que cada fila respeta las mismas validaciones que
-     * una matrícula individual (grado coherente con la edad, periodo de
-     * matrícula abierto, sin duplicados).
+     * mismo ciclo, cada uno en la carrera y ciclo curricular (I-VI)
+     * indicados en su fila. Reutiliza matricular(), así que cada fila
+     * respeta las mismas validaciones que una matrícula individual
+     * (periodo de matrícula abierto, sin duplicados).
      *
      * @param  Collection<int, Collection<string, mixed>>  $filas
      * @return array{exitosos: int, errores: list<array{fila: int, mensaje: string}>}
@@ -345,21 +347,28 @@ class MatriculaService
         foreach ($filas as $indice => $fila) {
             try {
                 $dniTexto = (new Dni($this->celdaObligatoria($fila, 'dni')))->valor();
-                $nombreGrado = $this->celdaObligatoria($fila, 'grado');
+                $nombreCarrera = $this->celdaObligatoria($fila, 'carrera');
+                $cicloTexto = $this->celdaObligatoria($fila, 'ciclo');
 
                 $estudiante = Estudiante::query()->where('dni', $dniTexto)->first();
                 if (! $estudiante) {
                     throw new InvalidArgumentException("No existe ningún estudiante registrado con el DNI {$dniTexto}.");
                 }
 
-                $grado = Grado::query()->where('nombre', $nombreGrado)->first();
-                if (! $grado) {
-                    throw new InvalidArgumentException("No existe el grado «{$nombreGrado}».");
+                $carrera = Carrera::query()->where('name', $nombreCarrera)->first();
+                if (! $carrera) {
+                    throw new InvalidArgumentException("No existe la carrera «{$nombreCarrera}».");
+                }
+
+                $cicloCurricular = $this->romanoANumero($cicloTexto);
+                if ($cicloCurricular === null || $cicloCurricular > $carrera->total_ciclos) {
+                    throw new InvalidArgumentException("Ciclo «{$cicloTexto}» no válido para {$carrera->name} (I a ".$this->numeroARomano($carrera->total_ciclos).').');
                 }
 
                 $this->matricular($estudiante, new RegistrarMatriculaData(
                     cicloId: $cicloId,
-                    gradoId: $grado->id,
+                    carreraId: $carrera->id,
+                    cicloCurricular: $cicloCurricular,
                     observaciones: $this->celdaOpcional($fila, 'observaciones'),
                     registradoPor: $registradoPor,
                 ));
@@ -371,5 +380,17 @@ class MatriculaService
         }
 
         return ['exitosos' => $exitosos, 'errores' => $errores];
+    }
+
+    private const ROMANOS = ['I' => 1, 'II' => 2, 'III' => 3, 'IV' => 4, 'V' => 5, 'VI' => 6];
+
+    private function romanoANumero(string $romano): ?int
+    {
+        return self::ROMANOS[mb_strtoupper(trim($romano))] ?? null;
+    }
+
+    private function numeroARomano(int $numero): string
+    {
+        return array_search($numero, self::ROMANOS, true) ?: (string) $numero;
     }
 }

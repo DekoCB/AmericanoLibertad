@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Matricula\Models;
 
-use App\Modules\Academico\Models\Grado;
+use App\Models\Carrera;
 use App\Modules\Identidad\Support\Auditable;
 use App\Modules\Matricula\Database\Factories\ExamenUbicacionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,7 +29,8 @@ class ExamenUbicacion extends Model
         'fecha',
         'costo',
         'resultado',
-        'grado_asignado_id',
+        'carrera_asignada_id',
+        'ciclo_asignado',
         'observaciones',
     ];
 
@@ -51,8 +52,8 @@ class ExamenUbicacion extends Model
         return $this->belongsTo(Estudiante::class);
     }
 
-    public function gradoAsignado(): BelongsTo
+    public function carreraAsignada(): BelongsTo
     {
-        return $this->belongsTo(Grado::class, 'grado_asignado_id');
+        return $this->belongsTo(Carrera::class, 'carrera_asignada_id');
     }
 }

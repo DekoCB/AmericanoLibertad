@@ -1,8 +1,8 @@
 <?php
 
+use App\Models\Carrera;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Siagie;
 use App\Modules\Academico\Services\CicloService;
 use App\Modules\Matricula\DTOs\RegistrarApoderadoData;
@@ -62,7 +62,7 @@ new class extends Component
 
     // Rematrícula — cuando el DNI tecleado en el paso 1 ya pertenece a un
     // estudiante existente, en vez de rechazarlo se ofrece continuar con su
-    // ficha ya creada, saltando directo a elegir ciclo/grado.
+    // ficha ya creada, saltando directo a elegir ciclo/carrera.
     public ?int $estudianteEncontradoId = null;
 
     public bool $esRematricula = false;
@@ -108,7 +108,9 @@ new class extends Component
 
     public string $examenResultado = '';
 
-    public string $examenGradoAsignadoId = '';
+    public string $examenCarreraAsignadaId = '';
+
+    public string $examenCicloAsignado = '';
 
     public string $examenObservaciones = '';
 
@@ -117,7 +119,9 @@ new class extends Component
 
     public string $cicloId = '';
 
-    public string $gradoId = '';
+    public string $carreraId = '';
+
+    public string $cicloCurricular = '';
 
     public string $siagieId = '';
 
@@ -181,14 +185,14 @@ new class extends Component
     public function estudianteEncontrado(): ?Estudiante
     {
         return $this->estudianteEncontradoId
-            ? Estudiante::query()->with('gradoActual')->find($this->estudianteEncontradoId)
+            ? Estudiante::query()->with('carreraActual')->find($this->estudianteEncontradoId)
             : null;
     }
 
     /**
      * El estudiante ya tiene ficha (datos, apoderado, documentos, examen de
      * ubicación): no hace falta volver a pedir nada de eso, solo el
-     * ciclo/grado de la nueva matrícula.
+     * ciclo/carrera de la nueva matrícula.
      */
     public function continuarComoRematricula(): void
     {
@@ -290,7 +294,8 @@ new class extends Component
                     'examenFecha' => 'required|date',
                     'examenCosto' => 'required|numeric|min:0',
                     'examenResultado' => 'nullable|string|max:30',
-                    'examenGradoAsignadoId' => 'nullable|integer|exists:grados,id',
+                    'examenCarreraAsignadaId' => 'nullable|integer|exists:carreras,id',
+                    'examenCicloAsignado' => 'nullable|integer|min:1|max:6',
                     'examenObservaciones' => 'nullable|string',
                 ]);
             }
@@ -304,7 +309,8 @@ new class extends Component
             $this->validate([
                 'modalidadCiclo' => 'required|string|in:seis_meses,anual',
                 'cicloId' => 'required|integer|exists:ciclos,id',
-                'gradoId' => 'required|integer|exists:grados,id',
+                'carreraId' => 'required|integer|exists:carreras,id',
+                'cicloCurricular' => 'required|integer|min:1|max:6',
                 'siagieId' => 'nullable|integer|exists:siagies,id',
                 'fechaMatricula' => 'required|date',
             ]);
@@ -402,7 +408,8 @@ new class extends Component
 
                 $matricula = $matriculaService->matricular($estudiante, new RegistrarMatriculaData(
                     cicloId: (int) $this->cicloId,
-                    gradoId: (int) $this->gradoId,
+                    carreraId: (int) $this->carreraId,
+                    cicloCurricular: (int) $this->cicloCurricular,
                     observaciones: $this->observacionesMatricula ?: null,
                     registradoPor: auth()->id(),
                     siagieId: $this->siagieId !== '' ? (int) $this->siagieId : null,
@@ -421,7 +428,7 @@ new class extends Component
 
         // Todo el registro (estudiante, apoderado, documentos, examen y
         // matrícula) va en una sola transacción: si matricular() falla al
-        // final (grado incoherente con la edad, periodo cerrado, sección
+        // final (carrera/ciclo incoherente, periodo cerrado, sección
         // faltante, etc.), el estudiante recién creado NO debe quedar
         // huérfano en la base de datos -- si quedara, un reintento desde
         // este mismo paso 5 (sin volver al paso 1) chocaría con el DNI ya
@@ -488,14 +495,16 @@ new class extends Component
                     'fecha' => $this->examenFecha,
                     'costo' => (float) $this->examenCosto,
                     'resultado' => $this->examenResultado ?: null,
-                    'grado_asignado_id' => $this->examenGradoAsignadoId !== '' ? (int) $this->examenGradoAsignadoId : null,
+                    'carrera_asignada_id' => $this->examenCarreraAsignadaId !== '' ? (int) $this->examenCarreraAsignadaId : null,
+                    'ciclo_asignado' => $this->examenCicloAsignado !== '' ? (int) $this->examenCicloAsignado : null,
                     'observaciones' => $this->examenObservaciones ?: null,
                 ]);
             }
 
             $matricula = $matriculaService->matricular($estudiante, new RegistrarMatriculaData(
                 cicloId: (int) $this->cicloId,
-                gradoId: (int) $this->gradoId,
+                carreraId: (int) $this->carreraId,
+                cicloCurricular: (int) $this->cicloCurricular,
                 observaciones: $this->observacionesMatricula ?: null,
                 registradoPor: auth()->id(),
                 siagieId: $this->siagieId !== '' ? (int) $this->siagieId : null,
@@ -534,7 +543,7 @@ new class extends Component
 
     public function with(CicloService $ciclos): array
     {
-        $grados = Grado::query()->where('activo', true)->orderBy('orden')->get();
+        $carreras = Carrera::query()->orderBy('name')->get();
 
         $ciclosConMatriculaAbierta = Ciclo::query()
             ->where('modalidad', ModalidadCicloEnum::SEIS_MESES)
@@ -548,8 +557,9 @@ new class extends Component
 
         return [
             'estadosCiviles' => EstadoCivilEnum::cases(),
-            'gradosCompatibles' => $grados,
-            'todosLosGrados' => $grados,
+            'carrerasCompatibles' => $carreras,
+            'todasLasCarreras' => $carreras,
+            'ciclosCurriculares' => ['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI'],
             'modalidadesCiclo' => ModalidadCicloEnum::cases(),
             'siagiesDisponibles' => Siagie::query()->orderByDesc('anio')->orderBy('tipo')->get(),
             'ciclosDisponibles' => $ciclosConMatriculaAbierta,
@@ -592,7 +602,7 @@ new class extends Component
                 <h1 class="font-display text-2xl text-ink">{{ $esRematricula ? 'Rematrícula' : 'Nueva matrícula' }}</h1>
                 <p class="mt-1 text-sm text-ink-dim">
                     @if ($esRematricula)
-                        Elige ciclo y grado para continuar.
+                        Elige ciclo y carrera para continuar.
                     @else
                         Paso {{ $paso }} de 6
                     @endif
@@ -639,8 +649,8 @@ new class extends Component
                 @if ($this->estudianteEncontrado)
                     <div class="sm:col-span-2 rounded-md border border-accent/30 bg-accent-soft/40 p-3 text-sm">
                         <p class="font-medium text-ink">Ya existe un estudiante con este DNI: {{ $this->estudianteEncontrado->nombreCompleto() }}</p>
-                        <p class="mt-1 text-ink-dim">Grado actual: {{ $this->estudianteEncontrado->gradoActual?->nombre ?? 'sin grado asignado' }}</p>
-                        <p class="mt-2 text-xs text-ink-faint">Si vuelve a matricularse (rematrícula), no hace falta llenar sus datos otra vez — solo el ciclo y grado nuevos.</p>
+                        <p class="mt-1 text-ink-dim">Carrera actual: {{ $this->estudianteEncontrado->carreraActual?->name ?? 'sin carrera asignada' }}</p>
+                        <p class="mt-2 text-xs text-ink-faint">Si vuelve a matricularse (rematrícula), no hace falta llenar sus datos otra vez — solo el ciclo y carrera nuevos.</p>
                         <x-secondary-button type="button" wire:click="continuarComoRematricula" class="mt-2">
                             Rematricular a este estudiante
                         </x-secondary-button>
@@ -831,12 +841,21 @@ new class extends Component
                         <x-input-error :messages="$errors->get('examenResultado')" class="mt-1" />
                     </div>
                     <div>
-                        <x-input-label for="examenGradoAsignadoId" value="Grado asignado" />
+                        <x-input-label for="examenCarreraAsignadaId" value="Carrera asignada" />
                         <x-select-input
-                            wire:model="examenGradoAsignadoId"
-                            id="examenGradoAsignadoId"
+                            wire:model="examenCarreraAsignadaId"
+                            id="examenCarreraAsignadaId"
                             class="mt-1 block w-full"
-                            :options="collect($todosLosGrados)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])->prepend('Sin asignar', '')"
+                            :options="collect($todasLasCarreras)->mapWithKeys(fn ($carrera) => [$carrera->id => $carrera->name])->prepend('Sin asignar', '')"
+                        />
+                    </div>
+                    <div>
+                        <x-input-label for="examenCicloAsignado" value="Ciclo asignado" />
+                        <x-select-input
+                            wire:model="examenCicloAsignado"
+                            id="examenCicloAsignado"
+                            class="mt-1 block w-full"
+                            :options="collect($ciclosCurriculares)->prepend('Sin asignar', '')"
                         />
                     </div>
                     <div class="sm:col-span-2">
@@ -905,14 +924,24 @@ new class extends Component
                     </div>
                 @endif
                 <div>
-                    <x-input-label for="gradoId" value="Grado" />
+                    <x-input-label for="carreraId" value="Carrera" />
                     <x-select-input
-                        wire:model.live="gradoId"
-                        id="gradoId"
+                        wire:model.live="carreraId"
+                        id="carreraId"
                         class="mt-1 block w-full"
-                        :options="collect($gradosCompatibles)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])"
+                        :options="collect($carrerasCompatibles)->mapWithKeys(fn ($carrera) => [$carrera->id => $carrera->name])"
                     />
-                    <x-input-error :messages="$errors->get('gradoId')" class="mt-1" />
+                    <x-input-error :messages="$errors->get('carreraId')" class="mt-1" />
+                </div>
+                <div>
+                    <x-input-label for="cicloCurricular" value="Ciclo" />
+                    <x-select-input
+                        wire:model.live="cicloCurricular"
+                        id="cicloCurricular"
+                        class="mt-1 block w-full"
+                        :options="$ciclosCurriculares"
+                    />
+                    <x-input-error :messages="$errors->get('cicloCurricular')" class="mt-1" />
                 </div>
                 <div>
                     <x-input-label for="fechaMatricula" value="Fecha de matrícula" />

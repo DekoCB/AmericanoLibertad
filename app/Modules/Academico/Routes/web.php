@@ -10,6 +10,14 @@ Route::middleware(['auth'])->prefix('academico')->name('academico.')->group(func
         ->middleware('can:academico.ver')
         ->name('grados.index');
 
+    // Reemplaza a "grados" en el sidebar (Grado -> Carrera+Ciclo, ver plan
+    // de migración). El componente Volt vive en resources/views/livewire
+    // pero el modelo Carrera es de Admision -- no hace falta que coincidan,
+    // esta es la pantalla de administración, no el dueño del dato.
+    Volt::route('carreras', 'academico.carreras.index')
+        ->middleware('can:academico.ver')
+        ->name('carreras.index');
+
     Volt::route('aulas', 'academico.aulas.index')
         ->middleware('can:academico.ver')
         ->name('aulas.index');
