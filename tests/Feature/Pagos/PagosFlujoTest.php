@@ -1,0 +1,343 @@
+<?php
+
+namespace Tests\Feature\Pagos;
+
+use App\Models\User;
+use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
+use App\Modules\Matricula\Models\Estudiante;
+use App\Modules\Matricula\Models\Matricula;
+use App\Modules\Pagos\Enums\MetodoPagoEnum;
+use App\Modules\Pagos\Enums\NumeroCuotasEnum;
+use App\Modules\Pagos\Models\ConceptoPago;
+use App\Modules\Pagos\Models\Pago;
+use App\Modules\Pagos\Services\PagoService;
+use App\Modules\Pagos\Services\PlanPagoService;
+use App\Modules\Pagos\Services\SolicitudCambioMontoService;
+use App\Shared\Enums\RolEnum;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Volt\Volt;
+use Tests\TestCase;
+
+class PagosFlujoTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
+    public function test_administrativo_registra_un_pago_y_tesoreria_lo_aprueba(): void
+    {
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+
+        $this->actingAs($administrativo);
+
+        Volt::test('pagos.index')
+            ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
+            ->set('conceptoId', (string) $concepto->id)
+            ->set('partes.0.monto', '150')
+            ->set('partes.0.metodo', 'yape')
+            ->call('registrarPago')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('pagos', [
+            'estudiante_id' => $estudiante->id,
+            'concepto_id' => $concepto->id,
+            'estado' => 'pendiente',
+        ]);
+
+        $pago = Pago::query()->where('estudiante_id', $estudiante->id)->firstOrFail();
+
+        $tesoreria = User::factory()->create();
+        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $this->actingAs($tesoreria);
+
+        Volt::test('pagos.index')
+            ->call('aprobar', $pago->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('pagos', ['id' => $pago->id, 'estado' => 'aprobado']);
+        $this->assertDatabaseHas('recibos', ['pago_id' => $pago->id]);
+    }
+
+    public function test_registrar_un_pago_con_concepto_otro_exige_y_guarda_el_detalle_libre(): void
+    {
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create(['tipo' => 'otro']);
+
+        $this->actingAs($administrativo);
+
+        Volt::test('pagos.index')
+            ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
+            ->set('conceptoId', (string) $concepto->id)
+            ->set('partes.0.monto', '25')
+            ->set('partes.0.metodo', 'efectivo')
+            ->call('registrarPago')
+            ->assertHasErrors('detalle');
+
+        $this->assertDatabaseMissing('pagos', ['estudiante_id' => $estudiante->id]);
+
+        Volt::test('pagos.index')
+            ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
+            ->set('conceptoId', (string) $concepto->id)
+            ->set('detalle', 'Duplicado de constancia de matrícula')
+            ->set('partes.0.monto', '25')
+            ->set('partes.0.metodo', 'efectivo')
+            ->call('registrarPago')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('pagos', [
+            'estudiante_id' => $estudiante->id,
+            'detalle' => 'Duplicado de constancia de matrícula',
+        ]);
+    }
+
+    public function test_registrar_un_pago_en_varias_partes_con_distinto_metodo_queda_como_un_solo_registro(): void
+    {
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+
+        $this->actingAs($administrativo);
+
+        Volt::test('pagos.index')
+            ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
+            ->set('conceptoId', (string) $concepto->id)
+            ->set('partes.0.monto', '60')
+            ->set('partes.0.metodo', 'efectivo')
+            ->call('agregarParte')
+            ->set('partes.1.monto', '40')
+            ->set('partes.1.metodo', 'yape')
+            ->call('registrarPago')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('pagos', 1);
+        $pago = Pago::query()->where('estudiante_id', $estudiante->id)->firstOrFail();
+        $this->assertSame('100.00', $pago->monto);
+        $this->assertSame(MetodoPagoEnum::MIXTO, $pago->metodo);
+        $this->assertDatabaseCount('pago_partes', 2);
+        $this->assertDatabaseHas('pago_partes', ['pago_id' => $pago->id, 'monto' => 60, 'metodo' => 'efectivo']);
+        $this->assertDatabaseHas('pago_partes', ['pago_id' => $pago->id, 'monto' => 40, 'metodo' => 'yape']);
+    }
+
+    public function test_quitar_una_parte_del_formulario_de_registrar_pago(): void
+    {
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+
+        $this->actingAs($administrativo);
+
+        Volt::test('pagos.index')
+            ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
+            ->set('conceptoId', (string) $concepto->id)
+            ->set('partes.0.monto', '60')
+            ->set('partes.0.metodo', 'efectivo')
+            ->call('agregarParte')
+            ->set('partes.1.monto', '40')
+            ->set('partes.1.metodo', 'yape')
+            ->call('quitarParte', 1)
+            ->call('registrarPago')
+            ->assertHasNoErrors();
+
+        $pago = Pago::query()->where('estudiante_id', $estudiante->id)->firstOrFail();
+        $this->assertSame('60.00', $pago->monto);
+        $this->assertSame(MetodoPagoEnum::EFECTIVO, $pago->metodo);
+        $this->assertDatabaseCount('pago_partes', 1);
+    }
+
+    public function test_tesoreria_rechaza_un_pago_con_motivo(): void
+    {
+        $tesoreria = User::factory()->create();
+        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+        $pago = $this->app->make(PagoService::class)
+            ->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'efectivo']], null, null, null);
+
+        $this->actingAs($tesoreria);
+
+        Volt::test('pagos.index')
+            ->set("motivoRechazo.{$pago->id}", 'Comprobante no corresponde')
+            ->call('rechazar', $pago->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('pagos', [
+            'id' => $pago->id,
+            'estado' => 'rechazado',
+            'motivo_rechazo' => 'Comprobante no corresponde',
+        ]);
+    }
+
+    public function test_un_administrativo_no_puede_aprobar_pagos(): void
+    {
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+        $pago = $this->app->make(PagoService::class)
+            ->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'efectivo']], null, null, null);
+
+        $this->actingAs($administrativo);
+
+        rescue(fn () => Volt::test('pagos.index')->call('aprobar', $pago->id), report: false);
+
+        $this->assertDatabaseHas('pagos', ['id' => $pago->id, 'estado' => 'pendiente']);
+    }
+
+    public function test_editar_el_monto_de_un_concepto_queda_pendiente_de_aprobacion(): void
+    {
+        $coordinador = User::factory()->create();
+        $coordinador->assignRole(RolEnum::COORDINADOR->value);
+        $concepto = ConceptoPago::factory()->create(['nombre' => 'Mensualidad', 'monto_base' => 100]);
+
+        $this->actingAs($coordinador);
+
+        Volt::test('pagos.conceptos')
+            ->call('abrirModal', $concepto->id)
+            ->set('montoBase', '150')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertSame('100.00', $concepto->fresh()->monto_base);
+        $this->assertDatabaseHas('solicitudes_cambio_monto', [
+            'concepto_pago_id' => $concepto->id,
+            'monto_propuesto' => 150,
+            'estado' => 'pendiente',
+        ]);
+    }
+
+    public function test_direccion_aprueba_un_cambio_de_monto_desde_la_vista_de_conceptos(): void
+    {
+        $coordinador = User::factory()->create();
+        $coordinador->assignRole(RolEnum::COORDINADOR->value);
+        $concepto = ConceptoPago::factory()->create(['monto_base' => 100]);
+        $solicitud = $this->app->make(SolicitudCambioMontoService::class)->solicitar($concepto, 150.0, $coordinador->id);
+
+        $direccion = User::factory()->create();
+        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $this->actingAs($direccion);
+
+        Volt::test('pagos.conceptos')
+            ->call('aprobarCambioMonto', $solicitud->id)
+            ->assertHasNoErrors();
+
+        $this->assertSame('150.00', $concepto->fresh()->monto_base);
+    }
+
+    public function test_coordinador_crea_un_plan_de_pago_desde_el_listado(): void
+    {
+        $coordinador = User::factory()->create();
+        $coordinador->assignRole(RolEnum::COORDINADOR->value);
+
+        $matricula = Matricula::factory()->create(['fecha_matricula' => now()]);
+
+        $this->actingAs($coordinador);
+
+        Volt::test('pagos.index')
+            ->set("numeroCuotasPorMatricula.{$matricula->id}", (string) NumeroCuotasEnum::SEIS->value)
+            ->set("montoTotalPorMatricula.{$matricula->id}", '600')
+            ->call('crearPlan', $matricula->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('planes_pago', ['matricula_id' => $matricula->id, 'numero_cuotas' => 6]);
+        $this->assertDatabaseCount('cuotas', 6);
+    }
+
+    public function test_el_estudiante_sube_un_comprobante_para_su_cuota(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ESTUDIANTE->value);
+        $estudiante = Estudiante::factory()->create(['user_id' => $usuario->id]);
+        $matricula = Matricula::factory()->create(['estudiante_id' => $estudiante->id, 'fecha_matricula' => now()]);
+        ConceptoPago::factory()->create(['tipo' => 'mensualidad']);
+
+        $plan = $this->app->make(PlanPagoService::class)->crear($matricula, NumeroCuotasEnum::UNA, 100.0);
+        $cuota = $plan->cuotas()->firstOrFail();
+
+        Storage::fake('public');
+
+        $this->actingAs($usuario);
+
+        Volt::test('pagos.mi-cuenta')
+            ->set("montoPorCuota.{$cuota->id}", '100')
+            ->set("metodoPorCuota.{$cuota->id}", 'yape')
+            ->set("comprobantePorCuota.{$cuota->id}", UploadedFile::fake()->create('comprobante.pdf', 100, 'application/pdf'))
+            ->call('subirComprobante', $cuota->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('pagos', [
+            'estudiante_id' => $estudiante->id,
+            'cuota_id' => $cuota->id,
+            'estado' => 'pendiente',
+        ]);
+    }
+
+    /**
+     * Regresión: "Mi cuenta" hardcodeaba el monto del pago al monto
+     * completo de la cuota sin importar cuánto haya escrito el
+     * estudiante -- un pago parcial terminaba restando la cuota entera
+     * al total adeudado. Ver mi-cuenta.blade.php::subirComprobante().
+     */
+    public function test_un_pago_parcial_desde_mi_cuenta_no_marca_la_cuota_como_pagada(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ESTUDIANTE->value);
+        $estudiante = Estudiante::factory()->create(['user_id' => $usuario->id]);
+        $matricula = Matricula::factory()->create(['estudiante_id' => $estudiante->id, 'fecha_matricula' => now()]);
+        ConceptoPago::factory()->create(['tipo' => 'mensualidad']);
+
+        $plan = $this->app->make(PlanPagoService::class)->crear($matricula, NumeroCuotasEnum::UNA, 80.0);
+        $cuota = $plan->cuotas()->firstOrFail();
+
+        Storage::fake('public');
+
+        $this->actingAs($usuario);
+
+        Volt::test('pagos.mi-cuenta')
+            ->set("montoPorCuota.{$cuota->id}", '40')
+            ->set("metodoPorCuota.{$cuota->id}", 'yape')
+            ->set("comprobantePorCuota.{$cuota->id}", UploadedFile::fake()->create('comprobante.pdf', 100, 'application/pdf'))
+            ->call('subirComprobante', $cuota->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('pagos', [
+            'estudiante_id' => $estudiante->id,
+            'cuota_id' => $cuota->id,
+            'monto' => 40.0,
+            'estado' => 'pendiente',
+        ]);
+
+        $pago = Pago::query()->where('cuota_id', $cuota->id)->firstOrFail();
+
+        $tesoreria = User::factory()->create();
+        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $this->actingAs($tesoreria);
+
+        Volt::test('pagos.index')
+            ->call('aprobar', $pago->id)
+            ->assertHasNoErrors();
+
+        $cuota->refresh();
+        $this->assertSame('pendiente', $cuota->estado->value);
+        $this->assertSame(40.0, $cuota->saldoPendiente());
+    }
+}

@@ -1,0 +1,870 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens — paleta azul institucional (Americano Libertad). Cada
+ * color se define como triple RGB (sin "rgb()") para que Tailwind pueda
+ * componer la opacidad vía rgb(var(--x) / <alpha-value>). --color-accent
+ * es el primario FUNCIONAL de toda la interfaz (botones, links, foco,
+ * estados activos) — el mismo azul (#2563eb / #3b82f6) usado en la landing
+ * pública, en vez del violeta heredado de CEBA.
+ */
+:root {
+    /* Sin esto, el navegador dibuja los controles nativos (el desplegable
+       abierto de un <select>, checkboxes, scrollbars) con su tema claro de
+       sistema sin importar el CSS de la página — el cuadro cerrado del
+       select se veía oscuro, pero la lista abierta salía blanca. */
+    color-scheme: light;
+
+    --color-bg: 246 247 250;
+    --color-bg-secondary: 238 240 245;
+    --color-surface: 255 255 255;
+    --color-surface-2: 238 240 243;
+    --color-surface-elevated: 255 255 255;
+    --color-border: 219 223 230;
+    --color-text: 27 31 39;
+    --color-text-dim: 91 100 114;
+    --color-text-faint: 136 145 160;
+    --color-accent: 37 99 235;
+    --color-accent-soft: 219 234 254;
+    --color-ok: 22 163 74;
+    --color-warn: 146 104 15;
+    --color-danger: 190 18 60;
+    --color-info: 37 99 235;
+
+    /*
+     * Degradado del panel de saludo del Dashboard (ver
+     * components/dashboard/hero-banner.blade.php) y del apartado de la
+     * mascota en el sidebar -- azul marino a azul claro, misma familia
+     * que el primario, igual en claro y oscuro (el texto encima siempre
+     * es blanco).
+     */
+    --gradient-hero-from: 30 58 138;
+    --gradient-hero-via: 37 99 235;
+    --gradient-hero-to: 96 165 250;
+}
+
+.dark {
+    color-scheme: dark;
+
+    --color-bg: 11 16 32;
+    --color-bg-secondary: 16 23 42;
+    --color-surface: 21 29 51;
+    --color-surface-2: 24 32 56;
+    --color-surface-elevated: 26 35 64;
+    --color-border: 40 48 68;
+    --color-text: 248 250 252;
+    --color-text-dim: 170 180 200;
+    --color-text-faint: 111 123 145;
+    --color-accent: 59 130 246;
+    --color-accent-soft: 30 58 138;
+    --color-ok: 34 197 94;
+    --color-warn: 250 204 21;
+    --color-danger: 244 63 94;
+    --color-info: 59 130 246;
+
+    --gradient-hero-from: 30 58 138;
+    --gradient-hero-via: 37 99 235;
+    --gradient-hero-to: 96 165 250;
+}
+
+/*
+ * El sidebar de escritorio puede colapsarse a una franja de solo íconos.
+ * El estado se guarda en localStorage y se aplica como clase en <html>
+ * antes del primer paint (ver partials/theme-boot-script), igual que el
+ * tema claro/oscuro, para que no parpadee el sidebar expandido en cada
+ * carga o navegación.
+ */
+.sidebar-collapsed .sidebar-desktop {
+    width: 5rem;
+}
+
+/*
+ * Se aplica solo mientras theme-boot-script corrige el ancho tras un
+ * wire:navigate (ver ese archivo): apaga la transición para que la
+ * corrección sea instantánea en vez de un despliegue-y-colapso visible.
+ */
+.sidebar-desktop.sidebar-no-transition,
+.sidebar-desktop.sidebar-no-transition .sidebar-label,
+.sidebar-desktop.sidebar-no-transition .sidebar-section-title,
+.sidebar-desktop.sidebar-no-transition .sidebar-chevron {
+    transition: none !important;
+}
+
+/*
+ * display:none no se puede animar, así que el texto se recoge encogiendo su
+ * ancho y opacidad en vez de desaparecer de golpe -- eso es lo que hacía que
+ * los íconos "saltaran" al colapsar. overflow:hidden + max-width recorta el
+ * texto suavemente mientras el sidebar se angosta, en vez de que el ícono se
+ * reacomode de un tirón.
+ */
+.sidebar-desktop .sidebar-label {
+    display: inline-block;
+    max-width: 12rem;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 200ms ease, max-width 300ms ease;
+}
+
+/*
+ * El nombre completo de la institución ("CEBA Peruano Británico") no
+ * entra en los 12rem que alcanzan los enlaces del menú -- se recortaría
+ * a la mitad. Mismo comportamiento de colapso, solo con más espacio.
+ */
+.sidebar-desktop .sidebar-label-brand {
+    max-width: 16rem;
+}
+
+.sidebar-desktop .sidebar-section-title {
+    max-height: 1.5rem;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity 200ms ease, max-height 300ms ease, margin-top 300ms ease;
+}
+
+.sidebar-collapsed .sidebar-desktop .sidebar-label {
+    max-width: 0;
+    opacity: 0;
+}
+
+.sidebar-collapsed .sidebar-desktop .sidebar-section-title {
+    max-height: 0;
+    margin-top: 0;
+    opacity: 0;
+}
+
+.sidebar-collapsed .sidebar-desktop .sidebar-chevron {
+    transform: rotate(180deg);
+}
+
+/*
+ * El apartado de la mascota (ver sidebar-nav.blade.php) no cabe en la
+ * franja de solo íconos -- mismo patrón de colapso que .sidebar-label,
+ * pero recogiendo alto en vez de ancho porque este bloque es horizontal.
+ */
+.sidebar-desktop .sidebar-mascot {
+    max-height: 5rem;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity 200ms ease, max-height 300ms ease, margin-top 300ms ease, padding-top 300ms ease;
+}
+
+.sidebar-collapsed .sidebar-desktop .sidebar-mascot {
+    max-height: 0;
+    padding-top: 0;
+    opacity: 0;
+    border-top-width: 0;
+}
+
+/*
+ * Confeti del apartado de la mascota: piezas sueltas que caen en loop
+ * dentro de la caja (recortadas por su propio overflow-hidden, como si
+ * lloviera confeti adentro). Cada <span> trae su color/posición/retraso
+ * inline (ver sidebar-nav.blade.php) para que no caigan todas sincronizadas.
+ */
+.confetti-piece {
+    position: absolute;
+    top: -10%;
+    width: 5px;
+    height: 9px;
+    border-radius: 1px;
+    animation: confetti-fall 3.6s linear infinite;
+    will-change: transform;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+    12% {
+        opacity: 0.9;
+    }
+    85% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateY(6rem) rotate(200deg);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .confetti-piece {
+        animation: none;
+        display: none;
+    }
+}
+
+/*
+ * Los enlaces y títulos de sección del sidebar usan la fuente "display"
+ * (texto de interfaz), en vez del font-sans del resto del contenido.
+ */
+.sidebar-nav a,
+.sidebar-nav button,
+.sidebar-nav .sidebar-section-title {
+    font-family: theme('fontFamily.display');
+}
+
+/*
+ * Badges (píldoras de estado: Publicada/Borrador, tipo de incidencia,
+ * asistencia, etc.): no hay una clase compartida, cada uno es un <span>
+ * suelto, pero todos comparten el patrón rounded-full + texto pequeño +
+ * relleno vertical — eso basta para detectarlos sin tocar cada aparición.
+ * Acotado a .app-shell (layouts.app) para no afectar los badges de la
+ * landing pública, que tiene su propia tipografía aparte.
+ */
+.app-shell [class*='rounded-full'][class*='text-xs'][class*='py-'] {
+    font-family: theme('fontFamily.display');
+}
+
+/*
+ * Hover de fila para todas las tablas del sistema: comparten el mismo
+ * `<tbody class="divide-y divide-border">` en cada módulo (ver auditoría
+ * del Design System), así que una sola regla acá les da hover a las 17
+ * tablas existentes sin tocar cada archivo.
+ */
+.app-shell tbody tr:hover {
+    background-color: rgb(var(--color-surface-2) / 0.6);
+}
+
+/*
+ * Fondo de la página de login (y demás páginas "guest"): resplandores
+ * ambientales en los mismos tonos violeta/azul del degradado del hero,
+ * sobre el token --color-bg -- reemplaza la imagen roja anterior hasta que
+ * se defina una nueva. Muy tenue en claro, más presente en oscuro, mismo
+ * criterio que .ambient-glow.
+ */
+.fondo-login {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+        radial-gradient(ellipse 60% 50% at 15% -10%, rgb(var(--gradient-hero-via) / 12%), transparent 70%),
+        radial-gradient(ellipse 55% 45% at 100% 110%, rgb(var(--gradient-hero-to) / 10%), transparent 70%);
+}
+
+.dark .fondo-login {
+    background-image:
+        radial-gradient(ellipse 60% 50% at 15% -10%, rgb(var(--gradient-hero-via) / 35%), transparent 70%),
+        radial-gradient(ellipse 55% 45% at 100% 110%, rgb(var(--gradient-hero-to) / 22%), transparent 70%);
+}
+
+/*
+ * Mascota del panel izquierdo del login (ver layouts/guest.blade.php):
+ * flotación suave para que no se sienta estática junto al degradado
+ * animado (.hero-glow) de atrás.
+ */
+@keyframes mascot-float {
+    0%, 100% {
+        transform: translateY(0) rotate(-3deg);
+    }
+    50% {
+        transform: translateY(-14px) rotate(-1deg);
+    }
+}
+
+.mascot-float {
+    animation: mascot-float 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mascot-float {
+        animation: none;
+    }
+}
+
+/*
+ * Fondo del área de contenido de los módulos (dentro de <main>, ver
+ * layouts/app.blade.php) -- reemplaza las ilustraciones tipo cuaderno que
+ * había antes (fondo-modulo) por resplandores ambientales lisos en los
+ * mismos tonos del degradado del hero, igual que la referencia del
+ * rediseño. Muy tenue en claro (las tarjetas blancas siguen siendo el
+ * protagonista), más presente en oscuro.
+ */
+.ambient-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        radial-gradient(ellipse 45% 40% at 8% 0%, rgb(76 42 122 / 10%), transparent 70%),
+        radial-gradient(ellipse 40% 35% at 100% 100%, rgb(178 71 168 / 8%), transparent 70%);
+}
+
+.dark .ambient-glow {
+    background-image:
+        radial-gradient(ellipse 45% 40% at 8% 0%, rgb(76 42 122 / 30%), transparent 70%),
+        radial-gradient(ellipse 40% 35% at 100% 100%, rgb(178 71 168 / 18%), transparent 70%);
+}
+
+/*
+ * Modal de "Mi perfil" (x-modal :tv="true" en navigation.blade.php): en vez
+ * del fade+translate+scale genérico, entra y sale como una tele CRT
+ * encendiéndose / apagándose (línea horizontal que se abre y luego se
+ * estira en vertical, y a la inversa al cerrar). transform-origin: center
+ * a propósito, para que lea como "pantalla".
+ */
+.tv-on {
+    animation: tv-on 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    transform-origin: center;
+}
+
+.tv-off {
+    animation: tv-off 320ms cubic-bezier(0.6, 0, 0.8, 0.2) both;
+    transform-origin: center;
+}
+
+@keyframes tv-on {
+    0% {
+        opacity: 0;
+        transform: scaleX(0.02) scaleY(0.02);
+        filter: brightness(3.2);
+    }
+
+    30% {
+        opacity: 1;
+        transform: scaleX(1) scaleY(0.02);
+        filter: brightness(3.5);
+    }
+
+    55% {
+        opacity: 1;
+        transform: scaleX(1) scaleY(0.04);
+        filter: brightness(2.5);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scaleX(1) scaleY(1);
+        filter: brightness(1);
+    }
+}
+
+@keyframes tv-off {
+    0% {
+        opacity: 1;
+        transform: scaleX(1) scaleY(1);
+        filter: brightness(1);
+    }
+
+    45% {
+        opacity: 1;
+        transform: scaleX(1) scaleY(0.04);
+        filter: brightness(2.8);
+    }
+
+    75% {
+        opacity: 1;
+        transform: scaleX(0.03) scaleY(0.04);
+        filter: brightness(3.5);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scaleX(0.01) scaleY(0.01);
+        filter: brightness(3.5);
+    }
+}
+
+/*
+ * Menú de "Mi perfil" (x-dropdown en navigation.blade.php): efecto de
+ * enrollamiento, como una persiana que se despliega desde arriba al abrir
+ * y se enrolla de vuelta hacia arriba al cerrar.
+ */
+.dropdown-roll-on {
+    animation: dropdown-roll-on 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: top center;
+}
+
+.dropdown-roll-off {
+    animation: dropdown-roll-off 200ms cubic-bezier(0.6, 0, 0.8, 0.2) both;
+    transform-origin: top center;
+}
+
+@keyframes dropdown-roll-on {
+    0% {
+        opacity: 0;
+        transform: scaleY(0);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scaleY(1.03);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+@keyframes dropdown-roll-off {
+    0% {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scaleY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tv-on,
+    .tv-off,
+    .dropdown-roll-on,
+    .dropdown-roll-off {
+        animation: none;
+    }
+}
+
+/*
+ * Panel de saludo del Dashboard (ver components/dashboard/hero-banner).
+ * Degradado diagonal con los tokens --gradient-hero-* (ver :root/.dark);
+ * un resplandor radial suave detrás de la mascota le da profundidad sin
+ * necesitar una segunda imagen.
+ */
+.dashboard-hero-gradient {
+    background-image:
+        radial-gradient(ellipse 60% 90% at 85% 100%, rgb(255 255 255 / 10%), transparent 70%),
+        linear-gradient(135deg, rgb(var(--gradient-hero-from)) 0%, rgb(var(--gradient-hero-via)) 55%, rgb(var(--gradient-hero-to)) 100%);
+}
+
+@layer base {
+    body {
+        @apply bg-bg text-ink;
+    }
+
+    /* Alpine oculta [x-cloak] recién tras inicializar; sin esta regla, el
+       elemento parpadea visible un instante en cada carga de página. */
+    [x-cloak] {
+        display: none !important;
+    }
+
+    /*
+     * Scrollbars con los tokens de marca: sin esto, todo scroll interno
+     * (sidebar, tablas, modales) usa la barra gris por defecto del SO/
+     * navegador, que no responde a claro/oscuro y desentona con el resto
+     * del diseño. Firefox usa scrollbar-color; Chrome/Edge/Safari, los
+     * pseudo-elementos ::-webkit-scrollbar-*. Ambos leen las mismas
+     * variables, así que cambian solos con el tema.
+     */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(var(--color-text-faint)) transparent;
+    }
+
+    *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    *::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        background-color: rgb(var(--color-text-faint));
+        border-radius: 9999px;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+        background-color: rgb(var(--color-text-dim));
+    }
+}
+
+/*
+ * Movimiento ambiental de la landing pública: el resplandor del hero respira
+ * lentamente de fondo, y el botón de WhatsApp emite un anillo que llama la
+ * atención sin ser intrusivo. Ambos se desactivan si el usuario pidió menos
+ * movimiento en su sistema.
+ */
+@keyframes hero-glow-drift {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate3d(1.5%, -2.5%, 0) scale(1.08);
+        opacity: 0.85;
+    }
+}
+
+.hero-glow {
+    animation: hero-glow-drift 14s ease-in-out infinite;
+}
+
+@keyframes whatsapp-button-ping {
+    0% {
+        transform: scale(1);
+        opacity: 0.55;
+    }
+    75%, 100% {
+        transform: scale(1.9);
+        opacity: 0;
+    }
+}
+
+.whatsapp-ping::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: inherit;
+    animation: whatsapp-button-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-glow,
+    .whatsapp-ping::before {
+        animation: none;
+    }
+}
+
+/*
+ * Hero "portada" de la landing pública (adaptado del concepto Loopstack):
+ * titular en dos líneas que se revela palabra por palabra desde una máscara
+ * borrosa, y el wordmark "CEBA" que se revela letra por letra desde la
+ * izquierda. Ver partials/_hero.blade.php para el marcado y la física del
+ * cursor personalizado.
+ */
+.hero-loop-word-mask {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding-bottom: 0.15em;
+    margin-bottom: -0.15em;
+}
+
+.hero-loop-word-inner {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(105%);
+    filter: blur(20px);
+    animation: hero-loop-word-reveal 1.3s cubic-bezier(0.05, 0.9, 0.1, 1) forwards;
+}
+
+@keyframes hero-loop-word-reveal {
+    0% {
+        opacity: 0;
+        transform: translateY(105%);
+        filter: blur(20px);
+    }
+    30% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+.hero-loop-letter-mask {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    line-height: 0.85;
+}
+
+.hero-loop-letter-inner {
+    display: inline-block;
+    opacity: 0;
+    transform: translateX(-105%);
+    filter: blur(20px);
+    animation: hero-loop-letter-reveal 1.2s cubic-bezier(0.05, 0.9, 0.1, 1) forwards;
+}
+
+@keyframes hero-loop-letter-reveal {
+    0% {
+        opacity: 0;
+        transform: translateX(-105%);
+        filter: blur(20px);
+    }
+    25% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.95;
+        transform: translateX(0);
+        filter: blur(0);
+    }
+}
+
+.hero-loop-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(2.1rem, 5.5vw, 3.4rem);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: #ffffff;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+.hero-loop-wordmark {
+    font-family: 'General Sans', 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: clamp(3.5rem, 32vw, 14rem);
+    line-height: 0.8;
+    letter-spacing: -0.03em;
+    color: #ffffff;
+    opacity: 0.95;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.hero-loop-fade {
+    background: linear-gradient(
+        to bottom,
+        #0a0a0a 0%,
+        rgba(10, 10, 10, 0.7) 22%,
+        rgba(10, 10, 10, 0.1) 45%,
+        rgba(10, 10, 10, 0.35) 75%,
+        #0a0a0a 100%
+    );
+}
+
+.hero-loop-btn {
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: #ffffff;
+    background-color: #000000;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 1.1rem 2.2rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.85rem;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
+}
+
+.hero-loop-btn:hover {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
+}
+
+.hero-loop-btn:active {
+    transform: translateY(0);
+}
+
+.hero-loop-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #2563eb;
+    border-radius: 50%;
+    position: relative;
+    display: inline-block;
+    animation: hero-loop-pulse-glow 2s infinite ease-in-out;
+}
+
+.hero-loop-dot::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background-color: rgba(37, 99, 235, 0.45);
+    border-radius: 50%;
+    animation: hero-loop-wave-expand 2s infinite ease-in-out;
+}
+
+@keyframes hero-loop-pulse-glow {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(0.85);
+        box-shadow: 0 0 4px rgba(37, 99, 235, 0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+        box-shadow: 0 0 12px rgba(37, 99, 235, 0.9);
+    }
+}
+
+@keyframes hero-loop-wave-expand {
+    0% {
+        transform: scale(0.6);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(2.3);
+        opacity: 0;
+    }
+}
+
+.hero-loop-tagline-title {
+    font-family: 'General Sans', 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 1.3rem;
+    letter-spacing: -0.015em;
+    color: #ffffff;
+}
+
+.hero-loop-divider {
+    border: none;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.15);
+    margin: 1.4rem 0;
+}
+
+.hero-loop-social {
+    color: rgba(255, 255, 255, 0.55);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+}
+
+.hero-loop-social:hover {
+    color: #ffffff;
+    transform: translateY(-2px);
+}
+
+.hero-loop-link {
+    font-size: 0.9rem;
+    color: #ffffff;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.hero-loop-link:hover {
+    opacity: 0.75;
+    transform: translateY(-1px);
+}
+
+/* Cursor personalizado (anillo + píldora "glass"): solo con puntero fino, ver media query abajo. */
+.hero-loop-ring,
+.hero-loop-pill {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+    will-change: transform, opacity;
+}
+
+.hero-loop-ring {
+    width: 46px;
+    height: 46px;
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+    border-radius: 50%;
+    z-index: 55;
+    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease;
+}
+
+.hero-loop-ring.is-active {
+    opacity: 1;
+}
+
+.hero-loop-ring.is-expanded {
+    border-color: rgba(37, 99, 235, 0.55);
+}
+
+.hero-loop-pill {
+    z-index: 56;
+    padding: 0.7rem 1.4rem;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-loop-pill.is-active {
+    opacity: 1;
+}
+
+.hero-loop-pill-text {
+    font-family: 'General Sans', 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: #2563eb;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+.hero-loop-pill-text .is-white {
+    color: #ffffff;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .hero-loop-ring,
+    .hero-loop-pill {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-loop-word-inner,
+    .hero-loop-letter-inner {
+        animation: none;
+        opacity: 1;
+        transform: none;
+        filter: none;
+    }
+
+    .hero-loop-dot,
+    .hero-loop-dot::after {
+        animation: none;
+    }
+}
+
+/*
+ * Carrusel 3D "coverflow" de "Noticias y Avisos": cada tarjeta anima su
+ * propia posición según qué tan lejos esté de la activa (ver
+ * estiloTarjeta() en _noticias.blade.php) -- no hay un anillo que gire
+ * como conjunto, porque con solo 4 tarjetas espaciarlas en un círculo
+ * completo (360°/4 = 90°) las deja exactamente de canto y desaparecen.
+ * backface-visibility:hidden es una red de seguridad por si algún ángulo
+ * futuro las empuja más allá de 90°, para no mostrar texto espejado.
+ */
+.noticias-carousel-viewport {
+    perspective: 1400px;
+    padding: 2.5rem 0;
+}
+
+.noticias-carousel-ring {
+    position: relative;
+    width: 280px;
+    height: 300px;
+    transform-style: preserve-3d;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.noticias-carousel-item {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: 0;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+    backface-visibility: hidden;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease, filter 0.6s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .noticias-carousel-item {
+        transition: none;
+    }
+}
