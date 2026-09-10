@@ -84,6 +84,19 @@ class DatabaseSeeder extends Seeder
         ]);
         $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
 
+        // Usuario de prueba pedido por el cliente para entrar rápido con
+        // permisos completos -- se recrea en cada `migrate:fresh --seed`
+        // en vez de a mano, dado lo seguido que se corre durante esta
+        // migración Grado->Carrera+Ciclo.
+        $admin = User::factory()->create([
+            'name' => 'Admin Prueba',
+            'email' => 'admin@americanolibertad.test',
+            'dni' => '00000099',
+            'password' => bcrypt('admin123'),
+            'estado' => EstadoUsuarioEnum::ACTIVO,
+        ]);
+        $admin->assignRole(RolEnum::GERENCIA->value);
+
         $this->call(AcademicoDemoSeeder::class);
         $this->call(MatriculaDemoSeeder::class);
         $this->call(AulaVirtualDemoSeeder::class);

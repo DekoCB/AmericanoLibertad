@@ -251,7 +251,11 @@ class DemoRobustoSeeder extends Seeder
             }
         }
 
+        // Solo cursos "de grado" (el modelo EBA heredado de CEBA, en
+        // retirada): ubicarHorario() usa Grado::letraAula(), que no existe
+        // para los cursos "de carrera" reales del instituto (grado_id null).
         $cursosSinHorario = Curso::query()
+            ->whereNotNull('grado_id')
             ->whereDoesntHave('horarios', fn ($query) => $query->where('ciclo_id', $ciclo->id))
             ->get();
 
