@@ -25,11 +25,11 @@ class CursoVirtualService
     }
 
     /**
-     * Los cursos virtuales que corresponden al mismo curso académico, grado
-     * y ciclo que $curso -- incluido $curso mismo -- aunque los dicte otro
-     * docente. Es la lista para "subir también a": replicar un material a
-     * los demás cursos virtuales equivalentes sin tener que repetirlo uno
-     * por uno.
+     * Los cursos virtuales que corresponden al mismo curso académico,
+     * carrera, ciclo curricular y ciclo que $curso -- incluido $curso
+     * mismo -- aunque los dicte otro docente. Es la lista para "subir
+     * también a": replicar un material a los demás cursos virtuales
+     * equivalentes sin tener que repetirlo uno por uno.
      *
      * @return Collection<int, CursoVirtual>
      */
@@ -40,10 +40,11 @@ class CursoVirtualService
         return CursoVirtual::query()
             ->whereHas('horario', function ($query) use ($horario) {
                 $query->where('curso_id', $horario->curso_id)
-                    ->where('grado_id', $horario->grado_id)
+                    ->where('carrera_id', $horario->carrera_id)
+                    ->where('ciclo_curricular', $horario->ciclo_curricular)
                     ->where('ciclo_id', $horario->ciclo_id);
             })
-            ->with(['horario.curso', 'horario.grado', 'horario.ciclo', 'horario.docente'])
+            ->with(['horario.curso', 'horario.carrera', 'horario.ciclo', 'horario.docente'])
             ->get()
             ->sortBy(fn (CursoVirtual $cursoVirtual) => $cursoVirtual->horario->docente->name ?? '');
     }

@@ -1,7 +1,7 @@
 <?php
 
+use App\Models\Carrera;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Notificaciones\Enums\EstadoMensajeWhatsappEnum;
 use App\Modules\Notificaciones\Enums\TipoMensajeWhatsappEnum;
 use App\Modules\Notificaciones\Models\PlantillaWhatsapp;
@@ -28,7 +28,7 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $plantillaId = '';
 
-    public string $gradoId = '';
+    public string $carreraId = '';
 
     public string $cicloId = '';
 
@@ -50,14 +50,14 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * @return array{grado_id?: int, ciclo_id?: int, solo_con_deuda?: bool}
+     * @return array{carrera_id?: int, ciclo_id?: int, solo_con_deuda?: bool}
      */
     private function segmentoActual(): array
     {
         $segmento = [];
 
-        if ($this->gradoId !== '') {
-            $segmento['grado_id'] = (int) $this->gradoId;
+        if ($this->carreraId !== '') {
+            $segmento['carrera_id'] = (int) $this->carreraId;
         }
 
         if ($this->cicloId !== '') {
@@ -85,7 +85,7 @@ new #[Layout('layouts.app')] class extends Component
             Auth::user(),
         );
 
-        $this->reset(['nombre', 'plantillaId', 'gradoId', 'cicloId', 'soloConDeuda']);
+        $this->reset(['nombre', 'plantillaId', 'carreraId', 'cicloId', 'soloConDeuda']);
         $this->tab = 'historial';
         session()->flash('status', 'Campaña creada. Los mensajes se están enviando.');
     }
@@ -94,7 +94,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         return [
             'plantillasActivas' => $plantillas->activas(),
-            'grados' => Grado::query()->orderBy('orden')->get(),
+            'carreras' => Carrera::query()->orderBy('name')->get(),
             'ciclos' => Ciclo::query()->latest('fecha_inicio')->get(),
             'destinatariosPrevistos' => $campanias->resolverDestinatarios($this->segmentoActual())->count(),
             'campanias' => $campanias->todas(),
@@ -111,7 +111,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Notificaciones</h1>
-        <p class="mt-1 text-sm text-ink-dim">Envíos masivos de WhatsApp segmentados por grado, ciclo o estado de deuda.</p>
+        <p class="mt-1 text-sm text-ink-dim">Envíos masivos de WhatsApp segmentados por carrera, ciclo o estado de deuda.</p>
     </x-slot>
 
     @if (session('status'))
@@ -158,12 +158,12 @@ new #[Layout('layouts.app')] class extends Component
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <x-input-label for="gradoId" value="Grado (opcional)" />
+                    <x-input-label for="carreraId" value="Carrera (opcional)" />
                     <x-select-input
-                        wire:model.live="gradoId"
-                        id="gradoId"
+                        wire:model.live="carreraId"
+                        id="carreraId"
                         class="mt-1 block w-full"
-                        :options="collect($grados)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])->prepend('Todos los grados', '')"
+                        :options="collect($carreras)->mapWithKeys(fn ($carrera) => [$carrera->id => $carrera->name])->prepend('Todas las carreras', '')"
                     />
                 </div>
                 <div>

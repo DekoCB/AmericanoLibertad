@@ -12,7 +12,7 @@ class CursoVirtualPolicy
 {
     /**
      * Dirección/Coordinador con supervisión general, el docente dueño del
-     * curso, o un estudiante matriculado en el grado y ciclo del horario.
+     * curso, o un estudiante matriculado en la carrera y ciclo del horario.
      */
     public function view(User $user, CursoVirtual $curso): bool
     {
@@ -43,7 +43,7 @@ class CursoVirtualPolicy
 
     /**
      * Solo cuenta como matriculado el estudiante con una matrícula
-     * aprobada en el mismo grado y ciclo del horario (ver
+     * aprobada en la misma carrera y ciclo del horario (ver
      * Matricula::scopeDelHorario()).
      */
     private function estudianteMatriculado(User $user, CursoVirtual $curso): bool

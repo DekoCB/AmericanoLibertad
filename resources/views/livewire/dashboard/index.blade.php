@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-use App\Modules\Academico\Models\Grado;
+use App\Models\Carrera;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Asistencia\Models\Asistencia;
 use App\Modules\AulaVirtual\Models\Tarea;
@@ -117,7 +117,7 @@ new #[Layout('layouts.app')] class extends Component
     public int $matriculasSinPlanDePago = 0;
 
     /** @var array<int, array{label: string, valor: float}> */
-    public array $asistenciaPorGrado = [];
+    public array $asistenciaPorCarrera = [];
 
     public bool $esTesoreria = false;
 
@@ -217,7 +217,7 @@ new #[Layout('layouts.app')] class extends Component
                 ->where('estado', 'aprobada')
                 ->whereNotIn('id', PlanPago::query()->pluck('matricula_id'))
                 ->count();
-            $this->asistenciaPorGrado = $this->calcularAsistenciaPorGrado();
+            $this->asistenciaPorCarrera = $this->calcularAsistenciaPorCarrera();
         }
 
         if (Gate::allows('pagos.aprobar')) {
@@ -372,13 +372,13 @@ new #[Layout('layouts.app')] class extends Component
     /**
      * @return array<int, array{label: string, valor: float}>
      */
-    private function calcularAsistenciaPorGrado(): array
+    private function calcularAsistenciaPorCarrera(): array
     {
-        return Grado::query()
-            ->orderBy('orden')
+        return Carrera::query()
+            ->orderBy('name')
             ->get()
-            ->map(function (Grado $grado) {
-                $registros = Asistencia::query()->whereHas('horario', fn ($query) => $query->where('grado_id', $grado->id));
+            ->map(function (Carrera $carrera) {
+                $registros = Asistencia::query()->whereHas('horario', fn ($query) => $query->where('carrera_id', $carrera->id));
                 $total = $registros->count();
 
                 if ($total === 0) {
@@ -387,7 +387,7 @@ new #[Layout('layouts.app')] class extends Component
 
                 $positivos = (clone $registros)->whereIn('estado', ['presente', 'justificado'])->count();
 
-                return ['label' => $grado->nombre, 'valor' => round($positivos / $total * 100, 1)];
+                return ['label' => $carrera->name, 'valor' => round($positivos / $total * 100, 1)];
             })
             ->filter()
             ->values()
@@ -565,13 +565,13 @@ new #[Layout('layouts.app')] class extends Component
             </div>
         @endif
 
-        @if ($esCoordinador && count($asistenciaPorGrado) > 0)
+        @if ($esCoordinador && count($asistenciaPorCarrera) > 0)
             <div class="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-                <h2 class="mb-3 text-sm font-semibold text-ink">Asistencia por grado (% presente/justificado)</h2>
+                <h2 class="mb-3 text-sm font-semibold text-ink">Asistencia por carrera (% presente/justificado)</h2>
                 <x-chart-canvas
                     type="bar"
-                    :labels="collect($asistenciaPorGrado)->pluck('label')->all()"
-                    :data="collect($asistenciaPorGrado)->pluck('valor')->all()"
+                    :labels="collect($asistenciaPorCarrera)->pluck('label')->all()"
+                    :data="collect($asistenciaPorCarrera)->pluck('valor')->all()"
                     label="% Asistencia"
                     color="#5B8DEF"
                 />

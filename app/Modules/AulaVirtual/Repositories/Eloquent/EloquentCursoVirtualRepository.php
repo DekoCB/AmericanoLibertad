@@ -22,7 +22,7 @@ class EloquentCursoVirtualRepository extends BaseRepository implements CursoVirt
      */
     protected function query(): Builder
     {
-        return CursoVirtual::query()->with(['horario.curso', 'horario.grado', 'horario.ciclo', 'horario.docente', 'horario.dias']);
+        return CursoVirtual::query()->with(['horario.curso', 'horario.carrera', 'horario.ciclo', 'horario.docente', 'horario.dias']);
     }
 
     public function delDocente(int $docenteId): Collection
@@ -36,7 +36,7 @@ class EloquentCursoVirtualRepository extends BaseRepository implements CursoVirt
     {
         $matriculas = $estudiante->matriculas()
             ->where('estado', 'aprobada')
-            ->get(['id', 'grado_id', 'ciclo_id']);
+            ->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
 
         if ($matriculas->isEmpty()) {
             return new Collection;

@@ -20,7 +20,7 @@ use Illuminate\Validation\ValidationException;
 class CampaniaWhatsappService
 {
     /**
-     * @param  array{grado_id?: int, ciclo_id?: int, solo_con_deuda?: bool}  $segmento
+     * @param  array{carrera_id?: int, ciclo_id?: int, solo_con_deuda?: bool}  $segmento
      * @return Collection<int, Estudiante>
      */
     public function resolverDestinatarios(array $segmento): Collection
@@ -29,8 +29,8 @@ class CampaniaWhatsappService
             ->whereHas('matriculas', function ($sub) use ($segmento) {
                 $sub->where('estado', 'aprobada');
 
-                if (! empty($segmento['grado_id'])) {
-                    $sub->where('grado_id', $segmento['grado_id']);
+                if (! empty($segmento['carrera_id'])) {
+                    $sub->where('carrera_id', $segmento['carrera_id']);
                 }
 
                 if (! empty($segmento['ciclo_id'])) {
@@ -46,7 +46,7 @@ class CampaniaWhatsappService
     }
 
     /**
-     * @param  array{grado_id?: int, ciclo_id?: int, solo_con_deuda?: bool}  $segmento
+     * @param  array{carrera_id?: int, ciclo_id?: int, solo_con_deuda?: bool}  $segmento
      */
     public function crearYEnviar(string $nombre, PlantillaWhatsapp $plantilla, array $segmento, User $creador): CampaniaWhatsapp
     {

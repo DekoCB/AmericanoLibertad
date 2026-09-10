@@ -22,8 +22,8 @@ interface CursoVirtualRepositoryInterface extends RepositoryInterface
     public function delDocente(int $docenteId): Collection;
 
     /**
-     * Cursos virtuales visibles para un estudiante: los que corresponden al
-     * grado y ciclo de alguna de sus matrículas aprobadas.
+     * Cursos virtuales visibles para un estudiante: los que corresponden a
+     * la carrera y ciclo de alguna de sus matrículas aprobadas.
      *
      * @return Collection<int, CursoVirtual>
      */
