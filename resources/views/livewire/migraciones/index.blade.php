@@ -1,8 +1,8 @@
 <?php
 
+use App\Models\Carrera;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Services\CicloService;
 use App\Modules\Matricula\Enums\EstadoMatriculaEnum;
 use App\Modules\Matricula\Models\Estudiante;
@@ -27,20 +27,20 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $cicloDestinoId = '';
 
-    public string $gradoDestinoId = '';
+    public string $cicloCurricularDestino = '';
 
     // Masivo
     public string $modalidadOrigen = '';
 
     public string $cicloOrigenId = '';
 
-    public string $seccionOrigen = '';
+    public string $carreraOrigenId = '';
 
-    public string $gradoOrigenId = '';
+    public string $cicloCurricularOrigen = '';
 
     public string $masivoCicloDestinoId = '';
 
-    public string $masivoGradoDestinoId = '';
+    public string $masivoCicloCurricularDestino = '';
 
     /** @var array{exitosos: int, errores: list<array{estudiante: string, mensaje: string}>}|null */
     public ?array $resultado = null;
@@ -60,15 +60,14 @@ new #[Layout('layouts.app')] class extends Component
 
         if ($origen) {
             $cicloSugerido = $service->cicloDestinoSugerido($origen->ciclo, $ciclos);
-            $gradoSugerido = $service->gradoSiguiente($origen->grado);
             $this->cicloDestinoId = $cicloSugerido ? (string) $cicloSugerido->id : '';
-            $this->gradoDestinoId = $gradoSugerido ? (string) $gradoSugerido->id : '';
+            $this->cicloCurricularDestino = (string) ($service->cicloCurricularSiguiente($origen->carrera, $origen->ciclo_curricular) ?? '');
         }
     }
 
     public function cambiarEstudiante(): void
     {
-        $this->reset(['estudianteId', 'estudianteNombre', 'cicloDestinoId', 'gradoDestinoId']);
+        $this->reset(['estudianteId', 'estudianteNombre', 'cicloDestinoId', 'cicloCurricularDestino']);
     }
 
     public function migrarIndividual(MigracionService $service): void
@@ -78,7 +77,7 @@ new #[Layout('layouts.app')] class extends Component
         $this->validate([
             'estudianteId' => 'required|integer|exists:estudiantes,id',
             'cicloDestinoId' => 'required|integer|exists:ciclos,id',
-            'gradoDestinoId' => 'required|integer|exists:grados,id',
+            'cicloCurricularDestino' => 'required|integer|min:1|max:10',
         ]);
 
         $origen = $this->matriculaVigenteDe($this->estudianteId);
@@ -89,38 +88,38 @@ new #[Layout('layouts.app')] class extends Component
             return;
         }
 
-        $service->migrar($origen, (int) $this->cicloDestinoId, (int) $this->gradoDestinoId, Auth::id());
+        $service->migrar($origen, (int) $this->cicloDestinoId, (int) $this->cicloCurricularDestino, Auth::id());
 
-        $this->reset(['estudianteId', 'estudianteNombre', 'cicloDestinoId', 'gradoDestinoId']);
+        $this->reset(['estudianteId', 'estudianteNombre', 'cicloDestinoId', 'cicloCurricularDestino']);
         session()->flash('status', 'Estudiante migrado correctamente.');
     }
 
     public function updatedModalidadOrigen(): void
     {
         $this->cicloOrigenId = '';
-        $this->seccionOrigen = '';
-        $this->gradoOrigenId = '';
+        $this->carreraOrigenId = '';
+        $this->cicloCurricularOrigen = '';
         $this->masivoCicloDestinoId = '';
-        $this->masivoGradoDestinoId = '';
+        $this->masivoCicloCurricularDestino = '';
     }
 
-    public function updatedSeccionOrigen(): void
+    public function updatedCarreraOrigenId(): void
     {
-        $this->gradoOrigenId = '';
-        $this->masivoGradoDestinoId = '';
+        $this->cicloCurricularOrigen = '';
+        $this->masivoCicloCurricularDestino = '';
     }
 
-    public function updatedGradoOrigenId(MigracionService $service, CicloService $ciclos): void
+    public function updatedCicloCurricularOrigen(MigracionService $service, CicloService $ciclos): void
     {
-        if ($this->gradoOrigenId === '') {
-            $this->masivoGradoDestinoId = '';
+        if ($this->cicloCurricularOrigen === '' || $this->carreraOrigenId === '') {
+            $this->masivoCicloCurricularDestino = '';
 
             return;
         }
 
-        $grado = Grado::query()->find($this->gradoOrigenId);
-        $gradoSugerido = $grado ? $service->gradoSiguiente($grado) : null;
-        $this->masivoGradoDestinoId = $gradoSugerido ? (string) $gradoSugerido->id : '';
+        $carrera = Carrera::query()->find($this->carreraOrigenId);
+        $siguiente = $carrera ? $service->cicloCurricularSiguiente($carrera, (int) $this->cicloCurricularOrigen) : null;
+        $this->masivoCicloCurricularDestino = $siguiente !== null ? (string) $siguiente : '';
 
         $cicloOrigen = $this->cicloOrigenParaSugerencia($service);
 
@@ -136,14 +135,15 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->validate([
             'modalidadOrigen' => 'required|string|in:seis_meses,anual',
-            'gradoOrigenId' => 'required|integer|exists:grados,id',
+            'carreraOrigenId' => 'required|integer|exists:carreras,id',
+            'cicloCurricularOrigen' => 'required|integer|min:1|max:10',
             'masivoCicloDestinoId' => 'required|integer|exists:ciclos,id',
-            'masivoGradoDestinoId' => 'required|integer|exists:grados,id',
+            'masivoCicloCurricularDestino' => 'required|integer|min:1|max:10',
         ]);
 
         $origenes = $this->cohorteMasivaActual($service);
 
-        $this->resultado = $service->migrarMasivo($origenes, (int) $this->masivoCicloDestinoId, (int) $this->masivoGradoDestinoId, Auth::id());
+        $this->resultado = $service->migrarMasivo($origenes, (int) $this->masivoCicloDestinoId, (int) $this->masivoCicloCurricularDestino, Auth::id());
     }
 
     private function matriculaVigenteDe(int $estudianteId): ?Matricula
@@ -152,7 +152,7 @@ new #[Layout('layouts.app')] class extends Component
             ->where('estudiante_id', $estudianteId)
             ->where('estado', EstadoMatriculaEnum::APROBADA)
             ->latest('fecha_matricula')
-            ->with(['ciclo', 'grado'])
+            ->with(['ciclo', 'carrera'])
             ->first();
     }
 
@@ -176,7 +176,7 @@ new #[Layout('layouts.app')] class extends Component
      */
     private function cohorteMasivaActual(MigracionService $service): Collection
     {
-        if ($this->modalidadOrigen === '' || $this->gradoOrigenId === '') {
+        if ($this->modalidadOrigen === '' || $this->carreraOrigenId === '' || $this->cicloCurricularOrigen === '') {
             return new Collection;
         }
 
@@ -189,8 +189,8 @@ new #[Layout('layouts.app')] class extends Component
         return $service->matriculasVigentes(
             $modalidad,
             $cicloId,
-            $this->seccionOrigen !== '' ? $this->seccionOrigen : null,
-            (int) $this->gradoOrigenId,
+            (int) $this->carreraOrigenId,
+            (int) $this->cicloCurricularOrigen,
         );
     }
 
@@ -210,11 +210,7 @@ new #[Layout('layouts.app')] class extends Component
                 ->get();
         }
 
-        $gradosOrigenDisponibles = Grado::query()
-            ->where('activo', true)
-            ->when($this->seccionOrigen !== '', fn ($q) => $q->deSeccion($this->seccionOrigen))
-            ->orderBy('orden')
-            ->get();
+        $ciclosCurriculares = ['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI'];
 
         return [
             'resultadosBusqueda' => $resultadosBusqueda,
@@ -222,8 +218,8 @@ new #[Layout('layouts.app')] class extends Component
             'ciclos' => Ciclo::query()->orderByDesc('fecha_inicio')->get(),
             'ciclosSeisMeses' => Ciclo::query()->where('modalidad', ModalidadCicloEnum::SEIS_MESES)->orderByDesc('fecha_inicio')->get(),
             'cicloAnualVigente' => $service->cicloAnualVigente(),
-            'grados' => Grado::query()->where('activo', true)->orderBy('orden')->get(),
-            'gradosOrigenDisponibles' => $gradosOrigenDisponibles,
+            'carreras' => Carrera::query()->orderBy('name')->get(),
+            'ciclosCurriculares' => $ciclosCurriculares,
             'cohorteMasiva' => $this->cohorteMasivaActual($service),
         ];
     }
@@ -232,7 +228,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Migraciones</h1>
-        <p class="mt-1 text-sm text-ink-dim">Pasar de grado a un estudiante, o a varios a la vez filtrados por Modalidad/Grupo/Sección/Grado.</p>
+        <p class="mt-1 text-sm text-ink-dim">Avanzar de ciclo a un estudiante, o a varios a la vez filtrados por Modalidad/Grupo/Carrera/Ciclo.</p>
     </x-slot>
 
     @if (session('status'))
@@ -279,7 +275,7 @@ new #[Layout('layouts.app')] class extends Component
 
             @if ($matriculaOrigenIndividual)
                 <p class="text-sm text-ink-dim">
-                    Actualmente en <span class="font-medium text-ink">{{ $matriculaOrigenIndividual->grado->nombre }}</span>
+                    Actualmente en <span class="font-medium text-ink">{{ $matriculaOrigenIndividual->carrera->name }} · Ciclo {{ $ciclosCurriculares[(string) $matriculaOrigenIndividual->ciclo_curricular] ?? $matriculaOrigenIndividual->ciclo_curricular }}</span>
                     · {{ $matriculaOrigenIndividual->ciclo->nombre }} ({{ $matriculaOrigenIndividual->ciclo->modalidad->label() }})
                 </p>
 
@@ -295,14 +291,14 @@ new #[Layout('layouts.app')] class extends Component
                         <x-input-error :messages="$errors->get('cicloDestinoId')" class="mt-1" />
                     </div>
                     <div>
-                        <x-input-label for="gradoDestinoId" value="Grado destino" />
+                        <x-input-label for="cicloCurricularDestino" value="Ciclo curricular destino" />
                         <x-select-input
-                            wire:model="gradoDestinoId"
-                            id="gradoDestinoId"
+                            wire:model="cicloCurricularDestino"
+                            id="cicloCurricularDestino"
                             class="mt-1 block w-full"
-                            :options="collect($grados)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])"
+                            :options="$ciclosCurriculares"
                         />
-                        <x-input-error :messages="$errors->get('gradoDestinoId')" class="mt-1" />
+                        <x-input-error :messages="$errors->get('cicloCurricularDestino')" class="mt-1" />
                     </div>
                 </div>
 
@@ -310,7 +306,7 @@ new #[Layout('layouts.app')] class extends Component
                     <x-primary-button
                         type="button"
                         x-data
-                        x-on:click="$store.confirm.preguntar('¿Migrar a {{ addslashes($estudianteNombre) }} al grado destino elegido?', () => $wire.migrarIndividual(), { etiquetaConfirmar: 'Migrar' })"
+                        x-on:click="$store.confirm.preguntar('¿Migrar a {{ addslashes($estudianteNombre) }} al ciclo destino elegido?', () => $wire.migrarIndividual(), { etiquetaConfirmar: 'Migrar' })"
                     >
                         Migrar
                     </x-primary-button>
@@ -360,29 +356,30 @@ new #[Layout('layouts.app')] class extends Component
 
                     @if ($modalidadOrigen !== '')
                         <div>
-                            <x-input-label for="seccionOrigen" value="Sección" />
+                            <x-input-label for="carreraOrigenId" value="Carrera" />
                             <x-select-input
-                                wire:model.live="seccionOrigen"
-                                id="seccionOrigen"
+                                wire:model.live="carreraOrigenId"
+                                id="carreraOrigenId"
                                 class="mt-1 block w-full"
-                                :options="['' => 'Todas', 'A' => 'Aula A', 'B' => 'Aula B']"
+                                :options="collect($carreras)->mapWithKeys(fn ($carrera) => [$carrera->id => $carrera->name])->prepend('Selecciona…', '')"
                             />
+                            <x-input-error :messages="$errors->get('carreraOrigenId')" class="mt-1" />
                         </div>
                         <div>
-                            <x-input-label for="gradoOrigenId" value="Grado" />
+                            <x-input-label for="cicloCurricularOrigen" value="Ciclo" />
                             <x-select-input
-                                wire:model.live="gradoOrigenId"
-                                id="gradoOrigenId"
+                                wire:model.live="cicloCurricularOrigen"
+                                id="cicloCurricularOrigen"
                                 class="mt-1 block w-full"
-                                :options="collect($gradosOrigenDisponibles)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])->prepend('Selecciona…', '')"
+                                :options="collect($ciclosCurriculares)->prepend('Selecciona…', '')"
                             />
-                            <x-input-error :messages="$errors->get('gradoOrigenId')" class="mt-1" />
+                            <x-input-error :messages="$errors->get('cicloCurricularOrigen')" class="mt-1" />
                         </div>
                     @endif
                 </div>
             </div>
 
-            @if ($modalidadOrigen !== '' && $gradoOrigenId !== '')
+            @if ($modalidadOrigen !== '' && $carreraOrigenId !== '' && $cicloCurricularOrigen !== '')
                 <div class="rounded-2xl border border-border bg-surface shadow-sm">
                     <div class="border-b border-border px-4 py-3">
                         <h3 class="font-display text-sm text-ink">{{ $cohorteMasiva->count() }} estudiante{{ $cohorteMasiva->count() === 1 ? '' : 's' }} coincide{{ $cohorteMasiva->count() === 1 ? '' : 'n' }}</h3>
@@ -413,14 +410,14 @@ new #[Layout('layouts.app')] class extends Component
                             <x-input-error :messages="$errors->get('masivoCicloDestinoId')" class="mt-1" />
                         </div>
                         <div>
-                            <x-input-label for="masivoGradoDestinoId" value="Grado destino" />
+                            <x-input-label for="masivoCicloCurricularDestino" value="Ciclo curricular destino" />
                             <x-select-input
-                                wire:model="masivoGradoDestinoId"
-                                id="masivoGradoDestinoId"
+                                wire:model="masivoCicloCurricularDestino"
+                                id="masivoCicloCurricularDestino"
                                 class="mt-1 block w-full"
-                                :options="collect($grados)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])"
+                                :options="$ciclosCurriculares"
                             />
-                            <x-input-error :messages="$errors->get('masivoGradoDestinoId')" class="mt-1" />
+                            <x-input-error :messages="$errors->get('masivoCicloCurricularDestino')" class="mt-1" />
                         </div>
                     </div>
 
@@ -428,7 +425,7 @@ new #[Layout('layouts.app')] class extends Component
                         <x-primary-button
                             type="button"
                             x-data
-                            x-on:click="$store.confirm.preguntar('¿Migrar a los {{ $cohorteMasiva->count() }} estudiantes seleccionados al grado destino elegido?', () => $wire.migrarMasivo(), { etiquetaConfirmar: 'Migrar' })"
+                            x-on:click="$store.confirm.preguntar('¿Migrar a los {{ $cohorteMasiva->count() }} estudiantes seleccionados al ciclo destino elegido?', () => $wire.migrarMasivo(), { etiquetaConfirmar: 'Migrar' })"
                         >
                             Migrar {{ $cohorteMasiva->count() }} estudiante{{ $cohorteMasiva->count() === 1 ? '' : 's' }}
                         </x-primary-button>

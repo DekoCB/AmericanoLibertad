@@ -1,9 +1,9 @@
 <?php
 
+use App\Models\Carrera;
 use App\Modules\Academico\Enums\FranjaHorarioEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Enums\MetodoPagoEnum;
@@ -86,7 +86,9 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $cobrosCicloId = '';
 
-    public string $cobrosGradoId = '';
+    public string $cobrosCarreraId = '';
+
+    public string $cobrosCicloCurricular = '';
 
     public string $cobrosCursoId = '';
 
@@ -126,16 +128,24 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * El filtro grupal es en cascada: Grupo primero, luego Grado, luego
-     * Curso. Cambiar un nivel invalida los que dependen de él.
+     * El filtro grupal es en cascada: Grupo primero, luego Carrera, luego
+     * Ciclo curricular, luego Curso. Cambiar un nivel invalida los que
+     * dependen de él.
      */
     public function updatedCobrosCicloId(): void
     {
-        $this->cobrosGradoId = '';
+        $this->cobrosCarreraId = '';
+        $this->cobrosCicloCurricular = '';
         $this->cobrosCursoId = '';
     }
 
-    public function updatedCobrosGradoId(): void
+    public function updatedCobrosCarreraId(): void
+    {
+        $this->cobrosCicloCurricular = '';
+        $this->cobrosCursoId = '';
+    }
+
+    public function updatedCobrosCicloCurricular(): void
     {
         $this->cobrosCursoId = '';
     }
@@ -267,7 +277,7 @@ new #[Layout('layouts.app')] class extends Component
             $matriculasSinPlan = Matricula::query()
                 ->where('estado', 'aprobada')
                 ->whereNotIn('id', PlanPago::query()->pluck('matricula_id'))
-                ->with(['estudiante', 'ciclo', 'grado'])
+                ->with(['estudiante', 'ciclo', 'carrera'])
                 ->get();
 
             foreach ($matriculasSinPlan as $matricula) {
@@ -322,14 +332,20 @@ new #[Layout('layouts.app')] class extends Component
             $cobrosReporteGrupal = $cobranza->deudoresPorConceptos(
                 array_map('intval', $this->cobrosConceptoIds),
                 $this->cobrosCicloId !== '' ? (int) $this->cobrosCicloId : null,
-                $this->cobrosGradoId !== '' ? (int) $this->cobrosGradoId : null,
+                $this->cobrosCarreraId !== '' ? (int) $this->cobrosCarreraId : null,
+                $this->cobrosCicloCurricular !== '' ? (int) $this->cobrosCicloCurricular : null,
                 $this->cobrosCursoId !== '' ? (int) $this->cobrosCursoId : null,
                 $this->cobrosFranja !== '' ? $this->cobrosFranja : null,
             );
         }
 
-        $cobrosCursos = ($puedeVerCobros && $this->cobrosGradoId !== '')
-            ? Curso::query()->where('grado_id', (int) $this->cobrosGradoId)->where('activo', true)->orderBy('nombre')->get()
+        $cobrosCursos = ($puedeVerCobros && $this->cobrosCarreraId !== '' && $this->cobrosCicloCurricular !== '')
+            ? Curso::query()
+                ->where('carrera_id', (int) $this->cobrosCarreraId)
+                ->where('ciclo_curricular', (int) $this->cobrosCicloCurricular)
+                ->where('activo', true)
+                ->orderBy('nombre')
+                ->get()
             : collect();
 
         return [
@@ -352,7 +368,8 @@ new #[Layout('layouts.app')] class extends Component
             'cobrosDeudaIndividual' => $cobrosDeudaIndividual,
             'cobrosReporteGrupal' => $cobrosReporteGrupal,
             'cobrosCiclos' => $puedeVerCobros ? Ciclo::query()->orderByDesc('fecha_inicio')->get() : collect(),
-            'cobrosGrados' => $puedeVerCobros ? Grado::query()->where('activo', true)->orderBy('orden')->get() : collect(),
+            'cobrosCarreras' => $puedeVerCobros ? Carrera::query()->orderBy('name')->get() : collect(),
+            'cobrosCiclosCurriculares' => ['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI'],
             'cobrosCursos' => $cobrosCursos,
             'cobrosFranjas' => collect(FranjaHorarioEnum::cases())->map(fn ($franja) => ['value' => $franja->value, 'label' => $franja->label()]),
         ];
@@ -603,7 +620,7 @@ new #[Layout('layouts.app')] class extends Component
                     <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
                         <div>
                             <p class="text-ink">{{ $matricula->estudiante?->nombreCompleto() ?? '—' }}</p>
-                            <p class="text-xs text-ink-faint">{{ $matricula->grado->nombre }} · {{ $matricula->ciclo->nombre }}</p>
+                            <p class="text-xs text-ink-faint">{{ $matricula->carrera->name }} · {{ $matricula->ciclo->nombre }}</p>
                         </div>
                         <form wire:submit="crearPlan({{ $matricula->id }})" class="flex items-start gap-2">
                             <div>
@@ -731,7 +748,7 @@ new #[Layout('layouts.app')] class extends Component
                                 @forelse ($cobrosDeudaIndividual['cuotasPendientes'] as $cuota)
                                     <div class="flex items-center justify-between px-4 py-3 text-sm">
                                         <div>
-                                            <p class="text-ink">Cuota {{ $cuota->numero }} — {{ $cuota->planPago->matricula->grado->nombre ?? '—' }}</p>
+                                            <p class="text-ink">Cuota {{ $cuota->numero }} — {{ $cuota->planPago->matricula->carrera->name ?? '—' }}</p>
                                             <p @class(['text-xs', 'text-danger' => $cuota->estaVencida(), 'text-ink-faint' => ! $cuota->estaVencida()])>
                                                 {{ $cuota->estaVencida() ? 'Vencida desde' : 'Vence el' }} {{ $cuota->fecha_vencimiento->format('d/m/Y') }}
                                             </p>
@@ -816,23 +833,33 @@ new #[Layout('layouts.app')] class extends Component
                             (si no, Alpine no vuelve a evaluar las opciones
                             tras el morph -- ver el mismo fix en Reportes).
                         --}}
-                        <div wire:key="cobros-grado-select-{{ $cobrosCicloId }}">
-                            <x-input-label for="cobrosGradoId" value="Grado" />
+                        <div wire:key="cobros-carrera-select-{{ $cobrosCicloId }}">
+                            <x-input-label for="cobrosCarreraId" value="Carrera" />
                             <x-select-input
-                                wire:model.live="cobrosGradoId"
-                                id="cobrosGradoId"
+                                wire:model.live="cobrosCarreraId"
+                                id="cobrosCarreraId"
                                 class="mt-1 block w-48"
                                 :disabled="$cobrosCicloId === ''"
-                                :options="collect($cobrosGrados)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])->prepend('Todos los grados', '')"
+                                :options="collect($cobrosCarreras)->mapWithKeys(fn ($carrera) => [$carrera->id => $carrera->name])->prepend('Todas las carreras', '')"
                             />
                         </div>
-                        <div wire:key="cobros-curso-select-{{ $cobrosGradoId }}">
+                        <div wire:key="cobros-ciclo-curricular-select-{{ $cobrosCarreraId }}">
+                            <x-input-label for="cobrosCicloCurricular" value="Ciclo" />
+                            <x-select-input
+                                wire:model.live="cobrosCicloCurricular"
+                                id="cobrosCicloCurricular"
+                                class="mt-1 block w-40"
+                                :disabled="$cobrosCarreraId === ''"
+                                :options="collect($cobrosCiclosCurriculares)->prepend('Todos los ciclos', '')"
+                            />
+                        </div>
+                        <div wire:key="cobros-curso-select-{{ $cobrosCicloCurricular }}">
                             <x-input-label for="cobrosCursoId" value="Curso" />
                             <x-select-input
                                 wire:model.live="cobrosCursoId"
                                 id="cobrosCursoId"
                                 class="mt-1 block w-48"
-                                :disabled="$cobrosGradoId === ''"
+                                :disabled="$cobrosCicloCurricular === ''"
                                 :options="collect($cobrosCursos)->mapWithKeys(fn ($curso) => [$curso->id => $curso->nombre])->prepend('Todos los cursos', '')"
                             />
                         </div>

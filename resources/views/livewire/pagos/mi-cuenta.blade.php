@@ -74,7 +74,7 @@ new #[Layout('layouts.app')] class extends Component
         $matriculas = Matricula::query()
             ->where('estudiante_id', $estudiante->id)
             ->where('estado', 'aprobada')
-            ->with(['ciclo', 'grado'])
+            ->with(['ciclo', 'carrera'])
             ->latest('fecha_matricula')
             ->get()
             ->map(fn (Matricula $matricula) => [
@@ -127,7 +127,7 @@ new #[Layout('layouts.app')] class extends Component
 
     @foreach ($matriculas as $item)
         <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
-            <h2 class="text-sm font-semibold text-ink">{{ $item['matricula']->grado->nombre }} · {{ $item['matricula']->ciclo->nombre }}</h2>
+            <h2 class="text-sm font-semibold text-ink">{{ $item['matricula']->carrera->name }} · {{ $item['matricula']->ciclo->nombre }}</h2>
 
             @if (! $item['plan'])
                 <p class="mt-3 text-sm text-ink-faint">Todavía no se te ha asignado un plan de pago para este ciclo.</p>

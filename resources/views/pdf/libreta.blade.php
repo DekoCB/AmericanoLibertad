@@ -69,8 +69,8 @@
         <tr>
             <td class="etiqueta">Modalidad</td>
             <td class="valor">{{ $modalidadTexto }}</td>
-            <td class="etiqueta">Grado</td>
-            <td class="valor">{{ $matricula?->grado?->nombre ?? '—' }}</td>
+            <td class="etiqueta">Carrera</td>
+            <td class="valor">{{ $matricula?->carrera?->name ?? '—' }}</td>
         </tr>
         <tr>
             <td class="etiqueta">Periodo promocional</td>

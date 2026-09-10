@@ -19,10 +19,14 @@ use Illuminate\Validation\ValidationException;
 class LibretaService
 {
     /**
-     * Texto oficial de la modalidad EBA, igual para todos los estudiantes
-     * y ciclos -- no depende del grado ni del tipo/modalidad del Ciclo.
+     * Texto institucional para la libreta, igual para todos los
+     * estudiantes y ciclos -- no depende de la carrera ni del tipo/
+     * modalidad del Ciclo. "Educación Básica Alternativa" era el texto de
+     * CEBA (colegio EBA); Americano Libertad es un instituto superior
+     * tecnológico, no aplica esa modalidad -- mismo texto institucional que
+     * ya se usa en pdf/partials/cuerpo-recibo.blade.php.
      */
-    private const MODALIDAD_EBA = 'Educación Básica Alternativa – Ciclo Avanzado';
+    private const MODALIDAD_TEXTO = 'Instituto Superior Tecnológico Privado';
 
     public function __construct(
         private readonly EvaluacionService $evaluaciones,
@@ -117,7 +121,7 @@ class LibretaService
             ->where('estudiante_id', $estudiante->id)
             ->where('ciclo_id', $ciclo->id)
             ->where('estado', 'aprobada')
-            ->with('grado')
+            ->with('carrera')
             ->first();
 
         $cursos = $this->resumenPorCursos($estudiante, $ciclo);
@@ -129,7 +133,7 @@ class LibretaService
             'cursos' => $cursos,
             'situacionFinal' => $this->calcularSituacionFinal($cursos),
             'periodoPromocional' => $this->periodoPromocional($ciclo),
-            'modalidadTexto' => self::MODALIDAD_EBA,
+            'modalidadTexto' => self::MODALIDAD_TEXTO,
         ];
     }
 

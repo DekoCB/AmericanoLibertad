@@ -34,7 +34,7 @@ class AsistenciaService
     {
         return Horario::query()
             ->where('docente_id', $docenteId)
-            ->with(['curso', 'grado', 'ciclo', 'dias'])
+            ->with(['curso', 'carrera', 'ciclo', 'dias'])
             ->get();
     }
 
@@ -45,7 +45,7 @@ class AsistenciaService
     {
         $matriculas = $estudiante->matriculas()
             ->where('estado', 'aprobada')
-            ->get(['id', 'grado_id', 'ciclo_id']);
+            ->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
 
         if ($matriculas->isEmpty()) {
             return new Collection;
@@ -57,7 +57,7 @@ class AsistenciaService
                     $query->orWhere(fn ($query) => $query->deLaMatricula($matricula));
                 }
             })
-            ->with(['curso', 'grado', 'ciclo', 'docente', 'dias'])
+            ->with(['curso', 'carrera', 'ciclo', 'docente', 'dias'])
             ->get();
     }
 
@@ -66,11 +66,11 @@ class AsistenciaService
      */
     public function todos(): Collection
     {
-        return Horario::query()->with(['curso', 'grado', 'ciclo', 'docente', 'dias'])->get();
+        return Horario::query()->with(['curso', 'carrera', 'ciclo', 'docente', 'dias'])->get();
     }
 
     /**
-     * Estudiantes matriculados (aprobados) en el grado y ciclo de un
+     * Estudiantes matriculados (aprobados) en la carrera y ciclo de un
      * horario -- ver Matricula::scopeDelHorario().
      *
      * @return Collection<int, Estudiante>

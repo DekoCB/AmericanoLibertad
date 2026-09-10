@@ -1,10 +1,10 @@
 <?php
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Enums\FranjaHorarioEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Siagie;
 use App\Modules\Reportes\Exports\ReporteExport;
 use App\Modules\Reportes\Services\ReporteService;
@@ -35,7 +35,7 @@ new #[Layout('layouts.app')] class extends Component
     /**
      * Tipos de reporte cuyos datos se originan en un Horario (clase
      * recurrente: curso + docente + día + hora) y por lo tanto admiten
-     * filtrarse por franja institucional, además de Grupo/Grado/Curso.
+     * filtrarse por franja institucional, además de Grupo/Carrera/Curso.
      *
      * @var list<string>
      */
@@ -47,7 +47,9 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $cicloId = '';
 
-    public string $gradoId = '';
+    public string $carreraId = '';
+
+    public string $cicloCurricular = '';
 
     public string $cursoId = '';
 
@@ -90,23 +92,32 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * El filtro es en cascada: SIAGIE primero, luego Grupo, luego Grado,
-     * luego Curso. Cambiar un nivel invalida los que dependen de él.
+     * El filtro es en cascada: SIAGIE primero, luego Grupo, luego Carrera,
+     * luego Ciclo curricular, luego Curso. Cambiar un nivel invalida los
+     * que dependen de él.
      */
     public function updatedSiagieId(): void
     {
         $this->cicloId = '';
-        $this->gradoId = '';
+        $this->carreraId = '';
+        $this->cicloCurricular = '';
         $this->cursoId = '';
     }
 
     public function updatedCicloId(): void
     {
-        $this->gradoId = '';
+        $this->carreraId = '';
+        $this->cicloCurricular = '';
         $this->cursoId = '';
     }
 
-    public function updatedGradoId(): void
+    public function updatedCarreraId(): void
+    {
+        $this->cicloCurricular = '';
+        $this->cursoId = '';
+    }
+
+    public function updatedCicloCurricular(): void
     {
         $this->cursoId = '';
     }
@@ -162,28 +173,37 @@ new #[Layout('layouts.app')] class extends Component
     {
         $siagieId = $this->siagieId !== '' ? (int) $this->siagieId : null;
         $cicloId = $this->cicloId !== '' ? (int) $this->cicloId : null;
-        $gradoId = $this->gradoId !== '' ? (int) $this->gradoId : null;
+        $carreraId = $this->carreraId !== '' ? (int) $this->carreraId : null;
+        $cicloCurricular = $this->cicloCurricular !== '' ? (int) $this->cicloCurricular : null;
         $cursoId = $this->cursoId !== '' ? (int) $this->cursoId : null;
         $franja = $this->franja !== '' ? $this->franja : null;
 
         return match ($this->tipo) {
-            'matricula' => $reportes->matricula($cicloId, $gradoId, $cursoId, $franja, $siagieId),
-            'academico' => $reportes->academico($cicloId, $gradoId, $cursoId, $franja, $siagieId),
-            'financiero' => $reportes->financiero($cicloId, $gradoId, $cursoId, $franja, $siagieId),
-            'morosos' => $reportes->morosos($cicloId, $gradoId, $cursoId, $franja, $siagieId),
-            'certificados' => $reportes->certificados($cicloId, $gradoId, $cursoId, $franja, $siagieId),
-            'operativo' => $reportes->operativo($cicloId, $gradoId, $cursoId, $franja, $siagieId),
-            'propio' => $reportes->propio(Auth::user(), $cicloId, $gradoId, $cursoId, $franja, $siagieId),
+            'matricula' => $reportes->matricula($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
+            'academico' => $reportes->academico($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
+            'financiero' => $reportes->financiero($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
+            'morosos' => $reportes->morosos($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
+            'certificados' => $reportes->certificados($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
+            'operativo' => $reportes->operativo($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
+            'propio' => $reportes->propio(Auth::user(), $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
             default => ['columnas' => [], 'filas' => []],
         };
     }
 
     /**
-     * @return Collection<int, Grado>
+     * @return Collection<int, Carrera>
      */
-    private function gradosDisponibles(): Collection
+    private function carrerasDisponibles(): Collection
     {
-        return Grado::query()->where('activo', true)->orderBy('orden')->get();
+        return Carrera::query()->orderBy('name')->get();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function ciclosCurricularesDisponibles(): array
+    {
+        return ['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI'];
     }
 
     /**
@@ -191,12 +211,13 @@ new #[Layout('layouts.app')] class extends Component
      */
     private function cursosDisponibles(): Collection
     {
-        if ($this->gradoId === '') {
+        if ($this->carreraId === '' || $this->cicloCurricular === '') {
             return collect();
         }
 
         return Curso::query()
-            ->where('grado_id', (int) $this->gradoId)
+            ->where('carrera_id', (int) $this->carreraId)
+            ->where('ciclo_curricular', (int) $this->cicloCurricular)
             ->where('activo', true)
             ->orderBy('nombre')
             ->get();
@@ -206,7 +227,7 @@ new #[Layout('layouts.app')] class extends Component
      * Las 3 franjas institucionales fijas (ver FranjaHorarioEnum): un curso
      * puede dictarse en cualquiera de ellas, así que filtrar por franja
      * -- no por un horario puntual -- trae todos los cursos que caen ahí,
-     * sin importar grado ni docente.
+     * sin importar carrera ni docente.
      *
      * @return Collection<int, array{value: string, label: string}>
      */
@@ -240,7 +261,8 @@ new #[Layout('layouts.app')] class extends Component
             'franjasDisponibles' => $this->franjasDisponibles(),
             'siagiesDisponibles' => Siagie::query()->orderByDesc('anio')->orderBy('tipo')->get(),
             'ciclosDisponibles' => Ciclo::query()->orderByDesc('fecha_inicio')->get(),
-            'gradosDisponibles' => $this->gradosDisponibles(),
+            'carrerasDisponibles' => $this->carrerasDisponibles(),
+            'ciclosCurricularesDisponibles' => $this->ciclosCurricularesDisponibles(),
             'cursosDisponibles' => $this->cursosDisponibles(),
         ];
     }
@@ -289,23 +311,33 @@ new #[Layout('layouts.app')] class extends Component
                     :options="collect($ciclosDisponibles)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])->prepend('Todos los grupos', '')"
                 />
             </div>
-            <div wire:key="grado-select-{{ $cicloId }}">
-                <x-input-label for="gradoId" value="Grado" />
+            <div wire:key="carrera-select-{{ $cicloId }}">
+                <x-input-label for="carreraId" value="Carrera" />
                 <x-select-input
-                    wire:model.live="gradoId"
-                    id="gradoId"
+                    wire:model.live="carreraId"
+                    id="carreraId"
                     class="mt-1 block w-48"
                     :disabled="$cicloId === ''"
-                    :options="collect($gradosDisponibles)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])->prepend('Todos los grados', '')"
+                    :options="collect($carrerasDisponibles)->mapWithKeys(fn ($carrera) => [$carrera->id => $carrera->name])->prepend('Todas las carreras', '')"
                 />
             </div>
-            <div wire:key="curso-select-{{ $gradoId }}">
+            <div wire:key="ciclo-curricular-select-{{ $carreraId }}">
+                <x-input-label for="cicloCurricular" value="Ciclo" />
+                <x-select-input
+                    wire:model.live="cicloCurricular"
+                    id="cicloCurricular"
+                    class="mt-1 block w-40"
+                    :disabled="$carreraId === ''"
+                    :options="collect($ciclosCurricularesDisponibles)->prepend('Todos los ciclos', '')"
+                />
+            </div>
+            <div wire:key="curso-select-{{ $cicloCurricular }}">
                 <x-input-label for="cursoId" value="Curso" />
                 <x-select-input
                     wire:model.live="cursoId"
                     id="cursoId"
                     class="mt-1 block w-48"
-                    :disabled="$gradoId === ''"
+                    :disabled="$cicloCurricular === ''"
                     :options="collect($cursosDisponibles)->mapWithKeys(fn ($curso) => [$curso->id => $curso->nombre])->prepend('Todos los cursos', '')"
                 />
             </div>

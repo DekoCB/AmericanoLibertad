@@ -24,38 +24,40 @@ use Illuminate\Support\Collection;
  * en el mismo formato para alimentar tanto la vista previa en pantalla
  * como los exportadores de Excel/CSV/PDF sin transformación adicional.
  *
- * El filtro común a todos es SIAGIE → Grupo (ciclo) → Grado → Curso, en
- * cascada, más franja institucional -- ya no hay filtro por rango de
- * fechas: el ciclo (que ya tiene su propio periodo) alcanza para acotar
- * el reporte a un periodo lectivo concreto. SIAGIE es una etiqueta por
- * matrícula independiente del Grupo (ver Matricula::siagie_id), así que
- * en los reportes que no giran en torno a una Matricula (Académico,
- * Operativo) se resuelve indirectamente vía los estudiantes matriculados
- * con ese SIAGIE; en "Mis evaluaciones" (por docente, no por estudiante)
- * no aplica y se ignora.
+ * El filtro común a todos es SIAGIE → Grupo (ciclo) → Carrera → Ciclo
+ * curricular (I-VI) → Curso, en cascada, más franja institucional -- ya no
+ * hay filtro por rango de fechas: el ciclo (que ya tiene su propio periodo)
+ * alcanza para acotar el reporte a un periodo lectivo concreto. SIAGIE es
+ * una etiqueta por matrícula independiente del Grupo (ver
+ * Matricula::siagie_id), así que en los reportes que no giran en torno a
+ * una Matricula (Académico, Operativo) se resuelve indirectamente vía los
+ * estudiantes matriculados con ese SIAGIE; en "Mis evaluaciones" (por
+ * docente, no por estudiante) no aplica y se ignora.
  */
 class ReporteService
 {
     /**
      * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
      */
-    public function matricula(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
+    public function matricula(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
     {
         $matriculas = $this->filtrarMatriculasPorFiltros(
-            Matricula::query()->with(['estudiante', 'grado', 'ciclo']),
+            Matricula::query()->with(['estudiante', 'carrera', 'ciclo']),
             $cicloId,
-            $gradoId,
+            $carreraId,
+            $cicloCurricular,
             $cursoId,
             $franja,
             $siagieId,
         )->latest('fecha_matricula')->get();
 
         return [
-            'columnas' => ['Estudiante', 'DNI', 'Grado', 'Ciclo', 'Estado', 'Fecha de matrícula'],
+            'columnas' => ['Estudiante', 'DNI', 'Carrera', 'Ciclo curricular', 'Ciclo', 'Estado', 'Fecha de matrícula'],
             'filas' => $matriculas->map(fn (Matricula $matricula) => [
                 $matricula->estudiante?->nombreCompleto() ?? '—',
                 $matricula->estudiante->dni ?? '—',
-                $matricula->grado->nombre,
+                $matricula->carrera->name,
+                $matricula->ciclo_curricular,
                 $matricula->ciclo->nombre,
                 $matricula->estado->label(),
                 $matricula->fecha_matricula->format('d/m/Y'),
@@ -66,13 +68,13 @@ class ReporteService
     /**
      * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
      */
-    public function academico(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
+    public function academico(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
     {
-        $horarioIds = $this->horarioIdsFiltrados($cicloId, $gradoId, $cursoId, $franja);
+        $horarioIds = $this->horarioIdsFiltrados($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja);
         $estudianteIds = $this->estudianteIdsConSiagie($siagieId);
 
         $calificaciones = Calificacion::query()
-            ->with(['estudiante', 'evaluacion.horario.grado', 'evaluacion.horario.curso'])
+            ->with(['estudiante', 'evaluacion.horario.carrera', 'evaluacion.horario.curso'])
             ->when($horarioIds !== null, fn ($query) => $query->whereHas(
                 'evaluacion',
                 fn ($sub) => $sub->whereIn('horario_id', $horarioIds),
@@ -82,10 +84,10 @@ class ReporteService
             ->get();
 
         return [
-            'columnas' => ['Estudiante', 'Grado', 'Curso', 'Evaluación', 'Nota', 'Resultado'],
+            'columnas' => ['Estudiante', 'Carrera', 'Curso', 'Evaluación', 'Nota', 'Resultado'],
             'filas' => $calificaciones->map(fn (Calificacion $calificacion) => [
                 $calificacion->estudiante?->nombreCompleto() ?? '—',
-                $calificacion->evaluacion->horario->grado->nombre,
+                $calificacion->evaluacion->horario->carrera->name,
                 $calificacion->evaluacion->horario->curso->nombre,
                 $calificacion->evaluacion->nombre,
                 number_format((float) $calificacion->nota_numerica, 2),
@@ -97,15 +99,15 @@ class ReporteService
     /**
      * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
      */
-    public function financiero(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
+    public function financiero(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
     {
-        $sinFiltros = $this->sinFiltros($cicloId, $gradoId, $cursoId, $franja, $siagieId);
+        $sinFiltros = $this->sinFiltros($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId);
 
         $pagos = Pago::query()
             ->with(['estudiante', 'concepto'])
             ->when(! $sinFiltros, fn ($query) => $query->whereHas(
                 'estudiante.matriculas',
-                fn ($sub) => $this->filtrarMatriculasPorFiltros($sub, $cicloId, $gradoId, $cursoId, $franja, $siagieId),
+                fn ($sub) => $this->filtrarMatriculasPorFiltros($sub, $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
             ))
             ->latest('fecha_pago')
             ->get();
@@ -126,25 +128,25 @@ class ReporteService
     /**
      * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
      */
-    public function certificados(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
+    public function certificados(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
     {
-        $sinFiltros = $this->sinFiltros($cicloId, $gradoId, $cursoId, $franja, $siagieId);
+        $sinFiltros = $this->sinFiltros($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId);
 
         $certificados = Certificado::query()
-            ->with(['estudiante', 'matricula.grado'])
+            ->with(['estudiante', 'matricula.carrera'])
             ->when(! $sinFiltros, fn ($query) => $query->whereHas(
                 'matricula',
-                fn ($sub) => $this->filtrarMatriculasPorFiltros($sub, $cicloId, $gradoId, $cursoId, $franja, $siagieId),
+                fn ($sub) => $this->filtrarMatriculasPorFiltros($sub, $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
             ))
             ->latest('fecha_emision')
             ->get();
 
         return [
-            'columnas' => ['N.° certificado', 'Estudiante', 'Grado', 'Duplicado', 'Fecha de emisión'],
+            'columnas' => ['N.° certificado', 'Estudiante', 'Carrera', 'Duplicado', 'Fecha de emisión'],
             'filas' => $certificados->map(fn (Certificado $certificado) => [
                 $certificado->numero,
                 $certificado->estudiante?->nombreCompleto() ?? '—',
-                $certificado->matricula !== null ? $certificado->matricula->grado->nombre : '—',
+                $certificado->matricula !== null ? $certificado->matricula->carrera->name : '—',
                 $certificado->es_duplicado ? 'Sí' : 'No',
                 $certificado->fecha_emision->format('d/m/Y'),
             ])->all(),
@@ -154,13 +156,13 @@ class ReporteService
     /**
      * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
      */
-    public function operativo(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
+    public function operativo(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
     {
-        $horarioIds = $this->horarioIdsFiltrados($cicloId, $gradoId, $cursoId, $franja);
+        $horarioIds = $this->horarioIdsFiltrados($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja);
         $estudianteIds = $this->estudianteIdsConSiagie($siagieId);
 
         $asistencias = Asistencia::query()
-            ->with(['estudiante', 'horario.grado'])
+            ->with(['estudiante', 'horario.carrera'])
             ->when($horarioIds !== null, fn ($query) => $query->whereIn('horario_id', $horarioIds))
             ->when($estudianteIds !== null, fn ($query) => $query->whereIn('estudiante_id', $estudianteIds))
             ->get()
@@ -175,7 +177,7 @@ class ReporteService
 
                 return [
                     $estudiante->nombreCompleto(),
-                    $registros->first()->horario->grado->nombre,
+                    $registros->first()->horario->carrera->name,
                     $total,
                     $presentes,
                     $total > 0 ? number_format($presentes / $total * 100, 1).'%' : '—',
@@ -183,7 +185,7 @@ class ReporteService
             })->values()->all();
 
         return [
-            'columnas' => ['Estudiante', 'Grado', 'Sesiones registradas', 'Asistencias', '% Asistencia'],
+            'columnas' => ['Estudiante', 'Carrera', 'Sesiones registradas', 'Asistencias', '% Asistencia'],
             'filas' => $filas,
         ];
     }
@@ -196,18 +198,18 @@ class ReporteService
      *
      * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
      */
-    public function morosos(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
+    public function morosos(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
     {
-        $sinFiltros = $this->sinFiltros($cicloId, $gradoId, $cursoId, $franja, $siagieId);
+        $sinFiltros = $this->sinFiltros($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId);
 
         $cuotasVencidas = Cuota::query()
             ->where('estado', EstadoCuotaEnum::PENDIENTE)
             ->where('fecha_vencimiento', '<', now()->toDateString())
             ->when(! $sinFiltros, fn ($query) => $query->whereHas(
                 'planPago.matricula',
-                fn ($sub) => $this->filtrarMatriculasPorFiltros($sub, $cicloId, $gradoId, $cursoId, $franja, $siagieId),
+                fn ($sub) => $this->filtrarMatriculasPorFiltros($sub, $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $siagieId),
             ))
-            ->with('planPago.matricula.estudiante', 'planPago.matricula.grado')
+            ->with('planPago.matricula.estudiante', 'planPago.matricula.carrera')
             ->get()
             ->filter(fn (Cuota $cuota) => $cuota->planPago->matricula?->estudiante !== null)
             ->groupBy(fn (Cuota $cuota) => $cuota->planPago->matricula->estudiante_id);
@@ -220,7 +222,7 @@ class ReporteService
                 return [
                     $estudiante->nombreCompleto(),
                     $estudiante->dni,
-                    $matricula->grado->nombre,
+                    $matricula->carrera->name,
                     $cuotas->count(),
                     number_format((float) $cuotas->sum('monto'), 2),
                     $cuotas->min('fecha_vencimiento')->format('d/m/Y'),
@@ -231,7 +233,7 @@ class ReporteService
             ->all();
 
         return [
-            'columnas' => ['Estudiante', 'DNI', 'Grado', 'Cuotas vencidas', 'Monto adeudado', 'Vencida desde'],
+            'columnas' => ['Estudiante', 'DNI', 'Carrera', 'Cuotas vencidas', 'Monto adeudado', 'Vencida desde'],
             'filas' => $filas,
         ];
     }
@@ -244,22 +246,22 @@ class ReporteService
      *
      * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
      */
-    public function propio(User $docente, ?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
+    public function propio(User $docente, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja = null, ?int $siagieId = null): array
     {
-        $horarioIds = $this->horarioIdsFiltrados($cicloId, $gradoId, $cursoId, $franja);
+        $horarioIds = $this->horarioIdsFiltrados($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja);
 
         $evaluaciones = Evaluacion::query()
-            ->with(['horario.grado', 'horario.curso'])
+            ->with(['horario.carrera', 'horario.curso'])
             ->whereHas('horario', fn ($query) => $query->where('docente_id', $docente->id))
             ->when($horarioIds !== null, fn ($query) => $query->whereIn('horario_id', $horarioIds))
             ->latest('fecha')
             ->get();
 
         return [
-            'columnas' => ['Evaluación', 'Grado', 'Curso', 'Fecha', 'Estado'],
+            'columnas' => ['Evaluación', 'Carrera', 'Curso', 'Fecha', 'Estado'],
             'filas' => $evaluaciones->map(fn (Evaluacion $evaluacion) => [
                 $evaluacion->nombre,
-                $evaluacion->horario->grado->nombre,
+                $evaluacion->horario->carrera->name,
                 $evaluacion->horario->curso->nombre,
                 $evaluacion->fecha->format('d/m/Y'),
                 $evaluacion->estado->label(),
@@ -267,9 +269,9 @@ class ReporteService
         ];
     }
 
-    private function sinFiltros(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja, ?int $siagieId = null): bool
+    private function sinFiltros(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja, ?int $siagieId = null): bool
     {
-        return $cicloId === null && $gradoId === null && $cursoId === null && $franja === null && $siagieId === null;
+        return $cicloId === null && $carreraId === null && $cicloCurricular === null && $cursoId === null && $franja === null && $siagieId === null;
     }
 
     /**
@@ -290,17 +292,18 @@ class ReporteService
     }
 
     /**
-     * Horarios que coinciden con el Grupo (ciclo), Grado y Curso elegidos
-     * en el selector en cascada, más la franja institucional si se usa.
-     * null en cualquiera de los filtros significa "no restringir por ese
-     * campo". Devuelve null si no se pidió ningún filtro (para que el
-     * caller no aplique ninguna restricción en absoluto).
+     * Horarios que coinciden con el Grupo (ciclo), Carrera, Ciclo
+     * curricular y Curso elegidos en el selector en cascada, más la franja
+     * institucional si se usa. null en cualquiera de los filtros significa
+     * "no restringir por ese campo". Devuelve null si no se pidió ningún
+     * filtro (para que el caller no aplique ninguna restricción en
+     * absoluto).
      *
      * @return ?Collection<int, Horario>
      */
-    private function horariosFiltrados(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja): ?Collection
+    private function horariosFiltrados(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja): ?Collection
     {
-        if ($this->sinFiltros($cicloId, $gradoId, $cursoId, $franja)) {
+        if ($this->sinFiltros($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja)) {
             return null;
         }
 
@@ -309,7 +312,8 @@ class ReporteService
         return Horario::query()
             ->with('dias')
             ->when($cicloId !== null, fn ($query) => $query->where('ciclo_id', $cicloId))
-            ->when($gradoId !== null, fn ($query) => $query->where('grado_id', $gradoId))
+            ->when($carreraId !== null, fn ($query) => $query->where('carrera_id', $carreraId))
+            ->when($cicloCurricular !== null, fn ($query) => $query->where('ciclo_curricular', $cicloCurricular))
             ->when($cursoId !== null, fn ($query) => $query->where('curso_id', $cursoId))
             ->get()
             ->filter(fn (Horario $horario) => $franjaEnum === null || $horario->franja() === $franjaEnum)
@@ -319,52 +323,59 @@ class ReporteService
     /**
      * @return ?list<int>
      */
-    private function horarioIdsFiltrados(?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja): ?array
+    private function horarioIdsFiltrados(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja): ?array
     {
-        return $this->horariosFiltrados($cicloId, $gradoId, $cursoId, $franja)?->pluck('id')->all();
+        return $this->horariosFiltrados($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja)?->pluck('id')->all();
     }
 
     /**
-     * Aplica el filtro de SIAGIE/Grupo/Grado/Curso/franja a una consulta
-     * de Matricula. SIAGIE, ciclo y grado se filtran directo por columna
-     * (Matricula ya las tiene). Curso y franja no existen ahí -- se
-     * resuelven vía Horario: un estudiante matriculado en ese grado+ciclo
-     * lleva automáticamente cualquier curso de su grado, salvo que ese
-     * curso tenga secciones paralelas, donde se exige la asignación
-     * explícita en el pivote matricula_horario a uno de los horarios
-     * filtrados (mismo criterio que Matricula::scopeDelHorario()).
+     * Aplica el filtro de SIAGIE/Grupo/Carrera/Ciclo curricular/Curso/franja
+     * a una consulta de Matricula. SIAGIE, ciclo, carrera y ciclo curricular
+     * se filtran directo por columna (Matricula ya las tiene). Curso y
+     * franja no existen ahí -- se resuelven vía Horario: un estudiante
+     * matriculado en esa carrera+ciclo curricular+ciclo lleva
+     * automáticamente cualquier curso de ese nivel, salvo que ese curso
+     * tenga secciones paralelas, donde se exige la asignación explícita en
+     * el pivote matricula_horario a uno de los horarios filtrados (mismo
+     * criterio que Matricula::scopeDelHorario()).
      *
      * @template TModel of \Illuminate\Database\Eloquent\Model
      *
      * @param  Builder<TModel>  $query
      * @return Builder<TModel>
      */
-    private function filtrarMatriculasPorFiltros(Builder $query, ?int $cicloId, ?int $gradoId, ?int $cursoId, ?string $franja, ?int $siagieId = null): Builder
+    private function filtrarMatriculasPorFiltros(Builder $query, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja, ?int $siagieId = null): Builder
     {
         $query = $query
             ->when($cicloId !== null, fn ($q) => $q->where('ciclo_id', $cicloId))
-            ->when($gradoId !== null, fn ($q) => $q->where('grado_id', $gradoId))
+            ->when($carreraId !== null, fn ($q) => $q->where('carrera_id', $carreraId))
+            ->when($cicloCurricular !== null, fn ($q) => $q->where('ciclo_curricular', $cicloCurricular))
             ->when($siagieId !== null, fn ($q) => $q->where('siagie_id', $siagieId));
 
         if ($cursoId === null && $franja === null) {
             return $query;
         }
 
-        $horarios = $this->horariosFiltrados($cicloId, $gradoId, $cursoId, $franja);
+        $horarios = $this->horariosFiltrados($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja);
 
         if ($horarios === null || $horarios->isEmpty()) {
             return $query->whereIn('id', []);
         }
 
-        // Si ciclo o grado no venían fijos arriba, hace falta acotar la
-        // matrícula a los pares grado+ciclo donde sí cae la franja/curso.
-        if ($cicloId === null || $gradoId === null) {
-            $pares = $horarios
-                ->map(fn (Horario $horario) => ['grado_id' => $horario->grado_id, 'ciclo_id' => $horario->ciclo_id])
-                ->unique(fn (array $par) => $par['grado_id'].'-'.$par['ciclo_id'])
+        // Si ciclo, carrera o ciclo curricular no venían fijos arriba, hace
+        // falta acotar la matrícula a las combinaciones donde sí cae la
+        // franja/curso.
+        if ($cicloId === null || $carreraId === null || $cicloCurricular === null) {
+            $combinaciones = $horarios
+                ->map(fn (Horario $horario) => [
+                    'carrera_id' => $horario->carrera_id,
+                    'ciclo_curricular' => $horario->ciclo_curricular,
+                    'ciclo_id' => $horario->ciclo_id,
+                ])
+                ->unique(fn (array $c) => $c['carrera_id'].'-'.$c['ciclo_curricular'].'-'.$c['ciclo_id'])
                 ->values();
 
-            $query = $this->filtrarPorGradoYCiclo($query, $pares);
+            $query = $this->filtrarPorCarreraCicloYGrupo($query, $combinaciones);
         }
 
         if ($cursoId === null) {
@@ -384,18 +395,21 @@ class ReporteService
      * @template TModel of \Illuminate\Database\Eloquent\Model
      *
      * @param  Builder<TModel>  $query
-     * @param  Collection<int, array{grado_id: int, ciclo_id: int}>  $pares
+     * @param  Collection<int, array{carrera_id: int, ciclo_curricular: int, ciclo_id: int}>  $combinaciones
      * @return Builder<TModel>
      */
-    private function filtrarPorGradoYCiclo(Builder $query, Collection $pares): Builder
+    private function filtrarPorCarreraCicloYGrupo(Builder $query, Collection $combinaciones): Builder
     {
-        if ($pares->isEmpty()) {
+        if ($combinaciones->isEmpty()) {
             return $query->whereIn('id', []);
         }
 
-        return $query->where(function (Builder $q) use ($pares) {
-            foreach ($pares as $par) {
-                $q->orWhere(fn (Builder $qq) => $qq->where('grado_id', $par['grado_id'])->where('ciclo_id', $par['ciclo_id']));
+        return $query->where(function (Builder $q) use ($combinaciones) {
+            foreach ($combinaciones as $c) {
+                $q->orWhere(fn (Builder $qq) => $qq
+                    ->where('carrera_id', $c['carrera_id'])
+                    ->where('ciclo_curricular', $c['ciclo_curricular'])
+                    ->where('ciclo_id', $c['ciclo_id']));
             }
         });
     }
