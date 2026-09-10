@@ -2,7 +2,6 @@
 
 use App\Models\User;
 use App\Modules\Academico\Enums\DiaSemanaEnum;
-use App\Modules\Academico\Enums\FranjaHorarioEnum;
 use App\Modules\Academico\Models\Aula;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
@@ -35,21 +34,13 @@ new #[Layout('layouts.app')] class extends Component
     public string $cicloId = '';
 
     /**
-     * Al crear: las franjas institucionales marcadas (pueden combinarse
-     * más de una a la vez). Al editar, en cambio, se usan los días
-     * sueltos ya reales del horario (ver $diasSueltosSeleccionados) --
-     * después de un arrastre en la pestaña "Editar" los días pueden no
-     * calzar ya con ninguna franja fija, así que editar no puede seguir
-     * atado a la abstracción de franjas.
+     * Los días de clase elegidos, tanto al crear como al editar: cualquier
+     * combinación libre de los 7 días de la semana (ver DiaSemanaEnum) --
+     * ya no hay una restricción a franjas institucionales fijas.
      *
      * @var list<string>
      */
-    public array $franjasSeleccionadas = [];
-
-    /**
-     * @var list<string>
-     */
-    public array $diasSueltosSeleccionados = [];
+    public array $diasSeleccionados = [];
 
     /** @var array<string, string> */
     public array $horaInicioHoraPorDia = [];
@@ -62,37 +53,6 @@ new #[Layout('layouts.app')] class extends Component
 
     /** @var array<string, string> */
     public array $horaFinMinutoPorDia = [];
-
-    /**
-     * Las 3 franjas institucionales, salvo que el curso elegido tenga
-     * franjas propias marcadas en su ficha (Curso::franjas_permitidas) --
-     * en ese caso solo se ofrecen esas.
-     *
-     * @return array<string, string>
-     */
-    public function franjasDisponibles(): array
-    {
-        $curso = $this->cursoId !== '' ? Curso::query()->find($this->cursoId) : null;
-        $permitidas = $curso?->franjas_permitidas;
-
-        return collect(FranjaHorarioEnum::cases())
-            ->when(! empty($permitidas), fn (Collection $franjas) => $franjas->filter(
-                fn (FranjaHorarioEnum $franja) => in_array($franja->value, $permitidas, true)
-            ))
-            ->mapWithKeys(fn (FranjaHorarioEnum $franja) => [$franja->value => $franja->label()])
-            ->all();
-    }
-
-    /**
-     * Si al elegir el curso alguna franja ya marcada deja de estar
-     * permitida para él, se limpia -- no tendría sentido dejar
-     * seleccionada una franja que ya no aparece en la lista.
-     */
-    public function updatedCursoId(): void
-    {
-        $disponibles = array_keys($this->franjasDisponibles());
-        $this->franjasSeleccionadas = array_values(array_intersect($this->franjasSeleccionadas, $disponibles));
-    }
 
     /**
      * @return array<string, string>
@@ -127,8 +87,7 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->resetValidation();
         $this->reset([
-            'editandoId', 'cursoId', 'docenteId', 'aulaId',
-            'franjasSeleccionadas', 'diasSueltosSeleccionados',
+            'editandoId', 'cursoId', 'docenteId', 'aulaId', 'diasSeleccionados',
             'horaInicioHoraPorDia', 'horaInicioMinutoPorDia', 'horaFinHoraPorDia', 'horaFinMinutoPorDia',
         ]);
         $this->cicloId = $this->cicloFiltro;
@@ -137,9 +96,7 @@ new #[Layout('layouts.app')] class extends Component
 
     /**
      * Precarga el horario elegido (desde la tarjeta en la pestaña
-     * "Editar") en el mismo modal que crea uno nuevo, pero con sus días
-     * reales (no franjas) para poder representar cualquier combinación
-     * que haya quedado tras un arrastre.
+     * "Editar") en el mismo modal que crea uno nuevo, con sus días reales.
      */
     public function abrirModalEditar(int $horarioId): void
     {
@@ -153,8 +110,7 @@ new #[Layout('layouts.app')] class extends Component
         $this->cursoId = (string) $horario->curso_id;
         $this->docenteId = (string) $horario->docente_id;
         $this->aulaId = (string) $horario->aula_id;
-        $this->franjasSeleccionadas = [];
-        $this->diasSueltosSeleccionados = $horario->dias->pluck('dia_semana.value')->all();
+        $this->diasSeleccionados = $horario->dias->pluck('dia_semana.value')->all();
 
         $this->horaInicioHoraPorDia = [];
         $this->horaInicioMinutoPorDia = [];
@@ -175,22 +131,14 @@ new #[Layout('layouts.app')] class extends Component
 
     /**
      * Los días efectivos sobre los que se piden horas y se arma el
-     * horario: la unión de las franjas marcadas al crear, o los días
-     * sueltos ya elegidos al editar.
+     * horario: cualquier combinación libre de los 7 días, tanto al crear
+     * como al editar.
      *
      * @return list<DiaSemanaEnum>
      */
     private function diasEfectivos(): array
     {
-        if ($this->editandoId !== null) {
-            return array_map(fn (string $valor) => DiaSemanaEnum::from($valor), $this->diasSueltosSeleccionados);
-        }
-
-        return collect($this->franjasSeleccionadas)
-            ->flatMap(fn (string $valor) => FranjaHorarioEnum::from($valor)->dias())
-            ->unique(fn (DiaSemanaEnum $dia) => $dia->value)
-            ->values()
-            ->all();
+        return array_map(fn (string $valor) => DiaSemanaEnum::from($valor), $this->diasSeleccionados);
     }
 
     public function guardar(HorarioService $service): void
@@ -204,15 +152,9 @@ new #[Layout('layouts.app')] class extends Component
             'docenteId' => 'required|integer|exists:users,id',
             'aulaId' => 'required|integer|exists:aulas,id',
             'cicloId' => 'required|integer|exists:ciclos,id',
+            'diasSeleccionados' => 'required|array|min:1',
+            'diasSeleccionados.*' => 'string|in:'.implode(',', array_map(fn (DiaSemanaEnum $dia) => $dia->value, DiaSemanaEnum::cases())),
         ];
-
-        if ($this->editandoId === null) {
-            $reglas['franjasSeleccionadas'] = 'required|array|min:1';
-            $reglas['franjasSeleccionadas.*'] = 'string|in:'.implode(',', array_keys($this->franjasDisponibles()));
-        } else {
-            $reglas['diasSueltosSeleccionados'] = 'required|array|min:1';
-            $reglas['diasSueltosSeleccionados.*'] = 'string|in:'.implode(',', array_map(fn (DiaSemanaEnum $dia) => $dia->value, DiaSemanaEnum::cases()));
-        }
 
         foreach ($dias as $dia) {
             $reglas["horaInicioHoraPorDia.{$dia->value}"] = 'required|string|in:'.implode(',', array_keys($this->horasDisponibles()));
@@ -280,13 +222,11 @@ new #[Layout('layouts.app')] class extends Component
 
         return [
             'ciclos' => Ciclo::query()->orderByDesc('fecha_inicio')->get(),
-            'horariosPorFranja' => $this->agruparPorFranjaYCarrera($horarios),
+            'horariosPorCarrera' => $this->agruparPorCarrera($horarios),
             'horarioDiasPorDia' => $this->agruparDiasParaLaGrilla($horarios),
             'cursos' => Curso::query()->where('activo', true)->orderBy('nombre')->get(),
             'docentes' => User::role('docente')->orderBy('name')->get(),
             'aulas' => Aula::query()->where('activa', true)->orderBy('nombre')->get(),
-            'cursoTieneFranjasRestringidas' => $this->cursoId !== '' && ! empty(Curso::query()->find($this->cursoId)?->franjas_permitidas),
-            'franjas' => $this->franjasDisponibles(),
             'horas' => $this->horasDisponibles(),
             'minutos' => $this->minutosDisponibles(),
             'diasSemana' => DiaSemanaEnum::ordenSemana(),
@@ -295,39 +235,20 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * La vista organizada como la institución realmente trabaja: primero
-     * por franja (Lunes-Miércoles / Martes-Jueves / Domingo), y dentro de
-     * cada una por carrera y ciclo -- así se ven de una los horarios de un
-     * mismo ciclo de una carrera, en vez de una tabla plana ordenada por
-     * curso.
+     * La vista organizada por carrera y ciclo -- así se ven de una los
+     * horarios de un mismo ciclo de una carrera, en vez de una tabla plana
+     * ordenada por curso. Ya no se agrupa primero por franja institucional:
+     * los días de un horario ahora son libres, no calzan necesariamente con
+     * ninguna franja fija.
      *
      * @param  Collection<int, Horario>  $horarios
-     * @return Collection<int, array{label: string, porCarrera: Collection<string, Collection<int, Horario>>}>
+     * @return Collection<string, Collection<int, Horario>>
      */
-    private function agruparPorFranjaYCarrera($horarios)
+    private function agruparPorCarrera($horarios)
     {
-        $etiqueta = fn (Horario $horario) => $horario->carrera->name.' · Ciclo '.$horario->curso->cicloRomano();
-
-        $grupos = collect(FranjaHorarioEnum::cases())
-            ->mapWithKeys(function (FranjaHorarioEnum $franja) use ($horarios, $etiqueta) {
-                $deLaFranja = $horarios->filter(fn (Horario $horario) => $horario->franja() === $franja);
-
-                return [$franja->value => [
-                    'label' => $franja->label(),
-                    'porCarrera' => $deLaFranja->groupBy($etiqueta)->sortKeys(),
-                ]];
-            });
-
-        $sinFranja = $horarios->filter(fn (Horario $horario) => $horario->franja() === null);
-
-        if ($sinFranja->isNotEmpty()) {
-            $grupos['otros'] = [
-                'label' => 'Otros días',
-                'porCarrera' => $sinFranja->groupBy($etiqueta)->sortKeys(),
-            ];
-        }
-
-        return $grupos->filter(fn (array $grupo) => $grupo['porCarrera']->isNotEmpty());
+        return $horarios
+            ->groupBy(fn (Horario $horario) => $horario->carrera->name.' · Ciclo '.$horario->curso->cicloRomano())
+            ->sortKeys();
     }
 
     /**
@@ -390,16 +311,13 @@ new #[Layout('layouts.app')] class extends Component
     </div>
 
     @if ($vista === 'lista')
-        @forelse ($horariosPorFranja as $grupoFranja)
+        @forelse ($horariosPorCarrera as $nombreCarrera => $horariosDeLaCarrera)
             <div class="mb-6">
-                <h2 class="mb-2 font-display text-lg text-ink">{{ $grupoFranja['label'] }}</h2>
-
-                @foreach ($grupoFranja['porCarrera'] as $nombreCarrera => $horariosDeLaCarrera)
-                    <div class="mb-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-                        <div class="border-b border-border bg-surface-2 px-4 py-2 font-display text-sm text-ink">{{ $nombreCarrera }}</div>
-                        <table class="min-w-full divide-y divide-border text-sm">
-                            <thead class="bg-surface-2">
-                                <tr>
+                <div class="mb-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+                    <div class="border-b border-border bg-surface-2 px-4 py-2 font-display text-sm text-ink">{{ $nombreCarrera }}</div>
+                    <table class="min-w-full divide-y divide-border text-sm">
+                        <thead class="bg-surface-2">
+                            <tr>
                                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Curso</th>
                                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Docente</th>
                                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Aula</th>
@@ -426,7 +344,6 @@ new #[Layout('layouts.app')] class extends Component
                             </tbody>
                         </table>
                     </div>
-                @endforeach
             </div>
         @empty
             <div class="rounded-2xl border border-border bg-surface shadow-sm px-4 py-8 text-center text-sm text-ink-faint">
@@ -540,52 +457,26 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                     </div>
 
-                    @if ($editandoId === null)
-                        <div>
-                            <x-input-label value="Días de clase" />
-                            <p class="mt-1 text-xs text-ink-faint">Ningún curso se dicta en un día suelto: elige una o varias franjas.</p>
-                            @if ($cursoTieneFranjasRestringidas)
-                                <p class="mt-1 text-xs text-ink-faint">Solo se muestran las franjas permitidas para este curso.</p>
-                            @endif
+                    <div>
+                        <x-input-label value="Días de clase" />
+                        <p class="mt-1 text-xs text-ink-faint">Elige libremente cualquier combinación de días de la semana.</p>
 
-                            <div class="mt-2 space-y-2">
-                                @foreach ($franjas as $valor => $etiqueta)
-                                    <label class="flex items-center gap-2 rounded-md border border-border p-3 text-sm text-ink">
-                                        <input
-                                            type="checkbox"
-                                            value="{{ $valor }}"
-                                            wire:model.live="franjasSeleccionadas"
-                                            class="rounded border-border text-accent focus:ring-accent"
-                                        >
-                                        {{ $etiqueta }}
-                                    </label>
-                                @endforeach
-                            </div>
-
-                            <x-input-error :messages="$errors->get('franjasSeleccionadas')" class="mt-1" />
+                        <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            @foreach ($diasSemana as $dia)
+                                <label class="flex items-center gap-2 rounded-md border border-border p-2 text-sm text-ink">
+                                    <input
+                                        type="checkbox"
+                                        value="{{ $dia->value }}"
+                                        wire:model.live="diasSeleccionados"
+                                        class="rounded border-border text-accent focus:ring-accent"
+                                    >
+                                    {{ $dia->label() }}
+                                </label>
+                            @endforeach
                         </div>
-                    @else
-                        <div>
-                            <x-input-label value="Días de clase" />
-                            <p class="mt-1 text-xs text-ink-faint">Los días reales de este horario -- puedes agregar o quitar días sueltos aquí.</p>
 
-                            <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                @foreach ($diasSemana as $dia)
-                                    <label class="flex items-center gap-2 rounded-md border border-border p-2 text-sm text-ink">
-                                        <input
-                                            type="checkbox"
-                                            value="{{ $dia->value }}"
-                                            wire:model.live="diasSueltosSeleccionados"
-                                            class="rounded border-border text-accent focus:ring-accent"
-                                        >
-                                        {{ $dia->label() }}
-                                    </label>
-                                @endforeach
-                            </div>
-
-                            <x-input-error :messages="$errors->get('diasSueltosSeleccionados')" class="mt-1" />
-                        </div>
-                    @endif
+                        <x-input-error :messages="$errors->get('diasSeleccionados')" class="mt-1" />
+                    </div>
 
                     @if ($diasParaHoras !== [])
                         <div class="space-y-3" wire:key="horas-{{ implode('-', array_map(fn ($d) => $d->value, $diasParaHoras)) }}">
