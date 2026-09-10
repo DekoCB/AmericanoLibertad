@@ -143,7 +143,7 @@ new #[Layout('layouts.app')] class extends Component
                         <p class="font-mono text-xs text-ink-faint">{{ $estudiante->dni }}</p>
                     </div>
 
-                    <p class="text-xs text-ink-dim">{{ $estudiante->gradoActual?->nombre ?? '—' }}</p>
+                    <p class="text-xs text-ink-dim">{{ $estudiante->carreraActual?->name ?? '—' }}</p>
                 </div>
 
                 <button

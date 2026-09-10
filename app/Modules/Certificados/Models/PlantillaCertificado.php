@@ -48,10 +48,10 @@ class PlantillaCertificado extends Model
     /**
      * Placeholders disponibles en $cuerpo, documentados también en la UI de
      * edición: {{estudiante}}, {{dni}}, {{detalle_matricula}} (la frase
-     * completa sobre el grado/ciclo cursado, o el texto alterno si el
-     * documento no está ligado a una matrícula), {{grado}} y {{periodo}}
-     * (solo el nombre del grado/ciclo, sueltos, para redactar la frase a
-     * mano en vez de usar detalle_matricula ya armado).
+     * completa sobre la carrera/ciclo cursado, o el texto alterno si el
+     * documento no está ligado a una matrícula), {{carrera}} y {{periodo}}
+     * (solo el nombre de la carrera/ciclo, sueltos, para redactar la frase
+     * a mano en vez de usar detalle_matricula ya armado).
      */
     public static function paraTipo(TipoDocumentoEnum $tipo): self
     {
@@ -84,8 +84,8 @@ class PlantillaCertificado extends Model
                 'titulo' => 'Constancia de estudios',
                 'cuerpo' => 'Por medio de la presente hacemos constar que el(la) alumno(a) {{estudiante}}, '
                     .'identificado(a) con DNI N.° {{dni}}, de nacionalidad peruana, se encuentra estudiando en '
-                    .'este Colegio el {{grado}} en el presente periodo {{periodo}}, en la modalidad de '
-                    ."Educación Básica Alternativa.\n\n"
+                    .'este Instituto la carrera de {{carrera}} en el presente periodo {{periodo}}, en la '
+                    ."modalidad de Educación Superior Tecnológica.\n\n"
                     .'Se expide el presente a solicitud de la parte interesada para los fines que estime conveniente.',
                 'pie_nota' => $pieNota,
                 'color_acento' => $colorAcentoConstancia,
@@ -111,8 +111,8 @@ class PlantillaCertificado extends Model
                 'titulo' => 'Constancia de matrícula',
                 'cuerpo' => 'Por medio de la presente hacemos constar que el(la) alumno(a) {{estudiante}}, '
                     .'identificado(a) con DNI N.° {{dni}}, de nacionalidad peruana, se encuentra matriculado(a) '
-                    .'en este Colegio como alumno(a) del {{grado}} en el presente periodo {{periodo}}, en la '
-                    ."modalidad de Educación Básica Alternativa.\n\n"
+                    .'en este Instituto como alumno(a) de la carrera de {{carrera}} en el presente periodo '
+                    ."{{periodo}}, en la modalidad de Educación Superior Tecnológica.\n\n"
                     .'Se expide el presente a solicitud de la parte interesada para los fines que estime conveniente.',
                 'pie_nota' => $pieNota,
                 'color_acento' => $colorAcentoConstancia,
@@ -122,10 +122,10 @@ class PlantillaCertificado extends Model
                 'titulo' => 'Constancia de egresado',
                 'cuerpo' => 'Por medio de la presente hacemos constar que el(la) alumno(a) {{estudiante}}, '
                     .'identificado(a) con DNI N.° {{dni}}, de nacionalidad peruana, ha culminado '
-                    .'satisfactoriamente sus estudios en este Colegio en el periodo {{periodo}}, en la '
-                    ."modalidad de Educación Básica Alternativa.\n\n"
+                    .'satisfactoriamente sus estudios en este Instituto en el periodo {{periodo}}, en la '
+                    ."modalidad de Educación Superior Tecnológica.\n\n"
                     .'Se expide el presente a solicitud de la parte interesada para los fines que estime '
-                    .'conveniente, mientras se tramita el certificado de estudios correspondiente ante la UGEL 05.',
+                    .'conveniente, mientras se tramita el certificado de estudios correspondiente.',
                 'pie_nota' => $pieNota,
                 'color_acento' => $colorAcentoConstancia,
             ],

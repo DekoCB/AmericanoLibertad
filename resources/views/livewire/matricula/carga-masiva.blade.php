@@ -77,7 +77,7 @@ new #[Layout('layouts.app')] class extends Component
                 <div>
                     <h2 class="font-display text-lg text-ink">1. Descarga la plantilla</h2>
                     <p class="mt-1 text-sm text-ink-dim">
-                        Una fila por estudiante: su DNI (ya debe estar registrado) y el nombre exacto del grado.
+                        Una fila por estudiante: su DNI (ya debe estar registrado), el nombre exacto de la carrera y el ciclo (I a VI).
                     </p>
                 </div>
                 <x-secondary-button type="button" wire:click="descargarPlantilla" class="shrink-0">

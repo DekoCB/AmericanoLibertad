@@ -91,7 +91,7 @@ new #[Layout('layouts.app')] class extends Component
             'misSolicitudes' => $certificados->misSolicitudes($estudiante)->filter($enEsteModulo)->values(),
             'matriculas' => Matricula::query()
                 ->where('estudiante_id', $estudiante->id)
-                ->with(['grado', 'ciclo'])
+                ->with(['carrera', 'ciclo'])
                 ->latest('fecha_matricula')
                 ->get(),
             'tieneDeudaCicloActual' => $bloqueos->tieneCuotasVencidasEnCicloActual($estudiante),
@@ -137,7 +137,7 @@ new #[Layout('layouts.app')] class extends Component
                         wire:model="matriculaId"
                         id="matriculaId"
                         class="mt-1 block w-full"
-                        :options="collect($matriculas)->mapWithKeys(fn ($matricula) => [$matricula->id => $matricula->grado->nombre.' · '.$matricula->ciclo->nombre])->prepend('Sin vincular a una matrícula específica', '')"
+                        :options="collect($matriculas)->mapWithKeys(fn ($matricula) => [$matricula->id => $matricula->carrera->name.' · '.$matricula->ciclo->nombre])->prepend('Sin vincular a una matrícula específica', '')"
                     />
                     <p class="mt-1 text-xs text-ink-faint">Para la libreta de notas, elige la matrícula del ciclo que quieres consultar.</p>
                     <x-input-error :messages="$errors->get('matriculaId')" class="mt-1" />
@@ -178,7 +178,7 @@ new #[Layout('layouts.app')] class extends Component
                         </p>
                         <p class="text-xs text-ink-faint">
                             @if ($certificado->matricula)
-                                {{ $certificado->matricula->grado->nombre }} ·
+                                {{ $certificado->matricula->carrera->name }} ·
                             @endif
                             emitido el {{ $certificado->fecha_emision->format('d/m/Y') }}
                         </p>

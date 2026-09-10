@@ -313,7 +313,7 @@ class CertificadoService
         return Certificado::query()
             ->where('codigo_verificacion', strtoupper(trim($codigo)))
             ->where('es_duplicado', false)
-            ->with(['estudiante', 'matricula.grado', 'matricula.ciclo'])
+            ->with(['estudiante', 'matricula.carrera', 'matricula.ciclo'])
             ->first();
     }
 
@@ -348,7 +348,7 @@ class CertificadoService
     {
         return Certificado::query()
             ->where('estudiante_id', $estudiante->id)
-            ->with(['matricula.grado', 'matricula.ciclo'])
+            ->with(['matricula.carrera', 'matricula.ciclo'])
             ->latest('fecha_emision')
             ->get();
     }
@@ -359,14 +359,14 @@ class CertificadoService
     public function todos(): Collection
     {
         return Certificado::query()
-            ->with(['estudiante', 'matricula.grado', 'emisor', 'entregadoPor'])
+            ->with(['estudiante', 'matricula.carrera', 'emisor', 'entregadoPor'])
             ->latest('fecha_emision')
             ->get();
     }
 
     private function generarPdf(Certificado $certificado): void
     {
-        $certificado->load(['estudiante', 'matricula.grado', 'matricula.ciclo']);
+        $certificado->load(['estudiante', 'matricula.carrera', 'matricula.ciclo']);
 
         $pdf = $this->renderizarPdf($certificado);
 
@@ -396,8 +396,9 @@ class CertificadoService
     {
         $detalleMatricula = $certificado->matricula
             ? sprintf(
-                'cursó estudios en el grado %s durante el ciclo %s (%s al %s),',
-                $certificado->matricula->grado->nombre,
+                'cursó estudios en la carrera de %s (ciclo %s) durante el periodo %s (%s al %s),',
+                $certificado->matricula->carrera->name,
+                $certificado->matricula->ciclo_curricular,
                 $certificado->matricula->ciclo->nombre,
                 $certificado->matricula->ciclo->fecha_inicio->format('d/m/Y'),
                 $certificado->matricula->ciclo->fecha_fin->format('d/m/Y'),
@@ -408,8 +409,8 @@ class CertificadoService
             'estudiante' => $certificado->estudiante?->nombreCompleto() ?? '—',
             'dni' => $certificado->estudiante->dni ?? '—',
             'detalle_matricula' => $detalleMatricula,
-            'grado' => $certificado->matricula?->grado->nombre ?? 'grado correspondiente',
-            // Sin "periodo" al inicio (a diferencia de "grado"): las plantillas ya
+            'carrera' => $certificado->matricula?->carrera->name ?? 'carrera correspondiente',
+            // Sin "periodo" al inicio (a diferencia de "carrera"): las plantillas ya
             // escriben la palabra "periodo" antes de este placeholder (p. ej. "en el
             // presente periodo {{periodo}}"), así que repetirla acá duplicaría la
             // palabra en el texto final.

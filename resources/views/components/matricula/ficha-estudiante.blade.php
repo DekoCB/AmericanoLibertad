@@ -48,10 +48,10 @@
             </div>
             <div><dt class="text-ink-faint">Correo</dt><dd class="text-ink">{{ $estudiante->email ?? '—' }}</dd></div>
             <div class="sm:col-span-2"><dt class="text-ink-faint">Dirección</dt><dd class="text-ink">{{ $estudiante->direccion ?? '—' }}</dd></div>
-            <div><dt class="text-ink-faint">Grado actual</dt><dd class="text-ink">{{ $estudiante->gradoActual?->nombre ?? '—' }}</dd></div>
+            <div><dt class="text-ink-faint">Carrera actual</dt><dd class="text-ink">{{ $estudiante->carreraActual?->name ?? '—' }}</dd></div>
             <div>
                 <dt class="text-ink-faint">Ciclos completados</dt>
-                <dd class="text-ink">{{ $estudiante->ciclos_completados }}{{ $matriculas->last()?->ciclo?->modalidad?->value !== 'anual' ? ' / 4' : '' }}</dd>
+                <dd class="text-ink">{{ $estudiante->ciclos_completados }}{{ $estudiante->carreraActual ? ' / '.$estudiante->carreraActual->total_ciclos : '' }}</dd>
             </div>
         </dl>
     </div>
@@ -132,7 +132,7 @@
                 @foreach ($examenes as $examen)
                     <div class="py-3 text-sm">
                         <p class="text-ink">{{ $examen->fecha->format('d/m/Y') }} · S/ {{ number_format((float) $examen->costo, 2) }}</p>
-                        <p class="text-ink-faint">Resultado: {{ $examen->resultado ?? '—' }} @if($examen->gradoAsignado) · Grado asignado: {{ $examen->gradoAsignado->nombre }} @endif</p>
+                        <p class="text-ink-faint">Resultado: {{ $examen->resultado ?? '—' }} @if($examen->carreraAsignada) · Carrera asignada: {{ $examen->carreraAsignada->name }} @if($examen->ciclo_asignado) (ciclo {{ $examen->ciclo_asignado }}) @endif @endif</p>
                     </div>
                 @endforeach
             </div>
@@ -145,7 +145,7 @@
             @forelse ($matriculas as $matricula)
                 <div class="py-3 text-sm">
                     <div class="flex items-center justify-between">
-                        <p class="text-ink">{{ $matricula->ciclo->nombre }} · {{ $matricula->ciclo->modalidad->label() }} · {{ $matricula->grado->nombre }}</p>
+                        <p class="text-ink">{{ $matricula->ciclo->nombre }} · {{ $matricula->ciclo->modalidad->label() }} · {{ $matricula->carrera->name }} (ciclo {{ $matricula->ciclo_curricular }})</p>
                         <span @class([
                             'rounded-full px-2 py-0.5 text-xs font-medium',
                             'bg-ok/10 text-ok' => $matricula->estado->value === 'aprobada',
@@ -156,7 +156,6 @@
                         </span>
                     </div>
                     <p class="mt-1 text-ink-faint">Matriculado el {{ $matricula->fecha_matricula->format('d/m/Y') }}</p>
-                    <p class="mt-1 text-ink-faint">Aula: {{ $matricula->grado->letraAula() }}</p>
 
                     <div class="mt-2 flex items-center gap-2">
                         <p class="text-ink-faint">Fin de estudios: {{ $matricula->fecha_fin_estudio?->format('d/m/Y') ?? '—' }}</p>
@@ -222,7 +221,7 @@
                                     @endif
                                 @endcan
                             @empty
-                                <p class="text-xs text-ink-faint">Este grado no tiene cursos con horario en este ciclo todavía.</p>
+                                <p class="text-xs text-ink-faint">Esta carrera no tiene cursos con horario en este ciclo todavía.</p>
                             @endforelse
                         </div>
                     </div>

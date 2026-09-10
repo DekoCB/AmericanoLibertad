@@ -27,15 +27,16 @@
         <tr><td class="etiqueta">Estado</td><td>{{ $estudiante->estado->label() }}</td></tr>
     </table>
 
-    <div class="seccion">Grados cursados</div>
+    <div class="seccion">Carreras cursadas</div>
     <table>
         <thead>
-            <tr><th>Grado</th><th>Ciclo</th><th>Modalidad</th><th>Fecha de matrícula</th><th>Fin de estudios</th><th>Estado</th></tr>
+            <tr><th>Carrera</th><th>Ciclo curricular</th><th>Ciclo</th><th>Modalidad</th><th>Fecha de matrícula</th><th>Fin de estudios</th><th>Estado</th></tr>
         </thead>
         <tbody>
             @forelse ($matriculas as $matricula)
                 <tr>
-                    <td>{{ $matricula->grado->nombre }}</td>
+                    <td>{{ $matricula->carrera->name }}</td>
+                    <td>{{ $matricula->ciclo_curricular }}</td>
                     <td>{{ $matricula->ciclo->nombre }}</td>
                     <td>{{ $matricula->ciclo->modalidad->label() }}</td>
                     <td>{{ $matricula->fecha_matricula->format('d/m/Y') }}</td>
@@ -43,7 +44,7 @@
                     <td>{{ $matricula->estado->label() }}</td>
                 </tr>
             @empty
-                <tr><td colspan="6">Sin matrículas registradas.</td></tr>
+                <tr><td colspan="7">Sin matrículas registradas.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -57,12 +58,12 @@
     @if ($resumenPagos['cuotasVencidas']->isNotEmpty())
         <div class="subseccion">Cuotas vencidas</div>
         <table>
-            <thead><tr><th>Cuota</th><th>Grado</th><th>Ciclo</th><th>Monto</th><th>Venció</th></tr></thead>
+            <thead><tr><th>Cuota</th><th>Carrera</th><th>Ciclo</th><th>Monto</th><th>Venció</th></tr></thead>
             <tbody>
                 @foreach ($resumenPagos['cuotasVencidas'] as $cuota)
                     <tr>
                         <td>{{ $cuota->numero }}</td>
-                        <td>{{ $cuota->planPago->matricula?->grado->nombre }}</td>
+                        <td>{{ $cuota->planPago->matricula?->carrera->name }}</td>
                         <td>{{ $cuota->planPago->matricula?->ciclo->nombre }}</td>
                         <td>S/ {{ number_format((float) $cuota->monto, 2) }}</td>
                         <td>{{ $cuota->fecha_vencimiento->format('d/m/Y') }}</td>
@@ -140,14 +141,15 @@
     @if ($examenesUbicacion->isNotEmpty())
         <div class="subseccion">Exámenes de ubicación</div>
         <table>
-            <thead><tr><th>Fecha</th><th>Costo</th><th>Resultado</th><th>Grado asignado</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Costo</th><th>Resultado</th><th>Carrera asignada</th><th>Ciclo asignado</th></tr></thead>
             <tbody>
                 @foreach ($examenesUbicacion as $examen)
                     <tr>
                         <td>{{ $examen->fecha->format('d/m/Y') }}</td>
                         <td>S/ {{ number_format((float) $examen->costo, 2) }}</td>
                         <td>{{ $examen->resultado ?? '—' }}</td>
-                        <td>{{ $examen->gradoAsignado?->nombre ?? '—' }}</td>
+                        <td>{{ $examen->carreraAsignada?->name ?? '—' }}</td>
+                        <td>{{ $examen->ciclo_asignado ?? '—' }}</td>
                     </tr>
                 @endforeach
             </tbody>

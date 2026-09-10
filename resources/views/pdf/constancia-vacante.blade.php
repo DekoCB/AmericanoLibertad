@@ -18,7 +18,7 @@
         El Instituto Americano Libertad deja constancia de que
         <strong>{{ $matricula->estudiante?->nombreCompleto() ?? '—' }}</strong>, identificado(a) con DNI
         <strong>{{ $matricula->estudiante?->dni ?? '—' }}</strong>, cuenta con vacante confirmada para cursar
-        <strong>{{ $matricula->grado->nombre }}</strong> durante el ciclo
+        <strong>{{ $matricula->carrera->name }}</strong> (ciclo {{ $matricula->ciclo_curricular }}) durante el periodo
         <strong>{{ $matricula->ciclo->nombre }}</strong>, con matrícula registrada el
         {{ $matricula->fecha_matricula->format('d/m/Y') }}.
     </p>

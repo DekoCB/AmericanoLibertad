@@ -22,7 +22,7 @@ use Illuminate\Support\Collection as SupportCollection;
 
 /**
  * Junta en un solo lugar lo que hoy exige entrar módulo por módulo para
- * saber qué le falta a un estudiante: grados cursados, situación de pagos,
+ * saber qué le falta a un estudiante: carreras cursadas, situación de pagos,
  * documentos (de las 3 fuentes distintas en las que viven hoy) y notas.
  * Es de solo lectura -- no reemplaza a la ficha editable de Matrícula.
  */
@@ -63,7 +63,7 @@ class HistorialEstudianteService
         }
 
         $matriculas = $estudiante->matriculas()
-            ->with(['grado', 'ciclo'])
+            ->with(['carrera', 'ciclo'])
             ->orderBy('fecha_matricula')
             ->get();
 
@@ -76,7 +76,7 @@ class HistorialEstudianteService
             'documentosEmitidos' => Certificado::query()->where('estudiante_id', $estudiante->id)->with('media')->latest('fecha_emision')->get(),
             'libretas' => $this->libretas->misLibretas($estudiante),
             'notasPorCiclo' => $this->notasPorCiclo($estudiante, $matriculas),
-            'examenesUbicacion' => $estudiante->examenesUbicacion()->with('gradoAsignado')->latest('fecha')->get(),
+            'examenesUbicacion' => $estudiante->examenesUbicacion()->with('carreraAsignada')->latest('fecha')->get(),
         ];
     }
 
@@ -94,7 +94,7 @@ class HistorialEstudianteService
     {
         $cuotas = Cuota::query()
             ->whereHas('planPago.matricula', fn ($query) => $query->where('estudiante_id', $estudiante->id))
-            ->with('planPago.matricula.grado', 'planPago.matricula.ciclo')
+            ->with('planPago.matricula.carrera', 'planPago.matricula.ciclo')
             ->get();
 
         return [

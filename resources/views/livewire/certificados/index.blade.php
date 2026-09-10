@@ -276,7 +276,7 @@ new #[Layout('layouts.app')] class extends Component
             if ($this->estudianteSeleccionadoId) {
                 $matriculasDelEstudiante = Matricula::query()
                     ->where('estudiante_id', $this->estudianteSeleccionadoId)
-                    ->with(['grado', 'ciclo'])
+                    ->with(['carrera', 'ciclo'])
                     ->latest('fecha_matricula')
                     ->get();
             }
@@ -354,7 +354,7 @@ new #[Layout('layouts.app')] class extends Component
                             <p class="text-xs text-ink-faint">
                                 {{ $solicitud->motivo }}
                                 @if ($solicitud->matricula)
-                                    · {{ $solicitud->matricula->grado->nombre }} · {{ $solicitud->matricula->ciclo->nombre }}
+                                    · {{ $solicitud->matricula->carrera->name }} · {{ $solicitud->matricula->ciclo->nombre }}
                                 @endif
                             </p>
                             <p class="text-xs text-ink-faint">
@@ -445,7 +445,7 @@ new #[Layout('layouts.app')] class extends Component
                         wire:model="matriculaId"
                         id="matriculaId"
                         class="mt-1 block w-full"
-                        :options="collect($matriculasDelEstudiante)->mapWithKeys(fn ($matricula) => [$matricula->id => $matricula->grado->nombre.' · '.$matricula->ciclo->nombre])->prepend('Sin vincular a una matrícula específica', '')"
+                        :options="collect($matriculasDelEstudiante)->mapWithKeys(fn ($matricula) => [$matricula->id => $matricula->carrera->name.' · '.$matricula->ciclo->nombre])->prepend('Sin vincular a una matrícula específica', '')"
                     />
                     <x-input-error :messages="$errors->get('matriculaId')" class="mt-1" />
                 </div>
@@ -496,7 +496,7 @@ new #[Layout('layouts.app')] class extends Component
                                 <p class="text-xs text-ink-faint">
                                     N.° {{ $certificado->numero }} · código {{ $certificado->codigo_verificacion }}
                                     @if ($certificado->matricula)
-                                        · {{ $certificado->matricula->grado->nombre }}
+                                        · {{ $certificado->matricula->carrera->name }}
                                     @endif
                                     · {{ $certificado->fecha_emision->format('d/m/Y') }}
                                 </p>
@@ -604,7 +604,7 @@ new #[Layout('layouts.app')] class extends Component
                     Puedes usar: <code class="rounded bg-surface-2 px-1">@{{estudiante}}</code>
                     <code class="rounded bg-surface-2 px-1">@{{dni}}</code>
                     <code class="rounded bg-surface-2 px-1">@{{detalle_matricula}}</code>
-                    <code class="rounded bg-surface-2 px-1">@{{grado}}</code>
+                    <code class="rounded bg-surface-2 px-1">@{{carrera}}</code>
                     <code class="rounded bg-surface-2 px-1">@{{periodo}}</code>
                     <code class="rounded bg-surface-2 px-1">@{{numero}}</code>
                     <code class="rounded bg-surface-2 px-1">@{{fecha_emision}}</code>

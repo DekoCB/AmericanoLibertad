@@ -196,10 +196,10 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Los cursos del grado y ciclo de esta matrícula, cada uno con sus
-     * horarios disponibles (por si tiene varias secciones), cuál está
-     * asignado explícitamente (si alguno) y si hace falta elegir uno
-     * ("ambiguo" = el curso tiene más de una sección, ver
+     * Los cursos de la carrera y ciclo curricular de esta matrícula, cada
+     * uno con sus horarios disponibles (por si tiene varias secciones),
+     * cuál está asignado explícitamente (si alguno) y si hace falta elegir
+     * uno ("ambiguo" = el curso tiene más de una sección, ver
      * Matricula::scopeDelHorario()).
      *
      * @return Collection<int, array{curso: Curso, opciones: Collection<int, Horario>, asignado: ?Horario, ambiguo: bool}>
@@ -208,7 +208,8 @@ new #[Layout('layouts.app')] class extends Component
     {
         $horariosPorCurso = Horario::query()
             ->where('ciclo_id', $matricula->ciclo_id)
-            ->where('grado_id', $matricula->grado_id)
+            ->where('carrera_id', $matricula->carrera_id)
+            ->where('ciclo_curricular', $matricula->ciclo_curricular)
             ->with(['curso', 'docente', 'dias'])
             ->get()
             ->groupBy('curso_id');
@@ -230,11 +231,11 @@ new #[Layout('layouts.app')] class extends Component
     {
         $this->estudiante->refresh();
 
-        $matriculas = $this->estudiante->matriculas()->with(['ciclo', 'grado', 'horarios.curso', 'horarios.docente', 'media'])->latest('fecha_matricula')->get();
+        $matriculas = $this->estudiante->matriculas()->with(['ciclo', 'carrera', 'horarios.curso', 'horarios.docente', 'media'])->latest('fecha_matricula')->get();
 
         return [
             'documentos' => $this->estudiante->documentos()->with('media')->get(),
-            'examenes' => $this->estudiante->examenesUbicacion()->with('gradoAsignado')->latest('fecha')->get(),
+            'examenes' => $this->estudiante->examenesUbicacion()->with('carreraAsignada')->latest('fecha')->get(),
             'matriculas' => $matriculas,
             'cursosConHorarios' => $matriculas->mapWithKeys(fn (Matricula $matricula) => [$matricula->id => $this->cursosConHorarios($matricula)]),
             'planesPorMatricula' => Auth::user()->hasPermissionTo('pagos.ver')
