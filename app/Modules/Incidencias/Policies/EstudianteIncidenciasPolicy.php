@@ -58,7 +58,7 @@ class EstudianteIncidenciasPolicy
 
     private function esEstudianteDelDocente(User $user, Estudiante $estudiante): bool
     {
-        $horarios = Horario::query()->where('docente_id', $user->id)->get(['id', 'grado_id', 'ciclo_id']);
+        $horarios = Horario::query()->where('docente_id', $user->id)->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
 
         if ($horarios->isEmpty()) {
             return false;

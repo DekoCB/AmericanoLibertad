@@ -4,13 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Modules\Academico\Enums\DiaSemanaEnum;
-use App\Modules\Academico\Enums\EstadoCicloEnum;
 use App\Modules\Academico\Enums\FranjaHorarioEnum;
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Aula;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Asistencia\Enums\EstadoAsistenciaEnum;
 use App\Modules\Asistencia\Services\AsistenciaService;
@@ -29,13 +26,8 @@ use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Evaluaciones\Services\LibretaService;
 use App\Modules\Incidencias\Enums\TipoIncidenciaEnum;
 use App\Modules\Incidencias\Services\IncidenciaService;
-use App\Modules\Matricula\DTOs\RegistrarApoderadoData;
-use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
-use App\Modules\Matricula\DTOs\RegistrarMatriculaData;
-use App\Modules\Matricula\Enums\EstadoCivilEnum;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
-use App\Modules\Matricula\Services\MatriculaService;
 use App\Modules\Notificaciones\Services\CampaniaWhatsappService;
 use App\Modules\Notificaciones\Services\PlantillaService;
 use App\Modules\Notificaciones\Services\RecordatorioCuotaService;
@@ -54,8 +46,6 @@ use App\Modules\Pagos\Services\PagoService;
 use App\Modules\Pagos\Services\PlanPagoService;
 use App\Shared\Enums\EstadoUsuarioEnum;
 use App\Shared\Enums\RolEnum;
-use App\Shared\ValueObjects\Dni;
-use App\Shared\ValueObjects\Telefono;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -95,12 +85,6 @@ class DemoRobustoSeeder extends Seeder
 
     private int $secuenciaDniDocente = 61000001;
 
-    private int $secuenciaDniEstudiante = 62000001;
-
-    private int $secuenciaDniApoderado = 63000001;
-
-    private int $secuenciaCelular = 1;
-
     public function run(): void
     {
         $ciclo = Ciclo::query()->where('estado', 'activo')->first();
@@ -109,14 +93,13 @@ class DemoRobustoSeeder extends Seeder
             return;
         }
 
-        $grados = Grado::query()->orderBy('orden')->get();
-
-        $this->asegurarCursos($grados);
+        // Ya no siembra cursos/estudiantes/matriculas de demo "de grado" (el
+        // modelo Grado, heredado de CEBA/EBA, está retirado -- ver el plan de
+        // migración Grado->Carrera+Ciclo). Sigue poblando lo que no depende
+        // de Grado: aulas, docentes, pagos/certificados/notificaciones base.
         $aulas = $this->asegurarAulas();
         $docentes = $this->crearDocentes(5);
         $this->crearHorarios($ciclo, $aulas, $docentes);
-        $this->crearEstudiantesYMatriculas($ciclo, $grados);
-        $this->poblarSiagieAnual($grados);
         $this->diversificarEstadosDeEstudiantes();
 
         $horarios = Horario::query()->where('ciclo_id', $ciclo->id)->get();
@@ -128,43 +111,6 @@ class DemoRobustoSeeder extends Seeder
         $this->poblarCertificados();
         $this->poblarIncidencias();
         $this->poblarNotificaciones();
-    }
-
-    /**
-     * @param  Collection<int, Grado>  $grados
-     */
-    /**
-     * Las 8 asignaturas oficiales de la libreta de notas de CEBA (mismo
-     * orden en que aparecen impresas) -- ver LibretaService/pdf.libreta.
-     * firstOrCreate() por grado_id+nombre en vez de por posición: así, si
-     * un grado ya tiene algún curso del catálogo anterior, no se duplica,
-     * y sigue siendo seguro volver a correr el seeder.
-     */
-    private function asegurarCursos(Collection $grados): void
-    {
-        $catalogo = [
-            'Matemática',
-            'Ciencia Tecnología y Salud',
-            'Comunicación',
-            'Desarrollo personal y ciudadano',
-            'Inglés',
-            'Religión',
-            'Educación para el trabajo',
-            'Educación física',
-        ];
-        $horasPorCurso = 80;
-
-        foreach ($grados as $grado) {
-            foreach ($catalogo as $indice => $nombre) {
-                Curso::query()->firstOrCreate(
-                    ['grado_id' => $grado->id, 'nombre' => $nombre],
-                    [
-                        'codigo' => "G{$grado->id}-".str_pad((string) ($indice + 1), 2, '0', STR_PAD_LEFT),
-                        'horas' => $horasPorCurso,
-                    ],
-                );
-            }
-        }
     }
 
     /**
@@ -354,111 +300,6 @@ class DemoRobustoSeeder extends Seeder
         }
 
         return false;
-    }
-
-    /**
-     * @param  Collection<int, Grado>  $grados
-     */
-    private function crearEstudiantesYMatriculas(Ciclo $ciclo, Collection $grados): void
-    {
-        $servicio = app(MatriculaService::class);
-
-        foreach ($grados as $grado) {
-            for ($i = 0; $i < 12; $i++) {
-                // La edad ya no restringe a qué grado/horario se matricula
-                // el estudiante -- los 4 grupos sirven a ambas edades, así
-                // que este seeder alterna al azar entre ambos tipos de
-                // estudiante para cada grado. Solo afecta su
-                // fecha_fin_estudio calculada (6 u 8 meses).
-                $esMenor = random_int(0, 1) === 1;
-                $edad = $esMenor ? random_int(14, 17) : random_int(18, 52);
-
-                $estudiante = $servicio->registrarEstudiante(new RegistrarEstudianteData(
-                    nombres: $this->nombreAleatorio(),
-                    apellidos: $this->apellidosAleatorios(),
-                    dni: new Dni((string) $this->secuenciaDniEstudiante++),
-                    fechaNacimiento: now()->subYears($edad)->subDays(random_int(0, 330))->format('Y-m-d'),
-                    estadoCivil: $esMenor ? null : Arr::random(EstadoCivilEnum::cases()),
-                    direccion: $this->direccionAleatoria(),
-                    celular: new Telefono($this->siguienteCelular()),
-                    observaciones: null,
-                ));
-
-                if ($esMenor) {
-                    $servicio->registrarApoderado($estudiante, new RegistrarApoderadoData(
-                        nombres: $this->nombreAleatorio().' '.$this->apellidosAleatorios(),
-                        dni: new Dni((string) $this->secuenciaDniApoderado++),
-                        celular: new Telefono($this->siguienteCelular()),
-                        correo: null,
-                        direccion: null,
-                        parentesco: Arr::random(['Padre', 'Madre', 'Tutor legal']),
-                    ));
-                }
-
-                try {
-                    $servicio->matricular($estudiante, new RegistrarMatriculaData(
-                        cicloId: $ciclo->id,
-                        gradoId: $grado->id,
-                        observaciones: null,
-                        registradoPor: null,
-                    ));
-                } catch (ValidationException) {
-                    // Si el periodo de matrícula del ciclo activo no está
-                    // abierto hoy, no bloquea el resto del seeder: el
-                    // estudiante queda registrado sin matrícula de ejemplo.
-                }
-            }
-        }
-    }
-
-    /**
-     * Un ciclo SIAGIE anual de ejemplo (independiente de los 4 grupos
-     * rotativos) con un par de estudiantes matriculados, para poder
-     * verificar la ficha/historial/wizard con un caso real de esa
-     * modalidad.
-     *
-     * @param  Collection<int, Grado>  $grados
-     */
-    private function poblarSiagieAnual(Collection $grados): void
-    {
-        $anio = (int) now()->year;
-
-        $cicloAnual = Ciclo::query()->firstOrCreate(
-            ['modalidad' => ModalidadCicloEnum::ANUAL, 'anio' => $anio],
-            [
-                'nombre' => "SIAGIE Anual - {$anio}",
-                'tipo' => null,
-                'fecha_inicio' => "{$anio}-03-01",
-                'fecha_fin' => "{$anio}-10-31",
-                'estado' => EstadoCicloEnum::ACTIVO,
-            ]
-        );
-
-        $servicio = app(MatriculaService::class);
-
-        foreach ($grados->take(2) as $grado) {
-            $estudiante = $servicio->registrarEstudiante(new RegistrarEstudianteData(
-                nombres: $this->nombreAleatorio(),
-                apellidos: $this->apellidosAleatorios(),
-                dni: new Dni((string) $this->secuenciaDniEstudiante++),
-                fechaNacimiento: now()->subYears(random_int(18, 40))->subDays(random_int(0, 330))->format('Y-m-d'),
-                estadoCivil: Arr::random(EstadoCivilEnum::cases()),
-                direccion: $this->direccionAleatoria(),
-                celular: new Telefono($this->siguienteCelular()),
-                observaciones: null,
-            ));
-
-            try {
-                $servicio->matricular($estudiante, new RegistrarMatriculaData(
-                    cicloId: $cicloAnual->id,
-                    gradoId: $grado->id,
-                    observaciones: null,
-                    registradoPor: null,
-                ));
-            } catch (ValidationException) {
-                // No bloquea el resto del seeder si ya existe la matrícula.
-            }
-        }
     }
 
     private function diversificarEstadosDeEstudiantes(): void
@@ -764,7 +605,8 @@ class DemoRobustoSeeder extends Seeder
             $tipo = TipoIncidenciaEnum::cases()[$indice % 4];
 
             $horariosDelEstudiante = Horario::query()
-                ->where('grado_id', $matricula->grado_id)
+                ->where('carrera_id', $matricula->carrera_id)
+                ->where('ciclo_curricular', $matricula->ciclo_curricular)
                 ->where('ciclo_id', $matricula->ciclo_id)
                 ->pluck('id');
 
@@ -865,21 +707,5 @@ class DemoRobustoSeeder extends Seeder
     private function apellidosAleatorios(): string
     {
         return Arr::random($this->apellidos).' '.Arr::random($this->apellidos);
-    }
-
-    private function direccionAleatoria(): string
-    {
-        $vias = ['Jr.', 'Av.', 'Calle', 'Psje.'];
-        $nombres = ['Los Álamos', 'Las Flores', 'San Martín', 'Túpac Amaru', 'Los Pinos', 'La Cultura', 'Grau', 'Bolognesi'];
-
-        return Arr::random($vias).' '.Arr::random($nombres).' '.random_int(100, 899);
-    }
-
-    private function siguienteCelular(): string
-    {
-        $numero = sprintf('9%08d', $this->secuenciaCelular);
-        $this->secuenciaCelular++;
-
-        return $numero;
     }
 }

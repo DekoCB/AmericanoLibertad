@@ -128,7 +128,7 @@ class IncidenciaService
      */
     public function estudiantesDelDocente(User $docente): Collection
     {
-        $horarios = Horario::query()->where('docente_id', $docente->id)->get(['id', 'grado_id', 'ciclo_id']);
+        $horarios = Horario::query()->where('docente_id', $docente->id)->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
 
         if ($horarios->isEmpty()) {
             return new Collection;
@@ -205,7 +205,7 @@ class IncidenciaService
     {
         $matriculas = $estudiante->matriculas()
             ->where('estado', 'aprobada')
-            ->get(['id', 'grado_id', 'ciclo_id']);
+            ->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
 
         if ($matriculas->isEmpty()) {
             return new Collection;
