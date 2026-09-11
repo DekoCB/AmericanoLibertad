@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Matricula;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Shared\Enums\RolEnum;
@@ -95,10 +95,10 @@ class CargaMasivaTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        Grado::factory()->create(['nombre' => '3ro de Secundaria']);
+        $carrera = Carrera::factory()->create(['name' => 'Enfermería Técnica', 'total_ciclos' => 6]);
         $estudiante = Estudiante::factory()->create(['dni' => '22334455', 'es_menor_edad' => false]);
 
-        $archivo = $this->archivoExcel(['dni', 'grado'], [['22334455', '3ro de Secundaria']]);
+        $archivo = $this->archivoExcel(['dni', 'carrera', 'ciclo'], [['22334455', $carrera->name, 'I']]);
 
         $this->actingAs($coordinador);
 

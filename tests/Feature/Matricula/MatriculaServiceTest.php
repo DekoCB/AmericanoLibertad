@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Matricula;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Enums\TipoSiagieEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Siagie;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
@@ -141,13 +141,14 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = Ciclo::factory()->activo()->create();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->expectException(ValidationException::class);
 
         $this->service()->matricular($estudiante, new RegistrarMatriculaData(
             cicloId: $ciclo->id,
-            gradoId: $grado->id,
+            carreraId: $carrera->id,
+            cicloCurricular: 1,
             observaciones: null,
             registradoPor: null,
         ));
@@ -157,9 +158,9 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $data = new RegistrarMatriculaData($ciclo->id, $grado->id, null, null);
+        $data = new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null);
 
         $this->service()->matricular($estudiante, $data);
 
@@ -174,9 +175,9 @@ class MatriculaServiceTest extends TestCase
 
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         Event::assertDispatched(EstudianteMatriculado::class);
     }
@@ -185,12 +186,13 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
         $siagie = Siagie::factory()->create(['tipo' => TipoSiagieEnum::SEGUNDO, 'anio' => $ciclo->anio]);
 
         $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData(
             cicloId: $ciclo->id,
-            gradoId: $grado->id,
+            carreraId: $carrera->id,
+            cicloCurricular: 1,
             observaciones: null,
             registradoPor: null,
             siagieId: $siagie->id,
@@ -204,32 +206,34 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $this->assertNull($matricula->siagie_id);
         $this->assertNull($matricula->siagieCompleto());
     }
 
-    public function test_matricular_actualiza_el_grado_actual_del_estudiante(): void
+    public function test_matricular_actualiza_la_carrera_y_ciclo_actual_del_estudiante(): void
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
-        $this->assertSame($grado->id, $estudiante->fresh()->grado_actual_id);
+        $estudianteFresco = $estudiante->fresh();
+        $this->assertSame($carrera->id, $estudianteFresco->carrera_actual_id);
+        $this->assertSame(1, $estudianteFresco->ciclo_actual);
     }
 
-    public function test_matricular_en_un_grado_sin_horarios_deja_la_matricula_sin_horarios_asignados(): void
+    public function test_matricular_en_una_carrera_sin_horarios_deja_la_matricula_sin_horarios_asignados(): void
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $this->assertTrue($matricula->horarios->isEmpty());
     }
@@ -238,9 +242,9 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $this->assertTrue($matricula->fecha_matricula->addMonths(6)->isSameDay($matricula->fecha_fin_estudio));
     }
@@ -249,23 +253,23 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMenor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $this->assertTrue($matricula->fecha_matricula->addMonths(8)->isSameDay($matricula->fecha_fin_estudio));
     }
 
     public function test_matricular_en_un_ciclo_anual_no_exige_periodo_de_matricula_abierto(): void
     {
-        // A diferencia de los Grupos de 6 meses, SIAGIE anual no depende de
+        // A diferencia de los Ciclos de 6 meses, SIAGIE anual no depende de
         // un PeriodoMatricula: este ciclo no tiene ninguno y aun así debe
         // poder matricularse.
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = Ciclo::factory()->anual()->activo()->create();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $this->assertTrue($ciclo->fecha_fin->isSameDay($matricula->fecha_fin_estudio));
     }
@@ -274,9 +278,9 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $nuevaFecha = now()->addMonths(9)->format('Y-m-d');
         $matricula = $this->service()->reasignarFechaFinEstudio($matricula, $nuevaFecha);
@@ -289,11 +293,13 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
-        Horario::factory()->create(['grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
-        $horarioDos = Horario::factory()->create(['grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        $carrera = Carrera::factory()->create();
+        $cursoUno = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $cursoDos = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        Horario::factory()->create(['curso_id' => $cursoUno->id, 'ciclo_id' => $ciclo->id]);
+        $horarioDos = Horario::factory()->create(['curso_id' => $cursoDos->id, 'ciclo_id' => $ciclo->id]);
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $matricula = $this->service()->asignarHorarioDeCurso($matricula, $horarioDos->curso_id, $horarioDos->id);
 
@@ -305,12 +311,12 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
-        $curso = Curso::factory()->create(['grado_id' => $grado->id]);
-        $seccionUno = Horario::factory()->create(['curso_id' => $curso->id, 'grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
-        $seccionDos = Horario::factory()->create(['curso_id' => $curso->id, 'grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        $carrera = Carrera::factory()->create();
+        $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $seccionUno = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $ciclo->id]);
+        $seccionDos = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $ciclo->id]);
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
         $this->service()->asignarHorarioDeCurso($matricula, $curso->id, $seccionUno->id);
 
         $matricula = $this->service()->asignarHorarioDeCurso($matricula, $curso->id, $seccionDos->id);
@@ -322,10 +328,11 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
-        $horario = Horario::factory()->create(['grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        $carrera = Carrera::factory()->create();
+        $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $horario = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $ciclo->id]);
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
         $matricula = $this->service()->asignarHorarioDeCurso($matricula, $horario->curso_id, $horario->id);
 
         $matricula = $this->service()->asignarHorarioDeCurso($matricula, $horario->curso_id, null);
@@ -333,14 +340,14 @@ class MatriculaServiceTest extends TestCase
         $this->assertTrue($matricula->fresh()->horarios->isEmpty());
     }
 
-    public function test_asignar_horario_de_curso_con_uno_ajeno_al_grado_lanza_excepcion(): void
+    public function test_asignar_horario_de_curso_con_uno_ajeno_a_la_carrera_lanza_excepcion(): void
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
         $horarioAjeno = Horario::factory()->create();
 
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $this->expectException(ValidationException::class);
 

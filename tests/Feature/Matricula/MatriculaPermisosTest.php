@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Matricula;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Enums\TipoSiagieEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Siagie;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
@@ -69,7 +69,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($usuario);
 
@@ -89,7 +89,8 @@ class MatriculaPermisosTest extends TestCase
             ->call('avanzar')
             ->assertSet('paso', 5)
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->call('confirmar')
             ->assertHasNoErrors()
             ->assertDispatched('matricula-registrada');
@@ -115,7 +116,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($usuario);
 
@@ -135,7 +136,8 @@ class MatriculaPermisosTest extends TestCase
             ->call('avanzar')
             ->assertSet('paso', 5)
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->call('confirmar')
             ->assertHasNoErrors()
             ->assertDispatched('matricula-registrada');
@@ -162,7 +164,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
         $fechaElegida = now()->subDays(5)->format('Y-m-d');
 
         $this->actingAs($usuario);
@@ -181,7 +183,8 @@ class MatriculaPermisosTest extends TestCase
             ->call('avanzar')
             ->assertSet('paso', 5)
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->set('fechaMatricula', $fechaElegida)
             ->call('confirmar')
             ->assertHasNoErrors()
@@ -208,7 +211,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($usuario);
 
@@ -231,7 +234,8 @@ class MatriculaPermisosTest extends TestCase
             ->call('avanzar')
             ->assertSet('paso', 5)
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->call('confirmar')
             ->assertHasNoErrors()
             ->assertDispatched('matricula-registrada');
@@ -300,7 +304,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
         $siagie = Siagie::factory()->create(['tipo' => TipoSiagieEnum::SEGUNDO]);
 
         $this->actingAs($usuario);
@@ -319,7 +323,8 @@ class MatriculaPermisosTest extends TestCase
             ->call('avanzar')
             ->assertSet('paso', 5)
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->set('siagieId', (string) $siagie->id)
             ->call('confirmar')
             ->assertHasNoErrors()
@@ -336,10 +341,10 @@ class MatriculaPermisosTest extends TestCase
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
-        // Sin periodo de matrícula: a diferencia de los Grupos de 6 meses,
+        // Sin periodo de matrícula: a diferencia de los Ciclos de 6 meses,
         // SIAGIE anual no lo necesita para poder matricularse.
         $cicloAnual = Ciclo::factory()->anual()->activo()->create();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($usuario);
 
@@ -357,7 +362,8 @@ class MatriculaPermisosTest extends TestCase
             ->assertSet('paso', 5)
             ->set('modalidadCiclo', 'anual')
             ->assertSet('cicloId', (string) $cicloAnual->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->call('confirmar')
             ->assertHasNoErrors()
             ->assertDispatched('matricula-registrada');
@@ -379,7 +385,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $estudiante = Estudiante::factory()->create(['dni' => '55667890']);
 
@@ -392,7 +398,8 @@ class MatriculaPermisosTest extends TestCase
             ->assertSet('esRematricula', true)
             ->assertSet('paso', 5)
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->call('confirmar')
             ->assertHasNoErrors()
             ->assertDispatched('matricula-registrada');
@@ -402,7 +409,8 @@ class MatriculaPermisosTest extends TestCase
         $this->assertDatabaseHas('matriculas', [
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $grado->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 1,
         ]);
     }
 
@@ -442,7 +450,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($usuario);
 
@@ -461,7 +469,8 @@ class MatriculaPermisosTest extends TestCase
             ->call('avanzar')
             ->assertSet('paso', 5)
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->call('avanzar')
             ->assertHasNoErrors()
             ->assertSet('paso', 6)
@@ -505,7 +514,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_inicio' => now()->subDays(10),
             'fecha_fin' => now()->addDays(10),
         ]);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($usuario);
 
@@ -522,7 +531,8 @@ class MatriculaPermisosTest extends TestCase
             ->call('avanzar')
             ->assertSet('paso', 5)
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->call('avanzar')
             ->assertSet('paso', 6)
             ->call('confirmar')
@@ -537,7 +547,7 @@ class MatriculaPermisosTest extends TestCase
 
     /**
      * Avanza el wizard hasta el paso 5 (Matrícula) para un estudiante mayor
-     * de edad recién creado, listo para setear cicloId/gradoId.
+     * de edad recién creado, listo para setear cicloId/carreraId/cicloCurricular.
      */
     private function wizardEnPasoDeMatricula(string $dni): Testable
     {
@@ -564,13 +574,14 @@ class MatriculaPermisosTest extends TestCase
 
         // Ciclo sin periodo de matrícula abierto: matricular() falla.
         $ciclo = Ciclo::factory()->activo()->create();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($usuario);
 
         $component = $this->wizardEnPasoDeMatricula('55667802')
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->call('confirmar')
             ->assertHasErrors();
 
@@ -742,15 +753,16 @@ class MatriculaPermisosTest extends TestCase
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
         $ciclo = Ciclo::factory()->activo()->create();
-        $grado = Grado::factory()->create();
-        $curso = Curso::factory()->create(['grado_id' => $grado->id]);
-        $seccionA = Horario::factory()->create(['curso_id' => $curso->id, 'grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
-        $seccionB = Horario::factory()->create(['curso_id' => $curso->id, 'grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        $carrera = Carrera::factory()->create();
+        $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $seccionA = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $ciclo->id]);
+        $seccionB = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $ciclo->id]);
         $estudiante = Estudiante::factory()->create();
         $matricula = Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $grado->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 1,
         ]);
 
         $this->actingAs($usuario);
@@ -771,13 +783,14 @@ class MatriculaPermisosTest extends TestCase
         $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
 
         $ciclo = Ciclo::factory()->activo()->create();
-        $grado = Grado::factory()->create();
-        $horario = Horario::factory()->create(['grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        $carrera = Carrera::factory()->create();
+        $horario = Horario::factory()->create(['ciclo_id' => $ciclo->id]);
         $estudiante = Estudiante::factory()->create();
         $matricula = Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $grado->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 1,
         ]);
 
         $this->actingAs($usuario);

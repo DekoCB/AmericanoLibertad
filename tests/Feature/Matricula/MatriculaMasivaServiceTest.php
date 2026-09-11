@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Matricula;
 
+use App\Models\Carrera;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Services\MatriculaService;
@@ -121,14 +121,14 @@ class MatriculaMasivaServiceTest extends TestCase
         $this->assertDatabaseHas('estudiantes', ['dni' => '55667788']);
     }
 
-    public function test_matricula_masivamente_estudiantes_existentes_por_dni_y_grado(): void
+    public function test_matricula_masivamente_estudiantes_existentes_por_dni_carrera_y_ciclo(): void
     {
         $ciclo = $this->cicloConPeriodoAbierto();
-        $grado = Grado::factory()->create(['nombre' => '1ro de Secundaria']);
+        $carrera = Carrera::factory()->create(['name' => 'Enfermería Técnica', 'total_ciclos' => 6]);
         $estudiante = Estudiante::factory()->create(['dni' => '44556677', 'es_menor_edad' => false]);
 
         $resultado = $this->service()->matricularDesdeFilas($ciclo->id, $this->filas([
-            ['dni' => '44556677', 'grado' => '1ro de Secundaria'],
+            ['dni' => '44556677', 'carrera' => $carrera->name, 'ciclo' => 'I'],
         ]), null);
 
         $this->assertSame(1, $resultado['exitosos']);
@@ -136,17 +136,18 @@ class MatriculaMasivaServiceTest extends TestCase
         $this->assertDatabaseHas('matriculas', [
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $grado->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 1,
         ]);
     }
 
     public function test_matricula_masiva_reporta_un_dni_inexistente_como_error(): void
     {
         $ciclo = $this->cicloConPeriodoAbierto();
-        Grado::factory()->create(['nombre' => '1ro de Secundaria']);
+        $carrera = Carrera::factory()->create(['name' => 'Enfermería Técnica', 'total_ciclos' => 6]);
 
         $resultado = $this->service()->matricularDesdeFilas($ciclo->id, $this->filas([
-            ['dni' => '00000000', 'grado' => '1ro de Secundaria'],
+            ['dni' => '00000000', 'carrera' => $carrera->name, 'ciclo' => 'I'],
         ]), null);
 
         $this->assertSame(0, $resultado['exitosos']);
