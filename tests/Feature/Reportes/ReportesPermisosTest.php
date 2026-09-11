@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Reportes;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Enums\FranjaHorarioEnum;
 use App\Modules\Academico\Enums\TipoSiagieEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Siagie;
 use App\Modules\Evaluaciones\Models\Calificacion;
@@ -205,7 +205,7 @@ class ReportesPermisosTest extends TestCase
             ->assertSet('franja', '');
     }
 
-    public function test_el_filtro_de_fecha_fue_reemplazado_por_grupo_grado_y_curso(): void
+    public function test_el_filtro_de_fecha_fue_reemplazado_por_siagie_ciclo_carrera_ciclo_curricular_y_curso(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
@@ -216,71 +216,78 @@ class ReportesPermisosTest extends TestCase
 
         $this->assertStringContainsString('id="siagieId"', $html);
         $this->assertStringContainsString('id="cicloId"', $html);
-        $this->assertStringContainsString('id="gradoId"', $html);
+        $this->assertStringContainsString('id="carreraId"', $html);
+        $this->assertStringContainsString('id="cicloCurricular"', $html);
         $this->assertStringContainsString('id="cursoId"', $html);
         $this->assertStringNotContainsString('id="desde"', $html);
         $this->assertStringNotContainsString('id="hasta"', $html);
     }
 
-    public function test_elegir_un_siagie_reinicia_grupo_grado_y_curso(): void
+    public function test_elegir_un_siagie_reinicia_ciclo_carrera_ciclo_curricular_y_curso(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
         $siagie = Siagie::factory()->create(['tipo' => TipoSiagieEnum::PRIMERO, 'anio' => 2026]);
         $ciclo = Ciclo::factory()->create();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($coordinador);
 
         Volt::test('reportes.index')
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->set('cursoId', '1')
             ->set('siagieId', (string) $siagie->id)
             ->assertSet('cicloId', '')
-            ->assertSet('gradoId', '')
+            ->assertSet('carreraId', '')
+            ->assertSet('cicloCurricular', '')
             ->assertSet('cursoId', '');
     }
 
-    public function test_elegir_un_grupo_reinicia_grado_y_curso(): void
+    public function test_elegir_un_ciclo_reinicia_carrera_ciclo_curricular_y_curso(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
         $ciclo = Ciclo::factory()->create();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($coordinador);
 
         Volt::test('reportes.index')
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
             ->set('cursoId', '1')
             ->set('cicloId', (string) $ciclo->id)
-            ->assertSet('gradoId', '')
+            ->assertSet('carreraId', '')
+            ->assertSet('cicloCurricular', '')
             ->assertSet('cursoId', '');
     }
 
-    public function test_elegir_un_grado_reinicia_curso(): void
+    public function test_elegir_una_carrera_reinicia_ciclo_curricular_y_curso(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($coordinador);
 
         Volt::test('reportes.index')
+            ->set('cicloCurricular', '1')
             ->set('cursoId', '1')
-            ->set('gradoId', (string) $grado->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->assertSet('cicloCurricular', '')
             ->assertSet('cursoId', '');
     }
 
-    public function test_filtrar_por_grupo_reduce_el_reporte_de_matricula(): void
+    public function test_filtrar_por_ciclo_reduce_el_reporte_de_matricula(): void
     {
         $horarioA = Horario::factory()->create();
         $horarioB = Horario::factory()->create();
         $estudianteA = Estudiante::factory()->create(['nombres' => 'Ana', 'apellidos' => 'Quispe']);
         $estudianteB = Estudiante::factory()->create(['nombres' => 'Beto', 'apellidos' => 'Salas']);
-        Matricula::factory()->create(['estudiante_id' => $estudianteA->id, 'grado_id' => $horarioA->grado_id, 'ciclo_id' => $horarioA->ciclo_id]);
-        Matricula::factory()->create(['estudiante_id' => $estudianteB->id, 'grado_id' => $horarioB->grado_id, 'ciclo_id' => $horarioB->ciclo_id]);
+        Matricula::factory()->create(['estudiante_id' => $estudianteA->id, 'carrera_id' => $horarioA->carrera_id, 'ciclo_curricular' => $horarioA->ciclo_curricular, 'ciclo_id' => $horarioA->ciclo_id]);
+        Matricula::factory()->create(['estudiante_id' => $estudianteB->id, 'carrera_id' => $horarioB->carrera_id, 'ciclo_curricular' => $horarioB->ciclo_curricular, 'ciclo_id' => $horarioB->ciclo_id]);
 
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);

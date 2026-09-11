@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Reportes;
 
+use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Certificados\Models\Certificado;
 use App\Modules\Evaluaciones\Models\Calificacion;
@@ -100,7 +101,8 @@ class HistorialEstudianteServiceTest extends TestCase
         $estudiante = Estudiante::factory()->create(['dni' => '44444444']);
 
         $matriculaAprobada = Matricula::factory()->create(['estudiante_id' => $estudiante->id, 'estado' => 'aprobada']);
-        $horario = Horario::factory()->create(['grado_id' => $matriculaAprobada->grado_id, 'ciclo_id' => $matriculaAprobada->ciclo_id]);
+        $curso = Curso::factory()->create(['carrera_id' => $matriculaAprobada->carrera_id, 'ciclo_curricular' => $matriculaAprobada->ciclo_curricular]);
+        $horario = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $matriculaAprobada->ciclo_id]);
         $evaluacion = Evaluacion::factory()->create(['horario_id' => $horario->id]);
         Calificacion::factory()->create(['evaluacion_id' => $evaluacion->id, 'estudiante_id' => $estudiante->id, 'nota_numerica' => 16]);
         $evaluacion->update(['estado' => 'publicada']);

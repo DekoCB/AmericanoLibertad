@@ -5,6 +5,7 @@ namespace Tests\Feature\Reportes;
 use App\Models\User;
 use App\Modules\Academico\Enums\TipoSiagieEnum;
 use App\Modules\Academico\Models\Ciclo;
+use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Siagie;
 use App\Modules\Evaluaciones\Models\Calificacion;
@@ -209,7 +210,8 @@ class HistorialEstudiantePermisosTest extends TestCase
         $matriculaReciente = Matricula::factory()->create(['estudiante_id' => $estudiante->id, 'estado' => 'aprobada', 'fecha_matricula' => now()]);
 
         foreach ([$matriculaVieja, $matriculaReciente] as $matricula) {
-            $horario = Horario::factory()->create(['grado_id' => $matricula->grado_id, 'ciclo_id' => $matricula->ciclo_id]);
+            $curso = Curso::factory()->create(['carrera_id' => $matricula->carrera_id, 'ciclo_curricular' => $matricula->ciclo_curricular]);
+            $horario = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $matricula->ciclo_id]);
             $evaluacion = Evaluacion::factory()->create(['horario_id' => $horario->id, 'estado' => 'publicada']);
             Calificacion::factory()->create(['evaluacion_id' => $evaluacion->id, 'estudiante_id' => $estudiante->id, 'nota_numerica' => 15]);
         }
@@ -233,11 +235,13 @@ class HistorialEstudiantePermisosTest extends TestCase
         $matriculaUno = Matricula::factory()->create(['estudiante_id' => $estudiante->id, 'estado' => 'aprobada', 'fecha_matricula' => now()->subYear()]);
         $matriculaDos = Matricula::factory()->create(['estudiante_id' => $estudiante->id, 'estado' => 'aprobada', 'fecha_matricula' => now()]);
 
-        $horarioUno = Horario::factory()->create(['grado_id' => $matriculaUno->grado_id, 'ciclo_id' => $matriculaUno->ciclo_id]);
+        $cursoUno = Curso::factory()->create(['carrera_id' => $matriculaUno->carrera_id, 'ciclo_curricular' => $matriculaUno->ciclo_curricular]);
+        $horarioUno = Horario::factory()->create(['curso_id' => $cursoUno->id, 'ciclo_id' => $matriculaUno->ciclo_id]);
         $evaluacionUno = Evaluacion::factory()->create(['horario_id' => $horarioUno->id, 'estado' => 'publicada']);
         Calificacion::factory()->create(['evaluacion_id' => $evaluacionUno->id, 'estudiante_id' => $estudiante->id, 'nota_numerica' => 12]);
 
-        $horarioDos = Horario::factory()->create(['grado_id' => $matriculaDos->grado_id, 'ciclo_id' => $matriculaDos->ciclo_id]);
+        $cursoDos = Curso::factory()->create(['carrera_id' => $matriculaDos->carrera_id, 'ciclo_curricular' => $matriculaDos->ciclo_curricular]);
+        $horarioDos = Horario::factory()->create(['curso_id' => $cursoDos->id, 'ciclo_id' => $matriculaDos->ciclo_id]);
         $evaluacionDos = Evaluacion::factory()->create(['horario_id' => $horarioDos->id, 'estado' => 'publicada']);
         Calificacion::factory()->create(['evaluacion_id' => $evaluacionDos->id, 'estudiante_id' => $estudiante->id, 'nota_numerica' => 18]);
 
