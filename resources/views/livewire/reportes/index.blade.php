@@ -2,7 +2,7 @@
 
 use App\Models\Carrera;
 use App\Models\User;
-use App\Modules\Academico\Enums\FranjaHorarioEnum;
+use App\Modules\Academico\Enums\DiaSemanaEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Periodo;
@@ -35,7 +35,7 @@ new #[Layout('layouts.app')] class extends Component
     /**
      * Tipos de reporte cuyos datos se originan en un Horario (clase
      * recurrente: curso + docente + día + hora) y por lo tanto admiten
-     * filtrarse por franja institucional, además de Ciclo/Carrera/Curso.
+     * filtrarse por día de la semana, además de Ciclo/Carrera/Curso.
      *
      * @var list<string>
      */
@@ -53,7 +53,7 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $cursoId = '';
 
-    public string $franja = '';
+    public string $dia = '';
 
     public function mount(): void
     {
@@ -88,7 +88,7 @@ new #[Layout('layouts.app')] class extends Component
 
     public function updatingTipo(): void
     {
-        $this->franja = '';
+        $this->dia = '';
     }
 
     /**
@@ -176,16 +176,16 @@ new #[Layout('layouts.app')] class extends Component
         $carreraId = $this->carreraId !== '' ? (int) $this->carreraId : null;
         $cicloCurricular = $this->cicloCurricular !== '' ? (int) $this->cicloCurricular : null;
         $cursoId = $this->cursoId !== '' ? (int) $this->cursoId : null;
-        $franja = $this->franja !== '' ? $this->franja : null;
+        $dia = $this->dia !== '' ? $this->dia : null;
 
         return match ($this->tipo) {
-            'matricula' => $reportes->matricula($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $periodoId),
-            'academico' => $reportes->academico($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $periodoId),
-            'financiero' => $reportes->financiero($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $periodoId),
-            'morosos' => $reportes->morosos($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $periodoId),
-            'certificados' => $reportes->certificados($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $periodoId),
-            'operativo' => $reportes->operativo($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $periodoId),
-            'propio' => $reportes->propio(Auth::user(), $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja, $periodoId),
+            'matricula' => $reportes->matricula($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
+            'academico' => $reportes->academico($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
+            'financiero' => $reportes->financiero($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
+            'morosos' => $reportes->morosos($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
+            'certificados' => $reportes->certificados($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
+            'operativo' => $reportes->operativo($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
+            'propio' => $reportes->propio(Auth::user(), $cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
             default => ['columnas' => [], 'filas' => []],
         };
     }
@@ -224,21 +224,21 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Las 3 franjas institucionales fijas (ver FranjaHorarioEnum): un curso
-     * puede dictarse en cualquiera de ellas, así que filtrar por franja
-     * -- no por un horario puntual -- trae todos los cursos que caen ahí,
-     * sin importar carrera ni docente.
+     * Los 7 días de la semana (ver DiaSemanaEnum): un curso puede dictarse
+     * en cualquier combinación libre de ellos, así que filtrar por un día
+     * puntual trae todos los horarios que se reúnen ese día, sin importar
+     * carrera ni docente.
      *
      * @return Collection<int, array{value: string, label: string}>
      */
-    private function franjasDisponibles(): Collection
+    private function diasDisponibles(): Collection
     {
         if (! in_array($this->tipo, self::TIPOS_CON_HORARIO, true)) {
             return collect();
         }
 
-        return collect(FranjaHorarioEnum::cases())
-            ->map(fn (FranjaHorarioEnum $franja) => ['value' => $franja->value, 'label' => $franja->label()]);
+        return collect(DiaSemanaEnum::ordenSemana())
+            ->map(fn (DiaSemanaEnum $dia) => ['value' => $dia->value, 'label' => $dia->label()]);
     }
 
     public function with(ReporteService $reportes): array
@@ -258,7 +258,7 @@ new #[Layout('layouts.app')] class extends Component
             'tiposDisponibles' => $tiposDisponibles,
             'reporte' => $reporte,
             'puedeExportar' => $user->hasPermissionTo('reportes.exportar'),
-            'franjasDisponibles' => $this->franjasDisponibles(),
+            'diasDisponibles' => $this->diasDisponibles(),
             'periodosDisponibles' => Periodo::query()->orderByDesc('anio')->orderBy('tipo')->get(),
             'ciclosDisponibles' => Ciclo::query()->orderByDesc('fecha_inicio')->get(),
             'carrerasDisponibles' => $this->carrerasDisponibles(),
@@ -342,26 +342,26 @@ new #[Layout('layouts.app')] class extends Component
                 />
             </div>
 
-            @if ($franjasDisponibles->isNotEmpty())
+            @if ($diasDisponibles->isNotEmpty())
                 <div>
-                    <x-input-label for="franja" value="Horario (opcional)" />
+                    <x-input-label for="dia" value="Horario (opcional)" />
                     <x-select-input
-                        wire:model.live="franja"
-                        id="franja"
+                        wire:model.live="dia"
+                        id="dia"
                         class="mt-1 block w-64"
-                        :options="collect($franjasDisponibles)->mapWithKeys(fn ($opcion) => [$opcion['value'] => $opcion['label']])->prepend('Todos los horarios', '')"
+                        :options="collect($diasDisponibles)->mapWithKeys(fn ($opcion) => [$opcion['value'] => $opcion['label']])->prepend('Todos los horarios', '')"
                     />
                 </div>
             @endif
-
-            @if ($puedeExportar)
-                <div class="ml-auto flex gap-2">
-                    <x-secondary-button type="button" wire:click="exportarExcel">Excel</x-secondary-button>
-                    <x-secondary-button type="button" wire:click="exportarCsv">CSV</x-secondary-button>
-                    <x-secondary-button type="button" wire:click="exportarPdf">PDF</x-secondary-button>
-                </div>
-            @endif
         </div>
+
+        @if ($puedeExportar)
+            <div class="flex justify-end gap-2">
+                <x-secondary-button type="button" wire:click="exportarExcel">Excel</x-secondary-button>
+                <x-secondary-button type="button" wire:click="exportarCsv">CSV</x-secondary-button>
+                <x-secondary-button type="button" wire:click="exportarPdf">PDF</x-secondary-button>
+            </div>
+        @endif
 
         <div class="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
             <table class="w-full text-left text-sm">

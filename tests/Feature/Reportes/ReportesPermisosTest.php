@@ -4,7 +4,7 @@ namespace Tests\Feature\Reportes;
 
 use App\Models\Carrera;
 use App\Models\User;
-use App\Modules\Academico\Enums\FranjaHorarioEnum;
+use App\Modules\Academico\Enums\DiaSemanaEnum;
 use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
@@ -27,18 +27,15 @@ class ReportesPermisosTest extends TestCase
     /**
      * @param  array<string, mixed>  $atributos
      */
-    private function horarioConFranja(FranjaHorarioEnum $franja, array $atributos = []): Horario
+    private function horarioConDia(DiaSemanaEnum $dia, array $atributos = []): Horario
     {
         $horario = Horario::factory()->create($atributos);
         $horario->dias()->delete();
-
-        foreach ($franja->dias() as $dia) {
-            $horario->dias()->create([
-                'dia_semana' => $dia,
-                'hora_inicio' => '18:00:00',
-                'hora_fin' => '20:00:00',
-            ]);
-        }
+        $horario->dias()->create([
+            'dia_semana' => $dia,
+            'hora_inicio' => '18:00:00',
+            'hora_fin' => '20:00:00',
+        ]);
 
         return $horario->fresh(['dias']);
     }
@@ -126,7 +123,7 @@ class ReportesPermisosTest extends TestCase
         $this->assertSame('application/pdf', $testable->effects['download']['contentType']);
     }
 
-    public function test_el_filtro_de_horario_muestra_las_3_franjas_institucionales(): void
+    public function test_el_filtro_de_horario_muestra_los_7_dias_de_la_semana(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
@@ -140,17 +137,17 @@ class ReportesPermisosTest extends TestCase
             ->set('tipo', 'academico')
             ->html();
 
-        $this->assertStringContainsString('lun_mie', $html);
-        $this->assertStringContainsString('mar_jue', $html);
-        $this->assertStringContainsString('domingo', $html);
+        foreach (DiaSemanaEnum::ordenSemana() as $dia) {
+            $this->assertStringContainsString($dia->value, $html);
+        }
     }
 
-    public function test_filtrar_el_reporte_academico_por_franja_solo_trae_esa_franja(): void
+    public function test_filtrar_el_reporte_academico_por_dia_solo_trae_ese_dia(): void
     {
-        $horarioLunes = $this->horarioConFranja(FranjaHorarioEnum::LUN_MIE, [
+        $horarioLunes = $this->horarioConDia(DiaSemanaEnum::LUNES, [
             'curso_id' => Curso::factory()->create(['nombre' => 'Curso Lunes']),
         ]);
-        $horarioMartes = $this->horarioConFranja(FranjaHorarioEnum::MAR_JUE, [
+        $horarioMartes = $this->horarioConDia(DiaSemanaEnum::MARTES, [
             'curso_id' => Curso::factory()->create(['nombre' => 'Curso Martes']),
         ]);
         Calificacion::factory()->create(['evaluacion_id' => Evaluacion::factory()->create(['horario_id' => $horarioLunes->id])->id]);
@@ -164,7 +161,7 @@ class ReportesPermisosTest extends TestCase
             ->set('tipo', 'academico')
             ->assertSee('Curso Lunes')
             ->assertSee('Curso Martes')
-            ->set('franja', FranjaHorarioEnum::LUN_MIE->value)
+            ->set('dia', DiaSemanaEnum::LUNES->value)
             ->assertSee('Curso Lunes')
             ->assertDontSee('Curso Martes');
     }
@@ -199,10 +196,10 @@ class ReportesPermisosTest extends TestCase
 
         Volt::test('reportes.index')
             ->set('tipo', 'academico')
-            ->set('franja', FranjaHorarioEnum::LUN_MIE->value)
-            ->assertSet('franja', FranjaHorarioEnum::LUN_MIE->value)
+            ->set('dia', DiaSemanaEnum::LUNES->value)
+            ->assertSet('dia', DiaSemanaEnum::LUNES->value)
             ->set('tipo', 'financiero')
-            ->assertSet('franja', '');
+            ->assertSet('dia', '');
     }
 
     public function test_el_filtro_de_fecha_fue_reemplazado_por_periodo_ciclo_carrera_ciclo_curricular_y_curso(): void

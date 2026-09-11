@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Pagos\Services;
 
-use App\Modules\Academico\Enums\FranjaHorarioEnum;
+use App\Modules\Academico\Enums\DiaSemanaEnum;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Academico\Models\HorarioDia;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Pagos\Enums\EstadoCuotaEnum;
 use App\Modules\Pagos\Enums\EstadoPagoEnum;
@@ -89,7 +90,7 @@ class CobranzaService
      * @param  list<int>  $conceptoIds
      * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
      */
-    public function deudoresPorConceptos(array $conceptoIds, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja): array
+    public function deudoresPorConceptos(array $conceptoIds, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $dia): array
     {
         $conceptos = ConceptoPago::query()->whereIn('id', $conceptoIds)->get();
 
@@ -97,8 +98,8 @@ class CobranzaService
 
         foreach ($conceptos as $concepto) {
             $filasDelConcepto = $concepto->tipo === TipoConceptoEnum::MENSUALIDAD
-                ? $this->deudoresMensualidad($concepto, $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja)
-                : $this->deudoresConceptoLibre($concepto, $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja);
+                ? $this->deudoresMensualidad($concepto, $cicloId, $carreraId, $cicloCurricular, $cursoId, $dia)
+                : $this->deudoresConceptoLibre($concepto, $cicloId, $carreraId, $cicloCurricular, $cursoId, $dia);
 
             array_push($filas, ...$filasDelConcepto);
         }
@@ -112,11 +113,11 @@ class CobranzaService
     /**
      * @return list<array<int, string|int|float>>
      */
-    private function deudoresMensualidad(ConceptoPago $concepto, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja): array
+    private function deudoresMensualidad(ConceptoPago $concepto, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $dia): array
     {
         $cuotas = Cuota::query()
             ->where('estado', EstadoCuotaEnum::PENDIENTE)
-            ->whereHas('planPago.matricula', fn ($sub) => $this->filtrarMatriculas($sub, $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja))
+            ->whereHas('planPago.matricula', fn ($sub) => $this->filtrarMatriculas($sub, $cicloId, $carreraId, $cicloCurricular, $cursoId, $dia))
             ->with('planPago.matricula.estudiante', 'planPago.matricula.carrera')
             ->get()
             ->filter(fn (Cuota $cuota) => $cuota->planPago->matricula?->estudiante !== null);
@@ -140,16 +141,16 @@ class CobranzaService
     /**
      * @return list<array<int, string|int|float>>
      */
-    private function deudoresConceptoLibre(ConceptoPago $concepto, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja): array
+    private function deudoresConceptoLibre(ConceptoPago $concepto, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $dia): array
     {
-        $sinFiltros = $this->sinFiltros($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja);
+        $sinFiltros = $this->sinFiltros($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia);
 
         $pagos = Pago::query()
             ->where('concepto_id', $concepto->id)
             ->whereIn('estado', [EstadoPagoEnum::PENDIENTE, EstadoPagoEnum::RECHAZADO])
             ->when(! $sinFiltros, fn ($query) => $query->whereHas(
                 'estudiante.matriculas',
-                fn ($sub) => $this->filtrarMatriculas($sub, $cicloId, $carreraId, $cicloCurricular, $cursoId, $franja),
+                fn ($sub) => $this->filtrarMatriculas($sub, $cicloId, $carreraId, $cicloCurricular, $cursoId, $dia),
             ))
             ->with('estudiante.carreraActual')
             ->get();
@@ -171,26 +172,26 @@ class CobranzaService
         })->values()->all();
     }
 
-    private function sinFiltros(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja): bool
+    private function sinFiltros(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $dia): bool
     {
-        return $cicloId === null && $carreraId === null && $cicloCurricular === null && $cursoId === null && $franja === null;
+        return $cicloId === null && $carreraId === null && $cicloCurricular === null && $cursoId === null && $dia === null;
     }
 
     /**
      * Horarios que coinciden con el Ciclo, Carrera, Ciclo curricular
-     * y Curso elegidos, más la franja institucional si se usa -- mismo
-     * criterio que ReporteService, ver ese archivo para el razonamiento
-     * completo.
+     * y Curso elegidos, más el día de la semana (lunes a domingo) si se
+     * usa -- mismo criterio que ReporteService, ver ese archivo para el
+     * razonamiento completo.
      *
      * @return ?Collection<int, Horario>
      */
-    private function horariosFiltrados(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja): ?Collection
+    private function horariosFiltrados(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $dia): ?Collection
     {
-        if ($this->sinFiltros($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja)) {
+        if ($this->sinFiltros($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia)) {
             return null;
         }
 
-        $franjaEnum = $franja !== null ? FranjaHorarioEnum::tryFrom($franja) : null;
+        $diaEnum = $dia !== null ? DiaSemanaEnum::tryFrom($dia) : null;
 
         return Horario::query()
             ->with('dias')
@@ -199,14 +200,14 @@ class CobranzaService
             ->when($cicloCurricular !== null, fn ($query) => $query->where('ciclo_curricular', $cicloCurricular))
             ->when($cursoId !== null, fn ($query) => $query->where('curso_id', $cursoId))
             ->get()
-            ->filter(fn (Horario $horario) => $franjaEnum === null || $horario->franja() === $franjaEnum)
+            ->filter(fn (Horario $horario) => $diaEnum === null || $horario->dias->contains(fn (HorarioDia $horarioDia) => $horarioDia->dia_semana === $diaEnum))
             ->values();
     }
 
     /**
-     * Aplica el filtro de Ciclo/Carrera/Ciclo curricular/Curso/franja a una
+     * Aplica el filtro de Ciclo/Carrera/Ciclo curricular/Curso/día a una
      * consulta de Matricula. Ciclo, carrera y ciclo curricular se filtran
-     * directo por columna; curso y franja se resuelven vía Horario,
+     * directo por columna; curso y día se resuelven vía Horario,
      * exigiendo la asignación explícita en matricula_horario cuando el
      * curso tiene secciones paralelas (mismo criterio que
      * Matricula::scopeDelHorario() y ReporteService).
@@ -216,18 +217,18 @@ class CobranzaService
      * @param  Builder<TModel>  $query
      * @return Builder<TModel>
      */
-    private function filtrarMatriculas(Builder $query, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $franja): Builder
+    private function filtrarMatriculas(Builder $query, ?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $dia): Builder
     {
         $query = $query
             ->when($cicloId !== null, fn ($q) => $q->where('ciclo_id', $cicloId))
             ->when($carreraId !== null, fn ($q) => $q->where('carrera_id', $carreraId))
             ->when($cicloCurricular !== null, fn ($q) => $q->where('ciclo_curricular', $cicloCurricular));
 
-        if ($cursoId === null && $franja === null) {
+        if ($cursoId === null && $dia === null) {
             return $query;
         }
 
-        $horarios = $this->horariosFiltrados($cicloId, $carreraId, $cicloCurricular, $cursoId, $franja);
+        $horarios = $this->horariosFiltrados($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia);
 
         if ($horarios === null || $horarios->isEmpty()) {
             return $query->whereIn('id', []);

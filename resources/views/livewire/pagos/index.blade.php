@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\Carrera;
-use App\Modules\Academico\Enums\FranjaHorarioEnum;
+use App\Modules\Academico\Enums\DiaSemanaEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Matricula\Models\Estudiante;
@@ -92,7 +92,7 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $cobrosCursoId = '';
 
-    public string $cobrosFranja = '';
+    public string $cobrosDia = '';
 
     /** @var array<int, string> */
     public array $cobrosConceptoIds = [];
@@ -335,7 +335,7 @@ new #[Layout('layouts.app')] class extends Component
                 $this->cobrosCarreraId !== '' ? (int) $this->cobrosCarreraId : null,
                 $this->cobrosCicloCurricular !== '' ? (int) $this->cobrosCicloCurricular : null,
                 $this->cobrosCursoId !== '' ? (int) $this->cobrosCursoId : null,
-                $this->cobrosFranja !== '' ? $this->cobrosFranja : null,
+                $this->cobrosDia !== '' ? $this->cobrosDia : null,
             );
         }
 
@@ -371,7 +371,7 @@ new #[Layout('layouts.app')] class extends Component
             'cobrosCarreras' => $puedeVerCobros ? Carrera::query()->orderBy('name')->get() : collect(),
             'cobrosCiclosCurriculares' => ['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI'],
             'cobrosCursos' => $cobrosCursos,
-            'cobrosFranjas' => collect(FranjaHorarioEnum::cases())->map(fn ($franja) => ['value' => $franja->value, 'label' => $franja->label()]),
+            'cobrosDias' => collect(DiaSemanaEnum::ordenSemana())->map(fn ($dia) => ['value' => $dia->value, 'label' => $dia->label()]),
         ];
     }
 }; ?>
@@ -864,12 +864,12 @@ new #[Layout('layouts.app')] class extends Component
                             />
                         </div>
                         <div>
-                            <x-input-label for="cobrosFranja" value="Horario (opcional)" />
+                            <x-input-label for="cobrosDia" value="Horario (opcional)" />
                             <x-select-input
-                                wire:model.live="cobrosFranja"
-                                id="cobrosFranja"
+                                wire:model.live="cobrosDia"
+                                id="cobrosDia"
                                 class="mt-1 block w-56"
-                                :options="collect($cobrosFranjas)->mapWithKeys(fn ($opcion) => [$opcion['value'] => $opcion['label']])->prepend('Todos los horarios', '')"
+                                :options="collect($cobrosDias)->mapWithKeys(fn ($opcion) => [$opcion['value'] => $opcion['label']])->prepend('Todos los horarios', '')"
                             />
                         </div>
                     </div>
