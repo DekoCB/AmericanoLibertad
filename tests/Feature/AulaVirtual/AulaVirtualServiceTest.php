@@ -3,6 +3,7 @@
 namespace Tests\Feature\AulaVirtual;
 
 use App\Models\User;
+use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\AulaVirtual\Enums\EstadoEntregaEnum;
 use App\Modules\AulaVirtual\Enums\TipoClaseGrabadaEnum;
@@ -42,7 +43,7 @@ class AulaVirtualServiceTest extends TestCase
         $this->assertSame(1, CursoVirtual::query()->count());
     }
 
-    public function test_del_estudiante_no_mezcla_otros_grados_o_ciclos(): void
+    public function test_del_estudiante_no_mezcla_otras_carreras_o_ciclos(): void
     {
         $horarioA = Horario::factory()->create();
         $horarioB = Horario::factory()->create();
@@ -52,7 +53,8 @@ class AulaVirtualServiceTest extends TestCase
         $estudianteA = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudianteA->id,
-            'grado_id' => $horarioA->grado_id,
+            'carrera_id' => $horarioA->carrera_id,
+            'ciclo_curricular' => $horarioA->ciclo_curricular,
             'ciclo_id' => $horarioA->ciclo_id,
         ]);
 
@@ -62,21 +64,24 @@ class AulaVirtualServiceTest extends TestCase
         $this->assertFalse($cursos->contains('id', $cursoB->id));
     }
 
-    public function test_cursos_virtuales_relacionados_incluye_otros_docentes_del_mismo_curso_grado_y_ciclo(): void
+    public function test_cursos_virtuales_relacionados_incluye_otros_docentes_del_mismo_curso_carrera_y_ciclo(): void
     {
         $horarioA = Horario::factory()->create();
         $horarioB = Horario::factory()->create([
             'curso_id' => $horarioA->curso_id,
-            'grado_id' => $horarioA->grado_id,
             'ciclo_id' => $horarioA->ciclo_id,
         ]);
         $cursoVirtualA = $this->cursoVirtualService()->activarParaHorario($horarioA);
         $cursoVirtualB = $this->cursoVirtualService()->activarParaHorario($horarioB);
 
-        // Mismo grado y ciclo, pero otro curso académico: no está
-        // relacionado, aunque coincidan grado/ciclo.
+        // Misma carrera y ciclo curricular, pero otro curso académico: no
+        // está relacionado, aunque coincidan carrera/ciclo.
+        $otroCurso = Curso::factory()->create([
+            'carrera_id' => $horarioA->carrera_id,
+            'ciclo_curricular' => $horarioA->ciclo_curricular,
+        ]);
         $otroHorario = Horario::factory()->create([
-            'grado_id' => $horarioA->grado_id,
+            'curso_id' => $otroCurso->id,
             'ciclo_id' => $horarioA->ciclo_id,
         ]);
         $cursoVirtualNoRelacionado = $this->cursoVirtualService()->activarParaHorario($otroHorario);
@@ -455,7 +460,8 @@ class AulaVirtualServiceTest extends TestCase
         $estudiante = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 
@@ -488,7 +494,8 @@ class AulaVirtualServiceTest extends TestCase
         $estudiante = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 
@@ -504,7 +511,8 @@ class AulaVirtualServiceTest extends TestCase
         $otroEstudiante = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $otroEstudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
         $service->entregar($tarea, $otroEstudiante, 'Otra respuesta', null);
@@ -522,7 +530,8 @@ class AulaVirtualServiceTest extends TestCase
         $estudiante = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 

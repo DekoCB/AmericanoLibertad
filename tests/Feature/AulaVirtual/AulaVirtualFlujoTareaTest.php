@@ -45,7 +45,8 @@ class AulaVirtualFlujoTareaTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $horario->ciclo_id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         return [$docente, $curso, $usuarioEstudiante, $estudiante];
@@ -151,7 +152,8 @@ class AulaVirtualFlujoTareaTest extends TestCase
         $matricula = Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $horario->ciclo_id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
         $plan = PlanPago::factory()->create(['matricula_id' => $matricula->id]);
         Cuota::factory()->vencida()->create(['plan_pago_id' => $plan->id, 'numero' => 1]);

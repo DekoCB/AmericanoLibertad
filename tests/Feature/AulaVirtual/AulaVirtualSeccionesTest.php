@@ -2,9 +2,10 @@
 
 namespace Tests\Feature\AulaVirtual;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
+use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\AulaVirtual\Models\CursoVirtual;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
@@ -13,6 +14,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
 
+/**
+ * El drill-down de Aula Virtual ya no es Grupo -> Sección(A/B) -> Grado ->
+ * Curso (la sección A/B por grado fue retirada, "aulas libres, sin sección
+ * fija") sino Grupo(ciclo) -> Carrera -> Ciclo curricular (I-VI) -> Curso.
+ */
 class AulaVirtualSeccionesTest extends TestCase
 {
     use RefreshDatabase;
@@ -24,115 +30,93 @@ class AulaVirtualSeccionesTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    private function cursoVirtualDe(Ciclo $ciclo, Grado $grado): CursoVirtual
+    private function cursoVirtualDe(Ciclo $ciclo, Curso $curso): CursoVirtual
     {
-        $horario = Horario::factory()->create(['ciclo_id' => $ciclo->id, 'grado_id' => $grado->id]);
+        $horario = Horario::factory()->create(['ciclo_id' => $ciclo->id, 'curso_id' => $curso->id]);
 
         return CursoVirtual::factory()->create(['horario_id' => $horario->id]);
     }
 
-    public function test_elegir_un_grupo_ofrece_secciones_a_y_b_antes_de_los_grados(): void
+    public function test_elegir_un_ciclo_ofrece_las_carreras_con_cursos_virtuales_antes_de_los_cursos(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
         $ciclo = Ciclo::factory()->create();
-        $gradoA = Grado::factory()->create(['nombre' => 'Grado 1', 'orden' => 1]);
-        $gradoB = Grado::factory()->create(['nombre' => 'Grado 3', 'orden' => 3]);
-        $this->cursoVirtualDe($ciclo, $gradoA);
-        $this->cursoVirtualDe($ciclo, $gradoB);
+        $carreraA = Carrera::factory()->create(['name' => 'Enfermería Técnica']);
+        $carreraB = Carrera::factory()->create(['name' => 'Farmacia Técnica']);
+        $cursoA = Curso::factory()->create(['carrera_id' => $carreraA->id, 'ciclo_curricular' => 1]);
+        $cursoB = Curso::factory()->create(['carrera_id' => $carreraB->id, 'ciclo_curricular' => 1]);
+        $this->cursoVirtualDe($ciclo, $cursoA);
+        $this->cursoVirtualDe($ciclo, $cursoB);
 
         $this->actingAs($usuario);
 
         Volt::test('aula-virtual.index')
             ->call('seleccionarGrupo', $ciclo->id)
-            ->assertSee('Sección A')
-            ->assertSee('Sección B')
-            ->assertSet('seccion', null);
+            ->assertSee('Enfermería Técnica')
+            ->assertSee('Farmacia Técnica')
+            ->assertSet('carreraId', null);
     }
 
-    public function test_la_seccion_a_solo_lista_los_grados_1_y_2(): void
+    public function test_elegir_una_carrera_ofrece_sus_ciclos_curriculares(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
         $ciclo = Ciclo::factory()->create();
-        $grado1 = Grado::factory()->create(['nombre' => 'Grado 1', 'orden' => 1]);
-        $grado2 = Grado::factory()->create(['nombre' => 'Grado 2', 'orden' => 2]);
-        $grado3 = Grado::factory()->create(['nombre' => 'Grado 3', 'orden' => 3]);
-        $this->cursoVirtualDe($ciclo, $grado1);
-        $this->cursoVirtualDe($ciclo, $grado2);
-        $this->cursoVirtualDe($ciclo, $grado3);
+        $carrera = Carrera::factory()->create();
+        $cursoUno = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $cursoDos = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 2]);
+        $this->cursoVirtualDe($ciclo, $cursoUno);
+        $this->cursoVirtualDe($ciclo, $cursoDos);
 
         $this->actingAs($usuario);
 
         Volt::test('aula-virtual.index')
             ->call('seleccionarGrupo', $ciclo->id)
-            ->call('seleccionarSeccion', 'A')
-            ->assertSee('Grado 1')
-            ->assertSee('Grado 2')
-            ->assertDontSee('Grado 3');
+            ->call('seleccionarCarrera', $carrera->id)
+            ->assertSee('Ciclo 1')
+            ->assertSee('Ciclo 2');
     }
 
-    public function test_la_seccion_b_solo_lista_los_grados_3_y_4(): void
+    public function test_elegir_un_ciclo_curricular_muestra_su_curso_virtual(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
         $ciclo = Ciclo::factory()->create();
-        $grado1 = Grado::factory()->create(['nombre' => 'Grado 1', 'orden' => 1]);
-        $grado3 = Grado::factory()->create(['nombre' => 'Grado 3', 'orden' => 3]);
-        $grado4 = Grado::factory()->create(['nombre' => 'Grado 4', 'orden' => 4]);
-        $this->cursoVirtualDe($ciclo, $grado1);
-        $this->cursoVirtualDe($ciclo, $grado3);
-        $this->cursoVirtualDe($ciclo, $grado4);
+        $carrera = Carrera::factory()->create();
+        $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $cursoVirtual = $this->cursoVirtualDe($ciclo, $curso);
 
         $this->actingAs($usuario);
 
         Volt::test('aula-virtual.index')
             ->call('seleccionarGrupo', $ciclo->id)
-            ->call('seleccionarSeccion', 'B')
-            ->assertSee('Grado 3')
-            ->assertSee('Grado 4')
-            ->assertDontSee('Grado 1');
+            ->call('seleccionarCarrera', $carrera->id)
+            ->call('seleccionarCicloCurricular', 1)
+            ->assertSee($cursoVirtual->horario->curso->nombre);
     }
 
-    public function test_elegir_grado_dentro_de_una_seccion_muestra_su_curso_virtual(): void
+    public function test_volver_a_carreras_limpia_el_ciclo_curricular_elegido(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
         $ciclo = Ciclo::factory()->create();
-        $grado = Grado::factory()->create(['orden' => 1]);
-        $curso = $this->cursoVirtualDe($ciclo, $grado);
+        $carrera = Carrera::factory()->create(['name' => 'Enfermería Técnica']);
+        $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $this->cursoVirtualDe($ciclo, $curso);
 
         $this->actingAs($usuario);
 
         Volt::test('aula-virtual.index')
             ->call('seleccionarGrupo', $ciclo->id)
-            ->call('seleccionarSeccion', 'A')
-            ->call('seleccionarGrado', $grado->id)
-            ->assertSee($curso->horario->curso->nombre);
-    }
-
-    public function test_volver_a_secciones_limpia_el_grado_elegido(): void
-    {
-        $usuario = User::factory()->create();
-        $usuario->assignRole(RolEnum::COORDINADOR->value);
-
-        $ciclo = Ciclo::factory()->create();
-        $grado = Grado::factory()->create(['orden' => 1]);
-        $this->cursoVirtualDe($ciclo, $grado);
-
-        $this->actingAs($usuario);
-
-        Volt::test('aula-virtual.index')
-            ->call('seleccionarGrupo', $ciclo->id)
-            ->call('seleccionarSeccion', 'A')
-            ->call('seleccionarGrado', $grado->id)
-            ->call('volverASecciones')
-            ->assertSet('seccion', null)
-            ->assertSet('gradoId', null)
-            ->assertSee('Sección A');
+            ->call('seleccionarCarrera', $carrera->id)
+            ->call('seleccionarCicloCurricular', 1)
+            ->call('volverACarreras')
+            ->assertSet('cicloCurricular', null)
+            ->assertSee('Enfermería Técnica');
     }
 }

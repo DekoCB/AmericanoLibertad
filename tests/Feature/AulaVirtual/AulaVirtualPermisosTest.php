@@ -61,7 +61,7 @@ class AulaVirtualPermisosTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_un_estudiante_matriculado_en_el_grado_y_ciclo_del_curso_puede_verlo(): void
+    public function test_un_estudiante_matriculado_en_la_carrera_y_ciclo_del_curso_puede_verlo(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::ESTUDIANTE->value);
@@ -75,7 +75,8 @@ class AulaVirtualPermisosTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $horario->ciclo_id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         $this->actingAs($usuario)
@@ -97,7 +98,8 @@ class AulaVirtualPermisosTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $horario->ciclo_id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         $foro = Foro::factory()->create(['curso_virtual_id' => $curso->id, 'autor_id' => $docente->id]);
@@ -116,7 +118,7 @@ class AulaVirtualPermisosTest extends TestCase
         ]);
     }
 
-    public function test_un_estudiante_no_matriculado_en_ese_grado_y_ciclo_no_puede_ver_el_curso(): void
+    public function test_un_estudiante_no_matriculado_en_esa_carrera_y_ciclo_no_puede_ver_el_curso(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::ESTUDIANTE->value);
@@ -335,7 +337,8 @@ class AulaVirtualPermisosTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $horario->ciclo_id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         $this->app->make(ClaseGrabadaService::class)
@@ -390,7 +393,6 @@ class AulaVirtualPermisosTest extends TestCase
         $horarioA = Horario::factory()->create();
         $horarioB = Horario::factory()->create([
             'curso_id' => $horarioA->curso_id,
-            'grado_id' => $horarioA->grado_id,
             'ciclo_id' => $horarioA->ciclo_id,
         ]);
         $cursoVirtualA = CursoVirtual::factory()->create(['horario_id' => $horarioA->id]);
@@ -442,7 +444,6 @@ class AulaVirtualPermisosTest extends TestCase
         $horarioA = Horario::factory()->create();
         $horarioB = Horario::factory()->create([
             'curso_id' => $horarioA->curso_id,
-            'grado_id' => $horarioA->grado_id,
             'ciclo_id' => $horarioA->ciclo_id,
         ]);
         $cursoVirtualA = CursoVirtual::factory()->create(['horario_id' => $horarioA->id]);
