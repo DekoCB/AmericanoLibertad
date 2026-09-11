@@ -134,7 +134,7 @@ new #[Layout('layouts.app')] class extends Component
         <p class="mt-1 text-sm text-ink-dim">Cuentas bancarias y billeteras digitales que ven los estudiantes para pagar su mensualidad.</p>
     </x-slot>
 
-    {{-- Ver academico/grados/index.blade.php: el botón no puede vivir en x-slot="header". --}}
+    {{-- Ver academico/carreras/index.blade.php: el botón no puede vivir en x-slot="header". --}}
     <div class="mb-4 flex justify-end">
         <x-primary-button type="button" wire:click="abrirModal" class="gap-2">
             <x-heroicon-o-plus class="h-4 w-4" />

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Academico\Services;
 
-use App\Modules\Academico\Enums\FranjaHorarioEnum;
+use App\Modules\Academico\Enums\DiaSemanaEnum;
 use App\Modules\Academico\Models\Aula;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Academico\Models\HorarioDia;
 use App\Modules\Matricula\Models\Matricula;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -59,13 +60,14 @@ class AulaService
 
     /**
      * Ocupación de cada aula activa de un ciclo (más las aulas sueltas,
-     * sin grupo asignado), agrupada por turno (franja institucional):
-     * cuántos estudiantes le corresponden a cada horario que usa esa
-     * aula, frente a su capacidad máxima. Un aula sin horarios en el
-     * ciclo aparece igual, con "porFranja" vacío, para que el personal
+     * sin ciclo asignado), agrupada por día de la semana: cuántos
+     * estudiantes le corresponden a cada horario que usa esa aula ese
+     * día, frente a su capacidad máxima. Un horario que se dicta varios
+     * días aparece bajo cada uno de ellos. Un aula sin horarios en el
+     * ciclo aparece igual, con "porDia" vacío, para que el personal
      * también vea qué aulas están libres.
      *
-     * @return SupportCollection<int, array{aula: Aula, porFranja: SupportCollection<string, array{label: string, horarios: SupportCollection<int, array{horario: Horario, estudiantes: int}>, totalEstudiantes: int}>}>
+     * @return SupportCollection<int, array{aula: Aula, porDia: SupportCollection<string, array{label: string, horarios: SupportCollection<int, array{horario: Horario, estudiantes: int}>, totalEstudiantes: int}>}>
      */
     public function ocupacion(int $cicloId): SupportCollection
     {
@@ -78,30 +80,33 @@ class AulaService
 
         $horarios = Horario::query()
             ->where('ciclo_id', $cicloId)
-            ->with(['curso', 'grado', 'dias'])
+            ->with(['curso', 'carrera', 'dias'])
             ->get();
 
         return $aulas->map(function (Aula $aula) use ($horarios) {
             $deEstaAula = $horarios->where('aula_id', $aula->id);
 
-            $porFranja = collect(FranjaHorarioEnum::cases())
-                ->mapWithKeys(function (FranjaHorarioEnum $franja) use ($deEstaAula) {
-                    $enFranja = $deEstaAula->filter(fn (Horario $horario) => $horario->franja() === $franja)
+            $porDia = collect(DiaSemanaEnum::ordenSemana())
+                ->mapWithKeys(function (DiaSemanaEnum $dia) use ($deEstaAula) {
+                    $enEseDia = $deEstaAula
+                        ->filter(fn (Horario $horario) => $horario->dias->contains(
+                            fn (HorarioDia $horarioDia) => $horarioDia->dia_semana === $dia,
+                        ))
                         ->map(fn (Horario $horario) => [
                             'horario' => $horario,
                             'estudiantes' => $this->contarEstudiantesDelHorario($horario),
                         ])
                         ->values();
 
-                    return [$franja->value => [
-                        'label' => $franja->label(),
-                        'horarios' => $enFranja,
-                        'totalEstudiantes' => (int) $enFranja->sum('estudiantes'),
+                    return [$dia->value => [
+                        'label' => $dia->label(),
+                        'horarios' => $enEseDia,
+                        'totalEstudiantes' => (int) $enEseDia->sum('estudiantes'),
                     ]];
                 })
                 ->filter(fn (array $grupo) => $grupo['horarios']->isNotEmpty());
 
-            return ['aula' => $aula, 'porFranja' => $porFranja];
+            return ['aula' => $aula, 'porDia' => $porDia];
         });
     }
 

@@ -91,9 +91,9 @@ class LibretaService
 
     /**
      * El "periodo promocional" tal como lo pide SIAGIE: "{año}-1"/"{año}-2"
-     * para los Grupos de 6 meses (según si el Grupo arranca en la primera
+     * para los Ciclos de 6 meses (según si el Ciclo arranca en la primera
      * o segunda mitad del año calendario), o "ANUAL" para SIAGIE anual --
-     * a diferencia de Ciclo::nombre (texto libre tipo "Grupo 1 (Enero -
+     * a diferencia de Ciclo::nombre (texto libre tipo "Ciclo 1 (Enero -
      * Junio)"), esto es el formato exigido en la libreta oficial.
      */
     public function periodoPromocional(Ciclo $ciclo): string

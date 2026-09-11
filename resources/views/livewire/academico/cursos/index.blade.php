@@ -1,8 +1,8 @@
 <?php
 
+use App\Models\Carrera;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Services\CursoService;
 use Illuminate\Support\Facades\Gate;
@@ -22,7 +22,9 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $codigo = '';
 
-    public string $gradoId = '';
+    public string $carreraId = '';
+
+    public string $cicloCurricular = '';
 
     public string $horas = '';
 
@@ -44,11 +46,12 @@ new #[Layout('layouts.app')] class extends Component
             $curso = Curso::query()->findOrFail($cursoId);
             $this->nombre = $curso->nombre;
             $this->codigo = $curso->codigo;
-            $this->gradoId = (string) $curso->grado_id;
+            $this->carreraId = (string) $curso->carrera_id;
+            $this->cicloCurricular = (string) $curso->ciclo_curricular;
             $this->horas = (string) $curso->horas;
             $this->activo = $curso->activo;
         } else {
-            $this->reset(['nombre', 'codigo', 'gradoId', 'horas']);
+            $this->reset(['nombre', 'codigo', 'carreraId', 'cicloCurricular', 'horas']);
             $this->activo = true;
         }
 
@@ -60,7 +63,12 @@ new #[Layout('layouts.app')] class extends Component
         $this->sugerirCodigo($service);
     }
 
-    public function updatedGradoId(CursoService $service): void
+    public function updatedCarreraId(CursoService $service): void
+    {
+        $this->sugerirCodigo($service);
+    }
+
+    public function updatedCicloCurricular(CursoService $service): void
     {
         $this->sugerirCodigo($service);
     }
@@ -68,21 +76,21 @@ new #[Layout('layouts.app')] class extends Component
     /**
      * Solo sugiere el código para un curso nuevo: si se está editando uno
      * existente, su código ya fue asignado y no debe pisarse sin querer al
-     * corregir el nombre o el grado.
+     * corregir el nombre, la carrera o el ciclo.
      */
     private function sugerirCodigo(CursoService $service): void
     {
-        if ($this->editandoId || trim($this->nombre) === '' || $this->gradoId === '') {
+        if ($this->editandoId || trim($this->nombre) === '' || $this->carreraId === '' || $this->cicloCurricular === '') {
             return;
         }
 
-        $grado = Grado::query()->find($this->gradoId);
+        $carrera = Carrera::query()->find($this->carreraId);
 
-        if (! $grado) {
+        if (! $carrera) {
             return;
         }
 
-        $this->codigo = $service->generarCodigo($this->nombre, $grado);
+        $this->codigo = $service->generarCodigo($carrera, (int) $this->cicloCurricular);
     }
 
     public function guardar(CursoService $service): void
@@ -92,18 +100,19 @@ new #[Layout('layouts.app')] class extends Component
         // El código se recalcula aquí (no solo en los hooks updated*) para
         // que un envío antes de que el debounce del nombre dispare no deje
         // el campo vacío: al crear, el código nunca lo escribe la persona.
-        if (! $this->editandoId && $this->gradoId !== '') {
-            $grado = Grado::query()->find($this->gradoId);
+        if (! $this->editandoId && $this->carreraId !== '' && $this->cicloCurricular !== '') {
+            $carrera = Carrera::query()->find($this->carreraId);
 
-            if ($grado) {
-                $this->codigo = $service->generarCodigo($this->nombre, $grado);
+            if ($carrera) {
+                $this->codigo = $service->generarCodigo($carrera, (int) $this->cicloCurricular);
             }
         }
 
         $this->validate([
             'nombre' => 'required|string|max:100',
             'codigo' => 'required|string|max:20',
-            'gradoId' => 'required|integer|exists:grados,id',
+            'carreraId' => 'required|integer|exists:carreras,id',
+            'cicloCurricular' => 'required|integer|min:1|max:6',
             'horas' => 'required|integer|min:1|max:500',
         ]);
 
@@ -116,7 +125,8 @@ new #[Layout('layouts.app')] class extends Component
         $datos = [
             'nombre' => $this->nombre,
             'codigo' => strtoupper($this->codigo),
-            'grado_id' => (int) $this->gradoId,
+            'carrera_id' => (int) $this->carreraId,
+            'ciclo_curricular' => (int) $this->cicloCurricular,
             'horas' => (int) $this->horas,
         ];
 
@@ -149,7 +159,7 @@ new #[Layout('layouts.app')] class extends Component
 
         return [
             'cursos' => $cursos,
-            'grados' => Grado::query()->orderBy('nombre')->get(),
+            'carreras' => Carrera::query()->orderBy('name')->get(),
             'ciclo' => $ciclo,
             'horariosPorCurso' => $horariosPorCurso,
         ];
@@ -159,10 +169,10 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Cursos</h1>
-        <p class="mt-1 text-sm text-ink-dim">Catálogo de cursos por grado.</p>
+        <p class="mt-1 text-sm text-ink-dim">Catálogo de cursos por carrera y ciclo.</p>
     </x-slot>
 
-    {{-- Ver academico/grados/index.blade.php: el botón no puede vivir en x-slot="header". --}}
+    {{-- Ver academico/carreras/index.blade.php: el botón no puede vivir en x-slot="header". --}}
     @can('academico.gestionar')
         <div class="mb-4 flex justify-end">
             <x-primary-button type="button" wire:click="abrirModal" class="gap-2">
@@ -190,7 +200,8 @@ new #[Layout('layouts.app')] class extends Component
                 <tr>
                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Código</th>
                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Nombre</th>
-                    <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Grado</th>
+                    <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Carrera</th>
+                    <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Ciclo</th>
                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Docente</th>
                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Horas</th>
                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Estado</th>
@@ -206,7 +217,8 @@ new #[Layout('layouts.app')] class extends Component
                     <tr wire:key="curso-{{ $curso->id }}">
                         <td class="px-4 py-3 font-mono text-ink-dim">{{ $curso->codigo }}</td>
                         <td class="px-4 py-3 font-medium text-ink">{{ $curso->nombre }}</td>
-                        <td class="px-4 py-3 text-ink-dim">{{ $curso->grado?->nombre }}</td>
+                        <td class="px-4 py-3 text-ink-dim">{{ $curso->carrera?->name }}</td>
+                        <td class="px-4 py-3 text-ink-dim">{{ $curso->cicloRomano() }}</td>
                         <td class="px-4 py-3 text-ink-dim">{{ $docentes->isNotEmpty() ? $docentes->implode(', ') : '—' }}</td>
                         <td class="px-4 py-3 text-ink-dim">{{ $curso->horas }}</td>
                         <td class="px-4 py-3">
@@ -221,7 +233,7 @@ new #[Layout('layouts.app')] class extends Component
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-ink-faint">No hay cursos registrados.</td></tr>
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-sm text-ink-faint">No hay cursos registrados.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -260,15 +272,27 @@ new #[Layout('layouts.app')] class extends Component
                         <x-input-error :messages="$errors->get('nombre')" class="mt-1" />
                     </div>
 
-                    <div>
-                        <x-input-label for="gradoId" value="Grado" />
-                        <x-select-input
-                            wire:model.live="gradoId"
-                            id="gradoId"
-                            class="mt-1 block w-full"
-                            :options="collect($grados)->mapWithKeys(fn ($grado) => [$grado->id => $grado->nombre])"
-                        />
-                        <x-input-error :messages="$errors->get('gradoId')" class="mt-1" />
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <x-input-label for="carreraId" value="Carrera" />
+                            <x-select-input
+                                wire:model.live="carreraId"
+                                id="carreraId"
+                                class="mt-1 block w-full"
+                                :options="collect($carreras)->mapWithKeys(fn ($carrera) => [$carrera->id => $carrera->name])"
+                            />
+                            <x-input-error :messages="$errors->get('carreraId')" class="mt-1" />
+                        </div>
+                        <div>
+                            <x-input-label for="cicloCurricular" value="Ciclo" />
+                            <x-select-input
+                                wire:model.live="cicloCurricular"
+                                id="cicloCurricular"
+                                class="mt-1 block w-full"
+                                :options="['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI']"
+                            />
+                            <x-input-error :messages="$errors->get('cicloCurricular')" class="mt-1" />
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">

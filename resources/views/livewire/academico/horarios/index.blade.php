@@ -272,7 +272,7 @@ new #[Layout('layouts.app')] class extends Component
         <p class="mt-1 text-sm text-ink-dim">Un aula y un docente no pueden tener dos clases a la misma hora.</p>
     </x-slot>
 
-    {{-- Ver academico/grados/index.blade.php: el botón no puede vivir en x-slot="header". --}}
+    {{-- Ver academico/carreras/index.blade.php: el botón no puede vivir en x-slot="header". --}}
     @can('academico.gestionar')
         <div class="mb-4 flex justify-end">
             <x-primary-button type="button" wire:click="abrirModal" class="gap-2">

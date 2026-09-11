@@ -105,7 +105,7 @@
             @endif
         </td>
         <td>
-            <p class="etiqueta">Grupo</p>
+            <p class="etiqueta">Ciclo</p>
             {{ $pago->cuota?->planPago?->matricula?->ciclo?->nombre ?? '—' }}
         </td>
         <td>

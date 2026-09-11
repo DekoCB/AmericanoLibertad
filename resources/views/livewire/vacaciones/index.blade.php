@@ -117,7 +117,7 @@ new #[Layout('layouts.app')] class extends Component
                     <div class="flex items-center justify-between px-4 py-3 text-sm">
                         <div>
                             <p class="text-ink">{{ $vacacion->estudiante->nombreCompleto() }}</p>
-                            <p class="text-xs text-ink-faint">{{ $vacacion->matricula->grado->nombre }}</p>
+                            <p class="text-xs text-ink-faint">{{ $vacacion->matricula->carrera->name }} · Ciclo {{ $vacacion->matricula->ciclo_curricular }}</p>
                         </div>
                         <p class="text-ink-dim">{{ $vacacion->fecha_inicio->format('d/m/Y') }} – {{ $vacacion->fecha_fin->format('d/m/Y') }}</p>
                     </div>
@@ -136,7 +136,7 @@ new #[Layout('layouts.app')] class extends Component
                     <div class="flex items-center justify-between px-4 py-3 text-sm">
                         <div>
                             <p class="text-ink">{{ $vacacion->estudiante->nombreCompleto() }}</p>
-                            <p class="text-xs text-ink-faint">{{ $vacacion->matricula->grado->nombre }}</p>
+                            <p class="text-xs text-ink-faint">{{ $vacacion->matricula->carrera->name }} · Ciclo {{ $vacacion->matricula->ciclo_curricular }}</p>
                         </div>
                         <p class="text-ink-dim">{{ $vacacion->fecha_inicio->format('d/m/Y') }} – {{ $vacacion->fecha_fin->format('d/m/Y') }}</p>
                     </div>

@@ -24,11 +24,11 @@ use Illuminate\Support\Collection;
  * en el mismo formato para alimentar tanto la vista previa en pantalla
  * como los exportadores de Excel/CSV/PDF sin transformación adicional.
  *
- * El filtro común a todos es SIAGIE → Grupo (ciclo) → Carrera → Ciclo
+ * El filtro común a todos es SIAGIE → Ciclo → Carrera → Ciclo
  * curricular (I-VI) → Curso, en cascada, más franja institucional -- ya no
  * hay filtro por rango de fechas: el ciclo (que ya tiene su propio periodo)
  * alcanza para acotar el reporte a un periodo lectivo concreto. SIAGIE es
- * una etiqueta por matrícula independiente del Grupo (ver
+ * una etiqueta por matrícula independiente del Ciclo (ver
  * Matricula::siagie_id), así que en los reportes que no giran en torno a
  * una Matricula (Académico, Operativo) se resuelve indirectamente vía los
  * estudiantes matriculados con ese SIAGIE; en "Mis evaluaciones" (por
@@ -277,7 +277,7 @@ class ReporteService
     /**
      * IDs de estudiantes con al menos una Matricula etiquetada con este
      * SIAGIE (ver Matricula::siagie_id) -- es una etiqueta independiente
-     * del Grupo/Ciclo, así que no se resuelve vía Horario. null significa
+     * del Ciclo, así que no se resuelve vía Horario. null significa
      * "no filtrar por SIAGIE".
      *
      * @return ?list<int>
@@ -292,7 +292,7 @@ class ReporteService
     }
 
     /**
-     * Horarios que coinciden con el Grupo (ciclo), Carrera, Ciclo
+     * Horarios que coinciden con el Ciclo, Carrera, Ciclo
      * curricular y Curso elegidos en el selector en cascada, más la franja
      * institucional si se usa. null en cualquiera de los filtros significa
      * "no restringir por ese campo". Devuelve null si no se pidió ningún
@@ -329,7 +329,7 @@ class ReporteService
     }
 
     /**
-     * Aplica el filtro de SIAGIE/Grupo/Carrera/Ciclo curricular/Curso/franja
+     * Aplica el filtro de SIAGIE/Ciclo/Carrera/Ciclo curricular/Curso/franja
      * a una consulta de Matricula. SIAGIE, ciclo, carrera y ciclo curricular
      * se filtran directo por columna (Matricula ya las tiene). Curso y
      * franja no existen ahí -- se resuelven vía Horario: un estudiante

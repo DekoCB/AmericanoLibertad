@@ -69,7 +69,7 @@ new #[Layout('layouts.app')] class extends Component
         <p class="mt-1 text-sm text-ink-dim">Estudiantes registrados y su estado.</p>
     </x-slot>
 
-    {{-- Ver academico/grados/index.blade.php: el botón no puede vivir en x-slot="header". --}}
+    {{-- Ver academico/carreras/index.blade.php: el botón no puede vivir en x-slot="header". --}}
     @can('matricula.crear')
         <div class="mb-4 flex flex-wrap justify-end gap-3">
             <a href="{{ route('matricula.carga-masiva-estudiantes') }}" wire:navigate class="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 font-display text-sm font-medium text-ink transition hover:bg-surface-2">

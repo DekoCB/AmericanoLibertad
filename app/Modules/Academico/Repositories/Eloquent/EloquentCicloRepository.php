@@ -37,7 +37,7 @@ class EloquentCicloRepository extends BaseRepository implements CicloRepositoryI
         return Ciclo::query()->where('estado', EstadoCicloEnum::ACTIVO)->first();
     }
 
-    public function paginateGrupos(int $perPage = 15): LengthAwarePaginator
+    public function paginateCiclos(int $perPage = 15): LengthAwarePaginator
     {
         return Ciclo::query()->where('modalidad', ModalidadCicloEnum::SEIS_MESES)->paginate($perPage);
     }

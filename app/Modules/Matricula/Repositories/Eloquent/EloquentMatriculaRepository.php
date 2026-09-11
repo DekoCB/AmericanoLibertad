@@ -19,7 +19,7 @@ class EloquentMatriculaRepository extends BaseRepository implements MatriculaRep
      */
     protected function query(): Builder
     {
-        return Matricula::query()->with(['estudiante', 'ciclo', 'grado']);
+        return Matricula::query()->with(['estudiante', 'ciclo', 'carrera']);
     }
 
     public function existeParaEstudianteYCiclo(int $estudianteId, int $cicloId): bool

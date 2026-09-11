@@ -49,8 +49,8 @@ class CicloFactory extends Factory
         $fin = "{$anio}-06-30";
 
         return [
-            'nombre' => "Grupo 1 - {$anio}",
-            'tipo' => TipoCicloEnum::GRUPO_1,
+            'nombre' => "Ciclo 1 - {$anio}",
+            'tipo' => TipoCicloEnum::CICLO_1,
             'anio' => $anio,
             'fecha_inicio' => $inicio,
             'fecha_fin' => $fin,
@@ -58,14 +58,14 @@ class CicloFactory extends Factory
         ];
     }
 
-    public function grupo3(): static
+    public function ciclo3(): static
     {
         return $this->state(function (array $attributes) {
             $anio = $attributes['anio'];
 
             return [
-                'nombre' => "Grupo 3 - {$anio}",
-                'tipo' => TipoCicloEnum::GRUPO_3,
+                'nombre' => "Ciclo 3 - {$anio}",
+                'tipo' => TipoCicloEnum::CICLO_3,
                 'fecha_inicio' => "{$anio}-07-01",
                 'fecha_fin' => "{$anio}-12-31",
             ];

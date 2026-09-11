@@ -277,7 +277,7 @@ class EvaluacionService
     /**
      * Promedio de las calificaciones publicadas del estudiante en un
      * horario, considerando solo los últimos N exámenes mensuales por
-     * fecha -- 6 para un Grupo de 6 meses, 8 para SIAGIE anual (ver
+     * fecha -- 6 para un Ciclo de 6 meses, 8 para SIAGIE anual (ver
      * Ciclo::siagie()). Si hay menos de N registrados, promedia los que
      * existan. La ponderación por tipo de evaluación queda fuera de
      * alcance: hoy solo existe un tipo (mensual).

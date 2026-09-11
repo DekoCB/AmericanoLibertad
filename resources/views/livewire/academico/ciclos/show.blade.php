@@ -40,14 +40,14 @@ new #[Layout('layouts.app')] class extends Component
     {
         return [
             'periodos' => $this->ciclo->periodosMatricula()->latest('fecha_inicio')->get(),
-            'horarios' => $this->ciclo->horarios()->with(['curso', 'docente', 'aula', 'grado', 'dias'])->get(),
+            'horarios' => $this->ciclo->horarios()->with(['curso', 'docente', 'aula', 'carrera', 'dias'])->get(),
         ];
     }
 }; ?>
 
 <div class="max-w-3xl space-y-6">
     <x-slot name="header">
-        <a href="{{ route('academico.ciclos.index') }}" wire:navigate class="text-sm text-ink-faint hover:text-ink">← Grupos</a>
+        <a href="{{ route('academico.ciclos.index') }}" wire:navigate class="text-sm text-ink-faint hover:text-ink">← Ciclos</a>
         <h1 class="mt-1 font-display text-2xl text-ink">{{ $ciclo->nombre }}</h1>
         <p class="mt-1 text-sm text-ink-dim">
             {{ $ciclo->modalidad->label() }}{{ $ciclo->tipo ? ' · '.$ciclo->tipo->label() : '' }} · {{ $ciclo->fecha_inicio->format('d/m/Y') }} – {{ $ciclo->fecha_fin->format('d/m/Y') }}

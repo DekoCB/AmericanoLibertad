@@ -36,9 +36,9 @@ class MigracionService
     /**
      * Cohorte de origen: matrículas vigentes (aprobadas) que coinciden con
      * los filtros elegidos. El primer filtro es siempre la modalidad del
-     * ciclo (Grupo rotativo de 6 meses vs. SIAGIE anual) -- ver el
+     * ciclo (Ciclo rotativo de 6 meses vs. SIAGIE anual) -- ver el
      * comentario de la vista sobre por qué SIAGIE anual no tiene un filtro
-     * de "Grupo" propio, a diferencia de 6 meses. Todos los filtros salvo
+     * de "Ciclo" propio, a diferencia de 6 meses. Todos los filtros salvo
      * $modalidad son opcionales.
      *
      * @return Collection<int, Matricula>
@@ -57,7 +57,7 @@ class MigracionService
 
     /**
      * Sirve tanto para acotar la cohorte de origen en modo masivo como
-     * para sugerir destino, sin pedirle al usuario que elija un "Grupo"
+     * para sugerir destino, sin pedirle al usuario que elija un "Ciclo"
      * que no existe en la modalidad anual (ver CicloService::cicloAnualVigente()).
      */
     public function cicloAnualVigente(): ?Ciclo

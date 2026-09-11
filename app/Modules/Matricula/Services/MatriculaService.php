@@ -181,7 +181,7 @@ class MatriculaService
      * Reasigna la fecha en que culmina el periodo de estudio de esta
      * matrícula, por ejemplo desde la ficha del estudiante cuando se
      * necesita ajustarla manualmente (p. ej. un grado doble). Es
-     * independiente del ciclo/horario: no afecta a qué grupo ni horario
+     * independiente del ciclo/horario: no afecta a qué ciclo ni horario
      * pertenece el estudiante.
      */
     public function reasignarFechaFinEstudio(Matricula $matricula, string $fecha): Matricula
@@ -232,7 +232,7 @@ class MatriculaService
     }
 
     /**
-     * Solo aplica a los 4 Grupos rotativos de 6 meses, cada uno con sus
+     * Solo aplica a los 4 Ciclos rotativos de 6 meses, cada uno con sus
      * propias ventanas de admisión que un coordinador abre y cierra a
      * mano. SIAGIE anual no tiene este concepto -- se identifica solo por
      * año y su matrícula está disponible mientras el ciclo esté vigente

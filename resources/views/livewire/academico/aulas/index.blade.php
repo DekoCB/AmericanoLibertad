@@ -60,7 +60,7 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Al elegir grupo+letra, se sugiere el nombre "Aula {letra}. {grupo}"
+     * Al elegir ciclo+letra, se sugiere el nombre "Aula {letra}. {ciclo}"
      * -- el campo sigue editable a mano si el personal prefiere otro.
      */
     public function updatedCicloId(): void
@@ -144,7 +144,7 @@ new #[Layout('layouts.app')] class extends Component
         <p class="mt-1 text-sm text-ink-dim">Espacios físicos disponibles para dictar clases.</p>
     </x-slot>
 
-    {{-- Ver academico/grados/index.blade.php: el botón no puede vivir en x-slot="header". --}}
+    {{-- Ver academico/carreras/index.blade.php: el botón no puede vivir en x-slot="header". --}}
     @can('academico.gestionar')
         <div class="mb-4 flex justify-end">
             <x-primary-button type="button" wire:click="abrirModal" class="gap-2">
@@ -163,8 +163,8 @@ new #[Layout('layouts.app')] class extends Component
     @endif
 
     <div class="mb-8">
-        <h2 class="mb-2 font-display text-lg text-ink">Ocupación por turno</h2>
-        <p class="mb-3 text-sm text-ink-dim">Estudiantes matriculados por aula en cada turno (Lunes-Miércoles, Martes-Jueves, Domingo), frente a su capacidad.</p>
+        <h2 class="mb-2 font-display text-lg text-ink">Ocupación por día</h2>
+        <p class="mb-3 text-sm text-ink-dim">Estudiantes matriculados por aula en cada día de la semana, frente a su capacidad.</p>
 
         <x-select-input
             wire:model.live="cicloFiltro"
@@ -186,26 +186,26 @@ new #[Layout('layouts.app')] class extends Component
                             <span class="text-xs text-ink-faint">Capacidad {{ $fila['aula']->capacidad }}</span>
                         </div>
 
-                        @if ($fila['porFranja']->isEmpty())
+                        @if ($fila['porDia']->isEmpty())
                             <p class="px-4 py-6 text-center text-sm text-ink-faint">Sin horarios asignados este ciclo.</p>
                         @else
                             <div class="divide-y divide-border">
-                                @foreach ($fila['porFranja'] as $grupoFranja)
+                                @foreach ($fila['porDia'] as $grupoDia)
                                     <div class="px-4 py-3">
                                         <div class="flex items-center justify-between">
-                                            <span class="text-xs font-semibold uppercase tracking-wide text-ink-faint">{{ $grupoFranja['label'] }}</span>
+                                            <span class="text-xs font-semibold uppercase tracking-wide text-ink-faint">{{ $grupoDia['label'] }}</span>
                                             <span @class([
                                                 'rounded-full px-2 py-0.5 text-xs font-medium',
-                                                'bg-danger/10 text-danger' => $grupoFranja['totalEstudiantes'] > $fila['aula']->capacidad,
-                                                'bg-ok/10 text-ok' => $grupoFranja['totalEstudiantes'] <= $fila['aula']->capacidad,
+                                                'bg-danger/10 text-danger' => $grupoDia['totalEstudiantes'] > $fila['aula']->capacidad,
+                                                'bg-ok/10 text-ok' => $grupoDia['totalEstudiantes'] <= $fila['aula']->capacidad,
                                             ])>
-                                                {{ $grupoFranja['totalEstudiantes'] }} / {{ $fila['aula']->capacidad }}
+                                                {{ $grupoDia['totalEstudiantes'] }} / {{ $fila['aula']->capacidad }}
                                             </span>
                                         </div>
                                         <div class="mt-1 space-y-0.5">
-                                            @foreach ($grupoFranja['horarios'] as $item)
+                                            @foreach ($grupoDia['horarios'] as $item)
                                                 <p class="text-xs text-ink-dim">
-                                                    {{ $item['horario']->curso->nombre }} · {{ $item['horario']->grado->nombre }}
+                                                    {{ $item['horario']->curso->nombre }} · {{ $item['horario']->carrera->name }} · Ciclo {{ $item['horario']->ciclo_curricular }}
                                                     <span class="text-ink-faint">— {{ $item['estudiantes'] }} estudiante{{ $item['estudiantes'] === 1 ? '' : 's' }}</span>
                                                 </p>
                                             @endforeach
@@ -279,12 +279,12 @@ new #[Layout('layouts.app')] class extends Component
                 <form wire:submit="guardar" class="mt-4 space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <x-input-label for="cicloId" value="Grupo (opcional)" />
+                            <x-input-label for="cicloId" value="Ciclo (opcional)" />
                             <x-select-input
                                 wire:model.live="cicloId"
                                 id="cicloId"
                                 class="mt-1 block w-full"
-                                placeholder="Aula suelta, sin grupo"
+                                placeholder="Aula suelta, sin ciclo"
                                 :options="collect($ciclos)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])"
                             />
                             <x-input-error :messages="$errors->get('cicloId')" class="mt-1" />
@@ -296,7 +296,7 @@ new #[Layout('layouts.app')] class extends Component
                                 id="letra"
                                 class="mt-1 block w-full"
                                 placeholder="Sin letra"
-                                :options="['A' => 'Aula A (grados 1-2)', 'B' => 'Aula B (grados 3-4)']"
+                                :options="['A' => 'Aula A', 'B' => 'Aula B']"
                             />
                             <x-input-error :messages="$errors->get('letra')" class="mt-1" />
                         </div>

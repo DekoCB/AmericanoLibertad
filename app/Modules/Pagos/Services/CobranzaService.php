@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
 /**
  * Cobros: qué debe un estudiante puntual (vista individual del módulo de
  * Cobranza), o qué estudiantes deben uno o más conceptos dentro de un
- * Grupo/Carrera/Ciclo/Curso filtrado (vista grupal).
+ * Ciclo/Carrera/Ciclo curricular/Curso filtrado (vista grupal).
  *
  * "Deber" se resuelve distinto según el tipo de concepto, porque solo
  * Mensualidad tiene una obligación real registrada en el sistema (las
@@ -73,7 +73,7 @@ class CobranzaService
      * estudiante (la de vencimiento más próximo, sin importar si ya venció
      * o no) -- usada por "Registrar pago" para vincular automáticamente el
      * pago a su Cuota cuando el concepto elegido es Mensualidad, en vez de
-     * dejar el pago suelto sin Grupo/Cuota (ver PagoService::registrar()).
+     * dejar el pago suelto sin Ciclo/Cuota (ver PagoService::registrar()).
      */
     public function cuotaPendienteMasProxima(Estudiante $estudiante): ?Cuota
     {
@@ -177,7 +177,7 @@ class CobranzaService
     }
 
     /**
-     * Horarios que coinciden con el Grupo (ciclo), Carrera, Ciclo curricular
+     * Horarios que coinciden con el Ciclo, Carrera, Ciclo curricular
      * y Curso elegidos, más la franja institucional si se usa -- mismo
      * criterio que ReporteService, ver ese archivo para el razonamiento
      * completo.
@@ -204,7 +204,7 @@ class CobranzaService
     }
 
     /**
-     * Aplica el filtro de Grupo/Carrera/Ciclo curricular/Curso/franja a una
+     * Aplica el filtro de Ciclo/Carrera/Ciclo curricular/Curso/franja a una
      * consulta de Matricula. Ciclo, carrera y ciclo curricular se filtran
      * directo por columna; curso y franja se resuelven vía Horario,
      * exigiendo la asignación explícita en matricula_horario cuando el

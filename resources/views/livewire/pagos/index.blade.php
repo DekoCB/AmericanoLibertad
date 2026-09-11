@@ -128,9 +128,9 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * El filtro grupal es en cascada: Grupo primero, luego Carrera, luego
-     * Ciclo curricular, luego Curso. Cambiar un nivel invalida los que
-     * dependen de él.
+     * El filtro grupal es en cascada: Ciclo académico primero, luego
+     * Carrera, luego Ciclo curricular, luego Curso. Cambiar un nivel
+     * invalida los que dependen de él.
      */
     public function updatedCobrosCicloId(): void
     {
@@ -526,7 +526,7 @@ new #[Layout('layouts.app')] class extends Component
                     <p>
                         <span class="font-semibold text-accent">Cuota N.° {{ $cuotaDetectada->numero }}</span>
                         de {{ $cuotaDetectada->planPago->numero_cuotas }}
-                        · Grupo {{ $cuotaDetectada->planPago->matricula->ciclo->nombre }}
+                        · Ciclo {{ $cuotaDetectada->planPago->matricula->ciclo->nombre }}
                         · vence {{ $cuotaDetectada->fecha_vencimiento->format('d/m/Y') }}
                     </p>
                     <p class="mt-1 text-ink-dim">
@@ -819,12 +819,12 @@ new #[Layout('layouts.app')] class extends Component
                 <div class="space-y-4 rounded-2xl border border-border bg-surface shadow-sm p-6">
                     <div class="flex flex-wrap items-end gap-4">
                         <div>
-                            <x-input-label for="cobrosCicloId" value="Grupo" />
+                            <x-input-label for="cobrosCicloId" value="Ciclo" />
                             <x-select-input
                                 wire:model.live="cobrosCicloId"
                                 id="cobrosCicloId"
                                 class="mt-1 block w-56"
-                                :options="collect($cobrosCiclos)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])->prepend('Todos los grupos', '')"
+                                :options="collect($cobrosCiclos)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])->prepend('Todos los ciclos', '')"
                             />
                         </div>
                         {{--

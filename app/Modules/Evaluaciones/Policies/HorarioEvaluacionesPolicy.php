@@ -40,7 +40,7 @@ class HorarioEvaluacionesPolicy
 
     /**
      * Solo cuenta como matriculado el estudiante con una matrícula
-     * aprobada en el mismo grado y ciclo del horario (ver
+     * aprobada en la misma carrera, ciclo curricular y ciclo del horario (ver
      * Matricula::scopeDelHorario()).
      */
     private function estudianteMatriculado(User $user, Horario $horario): bool

@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 /**
  * Ya no crea Grado/Curso-de-grado/Horario de demo (el modelo Grado, heredado
  * de CEBA, está en retirada -- ver el plan de migración Grado->Carrera+Ciclo).
- * Solo siembra el Ciclo(Grupo)/Aula/periodo de matrícula activos, que no
+ * Solo siembra el Ciclo/Aula/periodo de matrícula activos, que no
  * dependen de Grado y los sigue necesitando el resto del sistema para tener
  * un periodo de matrícula abierto en desarrollo.
  */
@@ -22,10 +22,11 @@ class AcademicoDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        // Los 4 grupos rotativos del año, cada uno con su propia Aula A
-        // (grados 1-2) y Aula B (grados 3-4). El "activo" para la demo es
-        // el que ya empezó más recientemente sin pasarse de hoy, para que
-        // haya datos con los que probar el resto de módulos desde ya.
+        // Los 4 ciclos rotativos del año, cada uno con su propia Aula A y
+        // Aula B (libres, sin sección fija asignada). El "activo" para la
+        // demo es el que ya empezó más recientemente sin pasarse de hoy,
+        // para que haya datos con los que probar el resto de módulos desde
+        // ya.
         $hoy = now();
         $anio = (int) $hoy->format('Y');
 
@@ -39,7 +40,7 @@ class AcademicoDemoSeeder extends Seeder
         $tipoActivo = $ventanas
             ->filter(fn (array $datos) => $datos['inicio']->lessThanOrEqualTo($hoy))
             ->sortByDesc(fn (array $datos) => $datos['inicio'])
-            ->first()['tipo'] ?? TipoCicloEnum::GRUPO_1;
+            ->first()['tipo'] ?? TipoCicloEnum::CICLO_1;
 
         $grupos = $ventanas->map(function (array $datos) use ($tipoActivo) {
             $ciclo = Ciclo::query()->create([

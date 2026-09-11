@@ -116,7 +116,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Historial del estudiante</h1>
-        <p class="mt-1 text-sm text-ink-dim">Busca por nombre o DNI para ver grados cursados, pagos, documentos y notas en un solo lugar.</p>
+        <p class="mt-1 text-sm text-ink-dim">Busca por nombre o DNI para ver ciclos cursados, pagos, documentos y notas en un solo lugar.</p>
     </x-slot>
 
     <div class="space-y-6">
@@ -189,12 +189,12 @@ new #[Layout('layouts.app')] class extends Component
             </div>
 
             <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
-                <h2 class="text-sm font-semibold text-ink">Grados cursados</h2>
+                <h2 class="text-sm font-semibold text-ink">Ciclos cursados</h2>
                 <div class="mt-4 divide-y divide-border">
                     @forelse ($historial['matriculas'] as $matricula)
                         <div class="flex items-center justify-between py-3 text-sm">
                             <div>
-                                <p class="text-ink">{{ $matricula->grado->nombre }} · {{ $matricula->ciclo->nombre }} · {{ $matricula->ciclo->modalidad->label() }}</p>
+                                <p class="text-ink">{{ $matricula->carrera->name }} · Ciclo {{ $matricula->ciclo_curricular }} · {{ $matricula->ciclo->nombre }} · {{ $matricula->ciclo->modalidad->label() }}</p>
                                 <p class="text-ink-faint">
                                     Matriculado el {{ $matricula->fecha_matricula->format('d/m/Y') }}
                                     @if ($matricula->fecha_fin_estudio)
@@ -242,7 +242,7 @@ new #[Layout('layouts.app')] class extends Component
                     <div class="mt-2 divide-y divide-border">
                         @foreach ($historial['resumenPagos']['cuotasVencidas'] as $cuota)
                             <div class="flex items-center justify-between py-2 text-sm">
-                                <span class="text-ink-dim">Cuota {{ $cuota->numero }} · {{ $cuota->planPago->matricula?->grado->nombre }} · {{ $cuota->planPago->matricula?->ciclo->nombre }}</span>
+                                <span class="text-ink-dim">Cuota {{ $cuota->numero }} · {{ $cuota->planPago->matricula?->carrera->name }} · {{ $cuota->planPago->matricula?->ciclo->nombre }}</span>
                                 <span class="text-danger">S/ {{ number_format((float) $cuota->monto, 2) }} · venció {{ $cuota->fecha_vencimiento->format('d/m/Y') }}</span>
                             </div>
                         @endforeach
@@ -335,7 +335,7 @@ new #[Layout('layouts.app')] class extends Component
                         @foreach ($historial['examenesUbicacion'] as $examen)
                             <div class="py-2 text-sm">
                                 <p class="text-ink">{{ $examen->fecha->format('d/m/Y') }} · S/ {{ number_format((float) $examen->costo, 2) }}</p>
-                                <p class="text-ink-faint">Resultado: {{ $examen->resultado ?? '—' }} @if ($examen->gradoAsignado) · Grado asignado: {{ $examen->gradoAsignado->nombre }} @endif</p>
+                                <p class="text-ink-faint">Resultado: {{ $examen->resultado ?? '—' }} @if ($examen->carreraAsignada) · Carrera asignada: {{ $examen->carreraAsignada->name }} (ciclo {{ $examen->ciclo_asignado }}) @endif</p>
                             </div>
                         @endforeach
                     </div>

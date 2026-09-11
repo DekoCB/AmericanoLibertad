@@ -54,7 +54,7 @@
         <div class="mt-4 divide-y divide-border">
             @forelse ($horarios as $horario)
                 <div class="py-3 text-sm">
-                    <p class="text-ink">{{ $horario->curso->nombre }} · {{ $horario->grado->nombre }}</p>
+                    <p class="text-ink">{{ $horario->curso->nombre }} · {{ $horario->carrera->name }} · Ciclo {{ $horario->ciclo_curricular }}</p>
                     <p class="text-ink-faint">{{ $horario->docente->name }} · {{ $horario->aula->nombre }} · {{ $horario->diasResumen() }}</p>
                 </div>
             @empty

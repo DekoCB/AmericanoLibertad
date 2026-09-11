@@ -70,7 +70,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">SIAGIE</h1>
-        <p class="mt-1 text-sm text-ink-dim">Los periodos SIAGIE del MINEDU (1.er periodo, 2.° periodo, Anual) — independientes del Grupo rotativo de Americano Libertad.</p>
+        <p class="mt-1 text-sm text-ink-dim">Los periodos SIAGIE del MINEDU (1.er periodo, 2.° periodo, Anual) — independientes del Ciclo rotativo de Americano Libertad.</p>
     </x-slot>
 
     @can('academico.gestionar')
@@ -161,7 +161,7 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 @if ($tipo === 'anual')
-                    <p class="text-xs text-ink-dim">El SIAGIE Anual crea además su propio Grupo (Ciclo), con horarios reales: declara de qué mes a qué mes dura el periodo de clases (8 meses; los 2 restantes son vacaciones).</p>
+                    <p class="text-xs text-ink-dim">El SIAGIE Anual crea además su propio Ciclo, con horarios reales: declara de qué mes a qué mes dura el periodo de clases (8 meses; los 2 restantes son vacaciones).</p>
                 @else
                     <p class="text-xs text-ink-dim">Las fechas son opcionales para este tipo — es solo una clasificación, sin horarios propios.</p>
                 @endif

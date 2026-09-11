@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Academico;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Services\CursoService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Shared\Enums\RolEnum;
@@ -21,37 +21,33 @@ class CursoCodigoTest extends TestCase
         return $this->app->make(CursoService::class);
     }
 
-    public function test_genera_el_codigo_con_tres_iniciales_y_el_orden_del_grado(): void
+    public function test_genera_el_codigo_con_el_codigo_de_carrera_el_ciclo_en_romano_y_la_secuencia(): void
     {
-        $grado = Grado::factory()->create(['orden' => 1]);
+        $carrera = Carrera::factory()->create(['code' => 'ENF']);
 
-        $codigo = $this->service()->generarCodigo('Comunicación', $grado);
+        $codigo = $this->service()->generarCodigo($carrera, 1);
 
-        $this->assertSame('COM-1', $codigo);
+        $this->assertSame('ENF-I-01', $codigo);
     }
 
-    public function test_quita_tildes_al_generar_las_iniciales(): void
+    public function test_cada_ciclo_lleva_su_propia_secuencia_dentro_de_la_misma_carrera(): void
     {
-        $grado = Grado::factory()->create(['orden' => 2]);
+        $carrera = Carrera::factory()->create(['code' => 'ENF']);
+        Curso::factory()->create(['codigo' => 'ENF-I-01', 'carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
 
-        $codigo = $this->service()->generarCodigo('Área Curricular', $grado);
+        $codigo = $this->service()->generarCodigo($carrera, 3);
 
-        $this->assertSame('ARE-2', $codigo);
+        $this->assertSame('ENF-III-01', $codigo);
     }
 
-    public function test_agrega_un_sufijo_si_el_codigo_base_ya_existe(): void
+    public function test_agrega_la_siguiente_secuencia_si_el_codigo_base_ya_existe(): void
     {
-        $gradoUno = Grado::factory()->create(['orden' => 1]);
-        // No se persiste: generarCodigo() solo lee $grado->orden, así que
-        // basta un grado en memoria con el mismo orden para forzar la
-        // colisión de código sin violar la unicidad real de "orden".
-        $otroGradoConMismoOrden = Grado::factory()->make(['orden' => 1]);
+        $carrera = Carrera::factory()->create(['code' => 'ENF']);
+        Curso::factory()->create(['codigo' => 'ENF-I-01', 'carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
 
-        Curso::factory()->create(['nombre' => 'Comunicación', 'codigo' => 'COM-1', 'grado_id' => $gradoUno->id]);
+        $codigo = $this->service()->generarCodigo($carrera, 1);
 
-        $codigo = $this->service()->generarCodigo('Comunicación', $otroGradoConMismoOrden);
-
-        $this->assertSame('COM-1-2', $codigo);
+        $this->assertSame('ENF-I-02', $codigo);
     }
 
     public function test_crear_un_curso_desde_el_formulario_le_asigna_codigo_automaticamente(): void
@@ -59,52 +55,55 @@ class CursoCodigoTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
-        $grado = Grado::factory()->create(['orden' => 3]);
+        $carrera = Carrera::factory()->create(['code' => 'FAR']);
 
         $this->actingAs($coordinador);
 
         Volt::test('academico.cursos.index')
             ->call('abrirModal')
-            ->set('nombre', 'Matemática')
-            ->set('gradoId', (string) $grado->id)
+            ->set('nombre', 'Farmacología General')
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '2')
             ->set('horas', '80')
             ->call('guardar')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('cursos', [
-            'nombre' => 'Matemática',
-            'codigo' => 'MAT-3',
-            'grado_id' => $grado->id,
+            'nombre' => 'Farmacología General',
+            'codigo' => 'FAR-II-01',
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 2,
         ]);
     }
 
-    public function test_editar_un_curso_no_le_cambia_el_codigo_al_ajustar_nombre_o_grado(): void
+    public function test_editar_un_curso_no_le_cambia_el_codigo_al_ajustar_nombre_o_carrera(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
-        $gradoOriginal = Grado::factory()->create(['orden' => 1]);
-        $otroGrado = Grado::factory()->create(['orden' => 5]);
+        $carreraOriginal = Carrera::factory()->create(['code' => 'ENF']);
+        $otraCarrera = Carrera::factory()->create(['code' => 'ADM']);
         $curso = Curso::factory()->create([
-            'nombre' => 'Comunicación',
-            'codigo' => 'COM-1',
-            'grado_id' => $gradoOriginal->id,
+            'nombre' => 'Anatomía Funcional',
+            'codigo' => 'ENF-I-01',
+            'carrera_id' => $carreraOriginal->id,
+            'ciclo_curricular' => 1,
         ]);
 
         $this->actingAs($coordinador);
 
         Volt::test('academico.cursos.index')
             ->call('abrirModal', $curso->id)
-            ->set('nombre', 'Comunicación Integral')
-            ->set('gradoId', (string) $otroGrado->id)
+            ->set('nombre', 'Anatomía Funcional Avanzada')
+            ->set('carreraId', (string) $otraCarrera->id)
             ->call('guardar')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('cursos', [
             'id' => $curso->id,
-            'nombre' => 'Comunicación Integral',
-            'codigo' => 'COM-1',
-            'grado_id' => $otroGrado->id,
+            'nombre' => 'Anatomía Funcional Avanzada',
+            'codigo' => 'ENF-I-01',
+            'carrera_id' => $otraCarrera->id,
         ]);
     }
 }

@@ -35,7 +35,7 @@ new #[Layout('layouts.app')] class extends Component
     /**
      * Tipos de reporte cuyos datos se originan en un Horario (clase
      * recurrente: curso + docente + día + hora) y por lo tanto admiten
-     * filtrarse por franja institucional, además de Grupo/Carrera/Curso.
+     * filtrarse por franja institucional, además de Ciclo/Carrera/Curso.
      *
      * @var list<string>
      */
@@ -92,9 +92,9 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * El filtro es en cascada: SIAGIE primero, luego Grupo, luego Carrera,
-     * luego Ciclo curricular, luego Curso. Cambiar un nivel invalida los
-     * que dependen de él.
+     * El filtro es en cascada: SIAGIE primero, luego Ciclo académico,
+     * luego Carrera, luego Ciclo curricular, luego Curso. Cambiar un nivel
+     * invalida los que dependen de él.
      */
     public function updatedSiagieId(): void
     {
@@ -302,13 +302,13 @@ new #[Layout('layouts.app')] class extends Component
                 primer render y nunca ve las nuevas tras un morph.
             --}}
             <div wire:key="ciclo-select-{{ $siagieId }}">
-                <x-input-label for="cicloId" value="Grupo" />
+                <x-input-label for="cicloId" value="Ciclo" />
                 <x-select-input
                     wire:model.live="cicloId"
                     id="cicloId"
                     class="mt-1 block w-56"
                     :disabled="$siagieId === ''"
-                    :options="collect($ciclosDisponibles)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])->prepend('Todos los grupos', '')"
+                    :options="collect($ciclosDisponibles)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])->prepend('Todos los ciclos', '')"
                 />
             </div>
             <div wire:key="carrera-select-{{ $cicloId }}">

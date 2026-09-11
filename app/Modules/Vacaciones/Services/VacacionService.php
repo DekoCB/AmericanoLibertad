@@ -50,7 +50,7 @@ class VacacionService
         return Vacacion::query()
             ->where('fecha_inicio', '<=', $hoy)
             ->where('fecha_fin', '>=', $hoy)
-            ->with(['estudiante', 'matricula.grado'])
+            ->with(['estudiante', 'matricula.carrera'])
             ->orderBy('fecha_fin')
             ->get();
     }
@@ -62,7 +62,7 @@ class VacacionService
     {
         return Vacacion::query()
             ->where('fecha_fin', '<', Carbon::today())
-            ->with(['estudiante', 'matricula.grado'])
+            ->with(['estudiante', 'matricula.carrera'])
             ->latest('fecha_fin')
             ->get();
     }

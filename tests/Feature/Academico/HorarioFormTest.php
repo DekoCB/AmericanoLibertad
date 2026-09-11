@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Academico;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Enums\DiaSemanaEnum;
 use App\Modules\Academico\Models\Aula;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Services\HorarioService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
@@ -35,7 +35,7 @@ class HorarioFormTest extends TestCase
         return $coordinador;
     }
 
-    public function test_crea_un_horario_con_la_franja_lunes_y_miercoles(): void
+    public function test_crea_un_horario_con_los_dias_lunes_y_miercoles(): void
     {
         $this->actingAs($this->actorCoordinador());
 
@@ -44,16 +44,14 @@ class HorarioFormTest extends TestCase
         $docente->assignRole(RolEnum::DOCENTE->value);
         $aula = Aula::factory()->create();
         $ciclo = Ciclo::factory()->create();
-        $grado = Grado::factory()->create();
 
         Volt::test('academico.horarios.index')
             ->call('abrirModal')
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
             ->set('cursoId', (string) $curso->id)
             ->set('docenteId', (string) $docente->id)
             ->set('aulaId', (string) $aula->id)
-            ->set('franjasSeleccionadas', ['lun_mie'])
+            ->set('diasSeleccionados', ['lunes', 'miercoles'])
             ->set('horaInicioHoraPorDia.lunes', '18')
             ->set('horaInicioMinutoPorDia.lunes', '00')
             ->set('horaFinHoraPorDia.lunes', '20')
@@ -76,6 +74,45 @@ class HorarioFormTest extends TestCase
         $this->assertSame('20:00:00', $miercoles->hora_fin);
     }
 
+    /**
+     * La restricción a 3 franjas fijas ya no existe: cualquier día suelto
+     * de la semana (incluidos Viernes y Sábado, antes inalcanzables al
+     * crear) se puede elegir por su cuenta.
+     */
+    public function test_crea_un_horario_con_solo_viernes_y_sabado(): void
+    {
+        $this->actingAs($this->actorCoordinador());
+
+        $curso = Curso::factory()->create();
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
+        $aula = Aula::factory()->create();
+        $ciclo = Ciclo::factory()->create();
+
+        Volt::test('academico.horarios.index')
+            ->call('abrirModal')
+            ->set('cicloId', (string) $ciclo->id)
+            ->set('cursoId', (string) $curso->id)
+            ->set('docenteId', (string) $docente->id)
+            ->set('aulaId', (string) $aula->id)
+            ->set('diasSeleccionados', ['viernes', 'sabado'])
+            ->set('horaInicioHoraPorDia.viernes', '16')
+            ->set('horaInicioMinutoPorDia.viernes', '00')
+            ->set('horaFinHoraPorDia.viernes', '18')
+            ->set('horaFinMinutoPorDia.viernes', '00')
+            ->set('horaInicioHoraPorDia.sabado', '09')
+            ->set('horaInicioMinutoPorDia.sabado', '00')
+            ->set('horaFinHoraPorDia.sabado', '12')
+            ->set('horaFinMinutoPorDia.sabado', '00')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $horario = Horario::query()->where('curso_id', $curso->id)->firstOrFail();
+        $this->assertCount(2, $horario->dias);
+        $this->assertNotNull($horario->dias->firstWhere('dia_semana', DiaSemanaEnum::VIERNES));
+        $this->assertNotNull($horario->dias->firstWhere('dia_semana', DiaSemanaEnum::SABADO));
+    }
+
     public function test_muestra_el_mensaje_de_choque_de_aula_al_guardar(): void
     {
         $this->actingAs($this->actorCoordinador());
@@ -85,7 +122,6 @@ class HorarioFormTest extends TestCase
             'docente_id' => User::factory()->create()->id,
             'aula_id' => Aula::factory()->create()->id,
             'ciclo_id' => Ciclo::factory()->create()->id,
-            'grado_id' => Grado::factory()->create()->id,
             'dias' => [
                 ['dia_semana' => DiaSemanaEnum::LUNES, 'hora_inicio' => '18:00:00', 'hora_fin' => '20:00:00'],
             ],
@@ -94,11 +130,10 @@ class HorarioFormTest extends TestCase
         Volt::test('academico.horarios.index')
             ->call('abrirModal')
             ->set('cicloId', (string) $existente->ciclo_id)
-            ->set('gradoId', (string) $existente->grado_id)
             ->set('cursoId', (string) Curso::factory()->create()->id)
             ->set('docenteId', (string) User::factory()->create()->id)
             ->set('aulaId', (string) $existente->aula_id)
-            ->set('franjasSeleccionadas', ['lun_mie'])
+            ->set('diasSeleccionados', ['lunes', 'miercoles'])
             ->set('horaInicioHoraPorDia.lunes', '19')
             ->set('horaInicioMinutoPorDia.lunes', '00')
             ->set('horaFinHoraPorDia.lunes', '21')
@@ -113,24 +148,23 @@ class HorarioFormTest extends TestCase
         $this->assertSame(1, Horario::query()->count());
     }
 
-    public function test_no_deja_guardar_sin_elegir_ninguna_franja(): void
+    public function test_no_deja_guardar_sin_elegir_ningun_dia(): void
     {
         $this->actingAs($this->actorCoordinador());
 
         Volt::test('academico.horarios.index')
             ->call('abrirModal')
             ->set('cicloId', (string) Ciclo::factory()->create()->id)
-            ->set('gradoId', (string) Grado::factory()->create()->id)
             ->set('cursoId', (string) Curso::factory()->create()->id)
             ->set('docenteId', (string) User::factory()->create()->id)
             ->set('aulaId', (string) Aula::factory()->create()->id)
             ->call('guardar')
-            ->assertHasErrors('franjasSeleccionadas');
+            ->assertHasErrors('diasSeleccionados');
 
         $this->assertSame(0, Horario::query()->count());
     }
 
-    public function test_crea_un_horario_combinando_dos_franjas_con_horas_distintas_por_dia(): void
+    public function test_crea_un_horario_combinando_dias_sueltos_con_horas_distintas_por_dia(): void
     {
         $this->actingAs($this->actorCoordinador());
 
@@ -139,16 +173,14 @@ class HorarioFormTest extends TestCase
         $docente->assignRole(RolEnum::DOCENTE->value);
         $aula = Aula::factory()->create();
         $ciclo = Ciclo::factory()->create();
-        $grado = Grado::factory()->create();
 
         Volt::test('academico.horarios.index')
             ->call('abrirModal')
             ->set('cicloId', (string) $ciclo->id)
-            ->set('gradoId', (string) $grado->id)
             ->set('cursoId', (string) $curso->id)
             ->set('docenteId', (string) $docente->id)
             ->set('aulaId', (string) $aula->id)
-            ->set('franjasSeleccionadas', ['lun_mie', 'mar_jue'])
+            ->set('diasSeleccionados', ['lunes', 'miercoles', 'martes', 'jueves'])
             ->set('horaInicioHoraPorDia.lunes', '18')
             ->set('horaInicioMinutoPorDia.lunes', '00')
             ->set('horaFinHoraPorDia.lunes', '20')
@@ -189,7 +221,6 @@ class HorarioFormTest extends TestCase
             'docente_id' => User::factory()->create()->id,
             'aula_id' => Aula::factory()->create()->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => Grado::factory()->create()->id,
             'dias' => [
                 ['dia_semana' => DiaSemanaEnum::LUNES, 'hora_inicio' => '18:00:00', 'hora_fin' => '20:00:00'],
             ],
@@ -216,7 +247,6 @@ class HorarioFormTest extends TestCase
             'docente_id' => User::factory()->create()->id,
             'aula_id' => Aula::factory()->create()->id,
             'ciclo_id' => Ciclo::factory()->create()->id,
-            'grado_id' => Grado::factory()->create()->id,
             'dias' => [
                 ['dia_semana' => DiaSemanaEnum::LUNES, 'hora_inicio' => '18:00:00', 'hora_fin' => '20:00:00'],
             ],
@@ -224,7 +254,7 @@ class HorarioFormTest extends TestCase
 
         Volt::test('academico.horarios.index')
             ->call('abrirModalEditar', $horario->id)
-            ->assertSet('diasSueltosSeleccionados', ['lunes'])
+            ->assertSet('diasSeleccionados', ['lunes'])
             ->assertSet('horaInicioHoraPorDia.lunes', '18')
             ->set('horaFinHoraPorDia.lunes', '21')
             ->call('guardar')
@@ -242,7 +272,6 @@ class HorarioFormTest extends TestCase
             'docente_id' => User::factory()->create()->id,
             'aula_id' => Aula::factory()->create()->id,
             'ciclo_id' => Ciclo::factory()->create()->id,
-            'grado_id' => Grado::factory()->create()->id,
             'dias' => [
                 ['dia_semana' => DiaSemanaEnum::LUNES, 'hora_inicio' => '18:00:00', 'hora_fin' => '20:00:00'],
             ],
@@ -257,21 +286,22 @@ class HorarioFormTest extends TestCase
             ->assertSet('cursoId', (string) $horario->curso_id);
     }
 
-    public function test_el_listado_agrupa_los_horarios_por_franja_y_luego_por_grado(): void
+    public function test_el_listado_agrupa_los_horarios_por_carrera(): void
     {
         $this->actingAs($this->actorCoordinador());
 
         $ciclo = Ciclo::factory()->create();
-        $gradoA = Grado::factory()->create(['nombre' => 'Grado 1 - Mayores']);
-        $gradoB = Grado::factory()->create(['nombre' => 'Grado 2 - Mayores']);
+        $carreraA = Carrera::factory()->create(['name' => 'Enfermería Técnica']);
+        $carreraB = Carrera::factory()->create(['name' => 'Farmacia Técnica']);
+        $cursoA = Curso::factory()->create(['carrera_id' => $carreraA->id, 'ciclo_curricular' => 1]);
+        $cursoB = Curso::factory()->create(['carrera_id' => $carreraB->id, 'ciclo_curricular' => 1]);
         $service = $this->app->make(HorarioService::class);
 
         $service->crear([
-            'curso_id' => Curso::factory()->create()->id,
+            'curso_id' => $cursoA->id,
             'docente_id' => User::factory()->create()->id,
             'aula_id' => Aula::factory()->create()->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $gradoA->id,
             'dias' => [
                 ['dia_semana' => DiaSemanaEnum::LUNES, 'hora_inicio' => '18:00:00', 'hora_fin' => '20:00:00'],
                 ['dia_semana' => DiaSemanaEnum::MIERCOLES, 'hora_inicio' => '18:00:00', 'hora_fin' => '20:00:00'],
@@ -279,11 +309,10 @@ class HorarioFormTest extends TestCase
         ]);
 
         $service->crear([
-            'curso_id' => Curso::factory()->create()->id,
+            'curso_id' => $cursoB->id,
             'docente_id' => User::factory()->create()->id,
             'aula_id' => Aula::factory()->create()->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $gradoB->id,
             'dias' => [
                 ['dia_semana' => DiaSemanaEnum::DOMINGO, 'hora_inicio' => '10:00:00', 'hora_fin' => '12:00:00'],
             ],
@@ -293,17 +322,11 @@ class HorarioFormTest extends TestCase
             ->set('cicloFiltro', (string) $ciclo->id)
             ->html();
 
-        // Se compara la PRIMERA aparición de cada texto: el listado se
-        // renderiza antes que el formulario "Nuevo horario" (que repite los
-        // mismos nombres de grado y franja en sus selects), así que si el
-        // orden real fuera otro, alguna de estas comparaciones fallaría.
-        $posicionLunMie = mb_strpos($html, 'Lunes y Miércoles');
-        $posicionGradoA = mb_strpos($html, 'Grado 1 - Mayores');
-        $posicionDomingo = mb_strpos($html, 'Domingo');
-        $posicionGradoB = mb_strpos($html, 'Grado 2 - Mayores');
+        // agruparPorCarrera() ordena las claves alfabéticamente (sortKeys()):
+        // "Enfermería..." antes que "Farmacia...".
+        $posicionCarreraA = mb_strpos($html, 'Enfermería Técnica');
+        $posicionCarreraB = mb_strpos($html, 'Farmacia Técnica');
 
-        $this->assertLessThan($posicionGradoA, $posicionLunMie);
-        $this->assertLessThan($posicionDomingo, $posicionGradoA);
-        $this->assertLessThan($posicionGradoB, $posicionDomingo);
+        $this->assertLessThan($posicionCarreraB, $posicionCarreraA);
     }
 }

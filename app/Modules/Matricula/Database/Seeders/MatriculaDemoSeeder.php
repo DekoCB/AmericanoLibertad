@@ -28,7 +28,7 @@ class MatriculaDemoSeeder extends Seeder
         /** @var MatriculaService $service */
         $service = app(MatriculaService::class);
 
-        // Los 4 grupos ya no distinguen mayores de menores -- ambas edades
+        // Los 4 ciclos ya no distinguen mayores de menores -- ambas edades
         // comparten el mismo horario, y solo cambia su fecha_fin_estudio
         // calculada (6 u 8 meses). Un solo horario del ciclo activo alcanza
         // para matricular a ambos estudiantes demo.
@@ -56,7 +56,7 @@ class MatriculaDemoSeeder extends Seeder
 
             // Vincula la cuenta de portal "estudiante@ceba.test" a esta
             // ficha real, para poder probar la vista de estudiante en Aula
-            // Virtual con datos coherentes (matriculada en el mismo grado y
+            // Virtual con datos coherentes (matriculada en la misma carrera y
             // ciclo que el curso virtual del docente demo).
             $usuarioEstudiante = User::query()->where('email', 'estudiante@ceba.test')->first();
             if ($usuarioEstudiante) {

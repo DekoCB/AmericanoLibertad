@@ -169,7 +169,7 @@ new #[Layout('layouts.app')] class extends Component
             @endforelse
         </div>
     @elseif (! $carreraId)
-        <button type="button" wire:click="volverAGrupos" class="mb-4 text-sm text-ink-faint hover:text-ink">← Grupos</button>
+        <button type="button" wire:click="volverAGrupos" class="mb-4 text-sm text-ink-faint hover:text-ink">← Ciclos</button>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             @forelse ($carrerasDisponibles as $carrera)
@@ -181,7 +181,7 @@ new #[Layout('layouts.app')] class extends Component
                     <p class="font-display text-lg text-ink">{{ $carrera->name }}</p>
                 </button>
             @empty
-                <p class="col-span-full py-8 text-center text-sm text-ink-faint">Sin horarios en este grupo.</p>
+                <p class="col-span-full py-8 text-center text-sm text-ink-faint">Sin horarios en este ciclo.</p>
             @endforelse
         </div>
     @elseif (! $cicloCurricular)
@@ -197,7 +197,7 @@ new #[Layout('layouts.app')] class extends Component
                     <p class="font-display text-lg text-ink">Ciclo {{ $ciclo }}</p>
                 </button>
             @empty
-                <p class="col-span-full py-8 text-center text-sm text-ink-faint">Esta carrera no tiene horarios en este grupo.</p>
+                <p class="col-span-full py-8 text-center text-sm text-ink-faint">Esta carrera no tiene horarios en este ciclo.</p>
             @endforelse
         </div>
     @else
@@ -239,7 +239,7 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 @endif
             @empty
-                <p class="col-span-full py-8 text-center text-sm text-ink-faint">Este ciclo no tiene horarios en este grupo.</p>
+                <p class="col-span-full py-8 text-center text-sm text-ink-faint">Este ciclo no tiene horarios en este ciclo curricular.</p>
             @endforelse
         </div>
     @endif

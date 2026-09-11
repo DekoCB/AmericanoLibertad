@@ -157,8 +157,8 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * El "Grupo" con el que se sugiere el destino: para 6 meses es el que
-     * el usuario eligió; SIAGIE anual no tiene selector de Grupo (ver
+     * El "Ciclo" con el que se sugiere el destino: para 6 meses es el que
+     * el usuario eligió; SIAGIE anual no tiene selector de Ciclo (ver
      * MigracionService::cicloAnualVigente()), así que se usa ese
      * automáticamente.
      */
@@ -228,7 +228,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Migraciones</h1>
-        <p class="mt-1 text-sm text-ink-dim">Avanzar de ciclo a un estudiante, o a varios a la vez filtrados por Modalidad/Grupo/Carrera/Ciclo.</p>
+        <p class="mt-1 text-sm text-ink-dim">Avanzar de ciclo a un estudiante, o a varios a la vez filtrados por Modalidad/Ciclo académico/Carrera/Ciclo curricular.</p>
     </x-slot>
 
     @if (session('status'))
@@ -320,7 +320,7 @@ new #[Layout('layouts.app')] class extends Component
         <div class="space-y-4">
             <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
                 <h2 class="font-display text-sm text-ink">Origen</h2>
-                <p class="mt-1 text-xs text-ink-faint">Primero elige la modalidad — el de 6 meses se filtra por Grupo, SIAGIE anual no tiene Grupos (no rota).</p>
+                <p class="mt-1 text-xs text-ink-faint">Primero elige la modalidad — el de 6 meses se filtra por Ciclo, SIAGIE anual no tiene Ciclos (no rota).</p>
                 <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
                         <x-input-label for="modalidadOrigen" value="Modalidad" />
@@ -335,12 +335,12 @@ new #[Layout('layouts.app')] class extends Component
 
                     @if ($modalidadOrigen === 'seis_meses')
                         <div>
-                            <x-input-label for="cicloOrigenId" value="Grupo" />
+                            <x-input-label for="cicloOrigenId" value="Ciclo" />
                             <x-select-input
                                 wire:model.live="cicloOrigenId"
                                 id="cicloOrigenId"
                                 class="mt-1 block w-full"
-                                :options="collect($ciclosSeisMeses)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])->prepend('Todos los grupos', '')"
+                                :options="collect($ciclosSeisMeses)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])->prepend('Todos los ciclos', '')"
                             />
                         </div>
                     @elseif ($modalidadOrigen === 'anual')

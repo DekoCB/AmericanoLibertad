@@ -305,7 +305,7 @@
 
         @foreach ([
             ['route' => 'academico.siagie.index', 'prefix' => 'academico.siagie.*', 'label' => 'SIAGIE', 'icon' => 'identification'],
-            ['route' => 'academico.ciclos.index', 'prefix' => 'academico.ciclos.*', 'label' => 'Grupos', 'icon' => 'arrow-path'],
+            ['route' => 'academico.ciclos.index', 'prefix' => 'academico.ciclos.*', 'label' => 'Ciclos', 'icon' => 'arrow-path'],
             ['route' => 'academico.carreras.index', 'prefix' => 'academico.carreras.*', 'label' => 'Carreras', 'icon' => 'academic-cap'],
             ['route' => 'academico.cursos.index', 'prefix' => 'academico.cursos.*', 'label' => 'Cursos', 'icon' => 'book-open'],
             ['route' => 'academico.aulas.index', 'prefix' => 'academico.aulas.*', 'label' => 'Aulas', 'icon' => 'building-office-2'],

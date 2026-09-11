@@ -218,7 +218,7 @@ new class extends Component
      * Al cambiar de modalidad se limpia el ciclo elegido; para SIAGIE anual
      * no hay selector -- se autoasigna el ciclo anual vigente, si existe
      * (ver CicloService::cicloAnualVigente() y with()). A diferencia de
-     * los Grupos de 6 meses, no depende de un periodo de matrícula abierto.
+     * los Ciclos de 6 meses, no depende de un periodo de matrícula abierto.
      */
     public function updatedModalidadCiclo(CicloService $ciclos): void
     {
@@ -895,7 +895,7 @@ new class extends Component
                         class="mt-1 block w-full"
                         :options="collect($siagiesDisponibles)->mapWithKeys(fn ($siagie) => [$siagie->id => $siagie->nombreCompleto()])"
                     />
-                    <p class="mt-1 text-xs text-ink-faint">Independiente del Grupo: es la clasificación propia del sistema SIAGIE del MINEDU.</p>
+                    <p class="mt-1 text-xs text-ink-faint">Independiente del Ciclo: es la clasificación propia del sistema SIAGIE del MINEDU.</p>
                     <x-input-error :messages="$errors->get('siagieId')" class="mt-1" />
                 </div>
                 @if ($modalidadCiclo === 'anual')
@@ -910,7 +910,7 @@ new class extends Component
                     </div>
                 @else
                     <div>
-                        <x-input-label for="cicloId" value="Grupo" />
+                        <x-input-label for="cicloId" value="Ciclo" />
                         <x-select-input
                             wire:model.live="cicloId"
                             id="cicloId"
@@ -918,7 +918,7 @@ new class extends Component
                             :options="collect($ciclosDisponibles)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])"
                         />
                         @if ($ciclosDisponibles->isEmpty())
-                            <p class="mt-1 text-xs text-danger">No hay grupos con periodo de matrícula abierto hoy.</p>
+                            <p class="mt-1 text-xs text-danger">No hay ciclos con periodo de matrícula abierto hoy.</p>
                         @endif
                         <x-input-error :messages="$errors->get('cicloId')" class="mt-1" />
                     </div>

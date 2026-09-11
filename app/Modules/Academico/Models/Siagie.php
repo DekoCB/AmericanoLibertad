@@ -17,9 +17,9 @@ use Illuminate\Support\Carbon;
 
 /**
  * El periodo SIAGIE del MINEDU (1.er periodo, 2.° periodo, Anual), por
- * año -- independiente del Grupo rotativo de Americano Libertad (ver ModalidadCicloEnum,
+ * año -- independiente del Ciclo rotativo de Americano Libertad (ver ModalidadCicloEnum,
  * un eje completamente aparte). Cada matrícula puede tener su propio
- * Siagie sin importar en qué Grupo esté (ver Matricula::siagie()).
+ * Siagie sin importar en qué Ciclo esté (ver Matricula::siagie()).
  *
  * Solo el tipo ANUAL corresponde además a un Ciclo real con horarios
  * propios (ver ciclo()): 1.er y 2.° periodo son clasificación pura, sin

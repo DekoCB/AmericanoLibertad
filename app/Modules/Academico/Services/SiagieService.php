@@ -15,9 +15,9 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * El periodo SIAGIE del MINEDU (1.er periodo, 2.° periodo, Anual): un eje
- * completamente aparte del Grupo rotativo de Americano Libertad (ver ModalidadCicloEnum,
+ * completamente aparte del Ciclo rotativo de Americano Libertad (ver ModalidadCicloEnum,
  * CicloService). Solo el tipo ANUAL tiene además un Ciclo real detrás (con
- * Horarios propios, igual que un Grupo) -- por eso su creación delega en
+ * Horarios propios, igual que un Ciclo rotativo) -- por eso su creación delega en
  * CicloService::crear(), reutilizando la misma validación de fechas (8
  * meses de clases) y de solape que ya existía para el Ciclo anual.
  */

@@ -16,11 +16,11 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Dos modalidades de ciclo (ver ModalidadCicloEnum): las 4 ventanas de
- * admisión rotativas del año (Grupo 1 a 4, 6 meses cada una) y SIAGIE
+ * admisión rotativas del año (Ciclo 1 a 4, 6 meses cada una) y SIAGIE
  * anual (un ciclo independiente que corre el año escolar completo, sin
- * Grupo asociado). Aplica la "doble validación" del roadmap: las fechas
- * del propio ciclo deben ser coherentes con su modalidad/tipo, y las
- * fechas de matrícula deben ser coherentes con las del ciclo.
+ * ventana rotativa asociada). Aplica la "doble validación" del roadmap:
+ * las fechas del propio ciclo deben ser coherentes con su modalidad/tipo,
+ * y las fechas de matrícula deben ser coherentes con las del ciclo.
  */
 class CicloService
 {
@@ -34,13 +34,13 @@ class CicloService
     ) {}
 
     /**
-     * Los Grupos rotativos (modalidad=seis_meses) únicamente: el SIAGIE
-     * anual ya no vive en este listado, tiene su propio módulo (ver
-     * SiagieService::listar()).
+     * Las 4 ventanas rotativas (modalidad=seis_meses) únicamente: el
+     * SIAGIE anual ya no vive en este listado, tiene su propio módulo
+     * (ver SiagieService::listar()).
      */
     public function listar(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->ciclos->paginateGrupos($perPage);
+        return $this->ciclos->paginateCiclos($perPage);
     }
 
     /**
@@ -72,7 +72,7 @@ class CicloService
         if ($modalidad === ModalidadCicloEnum::SEIS_MESES) {
             if ($tipo === null) {
                 throw ValidationException::withMessages([
-                    'tipo' => 'Un ciclo de 6 meses (Grupo rotativo) necesita indicar a qué grupo (1 a 4) pertenece.',
+                    'tipo' => 'Un ciclo de 6 meses (ventana rotativa) necesita indicar cuál de los 4 ciclos (1 a 4) es.',
                 ]);
             }
 
@@ -87,7 +87,7 @@ class CicloService
     }
 
     /**
-     * Un ciclo SIAGIE anual no tiene mes de inicio fijo ni Grupo asociado:
+     * Un ciclo SIAGIE anual no tiene mes de inicio fijo ni ventana rotativa asociada:
      * su periodo de clases dura 8 meses, declarados a mano (de qué mes a
      * qué mes) por quien lo registra -- los 2 meses restantes del año son
      * las vacaciones propias de esta modalidad (ver módulo Vacaciones),
@@ -128,7 +128,7 @@ class CicloService
 
     /**
      * Primera validación: las fechas del ciclo deben cuadrar con su tipo.
-     * Los 4 grupos tienen mes de inicio fijo, y una duración objetivo (6
+     * Los 4 ciclos tienen mes de inicio fijo, y una duración objetivo (6
      * meses) con un margen de una semana para acomodar feriados/ajustes
      * administrativos.
      */
@@ -219,10 +219,10 @@ class CicloService
     }
 
     /**
-     * El grupo al que pasaría un estudiante de $actual al culminar su
+     * El ciclo al que pasaría un estudiante de $actual al culminar su
      * grado (ver TipoCicloEnum::siguiente()), si ya existe una fila
-     * creada para ese grupo+año. Null si todavía no se ha creado (p. ej.
-     * personal aún no armó el siguiente grupo).
+     * creada para ese ciclo+año. Null si todavía no se ha creado (p. ej.
+     * personal aún no armó el siguiente ciclo).
      */
     public function siguienteCiclo(Ciclo $actual): ?Ciclo
     {
@@ -239,7 +239,7 @@ class CicloService
     }
 
     /**
-     * SIAGIE anual no rota entre Grupos como el de 6 meses: a lo sumo hay un
+     * SIAGIE anual no rota entre ciclos como el de 6 meses: a lo sumo hay un
      * ciclo anual "vigente" a la vez, el marcado Activo. Si todavía no hay
      * ninguno activo, cae al más reciente por fecha de inicio. Sin periodo
      * de matrícula que abrir de por medio -- esta modalidad se identifica

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Academico\Services;
 
+use App\Models\Carrera;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Repositories\Contracts\CursoRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -21,7 +21,7 @@ class CursoService
     }
 
     /**
-     * @param  array{nombre: string, codigo: string, grado_id: int, horas: int}  $datos
+     * @param  array{nombre: string, codigo: string, carrera_id: int, ciclo_curricular: int, horas: int}  $datos
      */
     public function crear(array $datos): Curso
     {
@@ -29,7 +29,7 @@ class CursoService
     }
 
     /**
-     * @param  array{nombre: string, codigo: string, grado_id: int, horas: int, activo: bool}  $datos
+     * @param  array{nombre: string, codigo: string, carrera_id: int, ciclo_curricular: int, horas: int, activo: bool}  $datos
      */
     public function actualizar(Curso $curso, array $datos): Curso
     {
@@ -42,39 +42,29 @@ class CursoService
     }
 
     /**
-     * Código sugerido para un curso nuevo: las tres primeras iniciales del
-     * nombre (sin tildes) más el número de grado, p. ej. "Comunicación" en
-     * Grado 1 → "COM-1". Si ya existe (dos grados distintos pueden
-     * compartir el mismo orden, como "Mayores"/"Menores"), se agrega un
-     * sufijo numérico hasta encontrar uno libre.
+     * Código sugerido para un curso nuevo, con la misma convención que ya
+     * usa la currícula real del instituto (ver CurriculaInstitutoSeeder):
+     * código de la carrera + ciclo en números romanos + secuencia dentro
+     * de ese ciclo, p. ej. "ENF-I-01". Si ya existe (un registro manual
+     * puede dejar huecos en la secuencia), avanza hasta encontrar uno
+     * libre.
      */
-    public function generarCodigo(string $nombre, Grado $grado): string
+    public function generarCodigo(Carrera $carrera, int $cicloCurricular): string
     {
-        $base = $this->iniciales($nombre).'-'.$grado->orden;
+        $romano = $this->cicloRomano($cicloCurricular);
+        $secuencia = 1;
 
-        if ($this->codigoDisponible($base)) {
-            return $base;
-        }
-
-        $sufijo = 2;
-
-        while (! $this->codigoDisponible($codigo = "{$base}-{$sufijo}")) {
-            $sufijo++;
+        while (! $this->codigoDisponible($codigo = sprintf('%s-%s-%02d', $carrera->code, $romano, $secuencia))) {
+            $secuencia++;
         }
 
         return $codigo;
     }
 
-    private function iniciales(string $nombre): string
+    private function cicloRomano(int $cicloCurricular): string
     {
-        $sinTildes = str_replace(
-            ['á', 'é', 'í', 'ó', 'ú', 'Á', 'É', 'Í', 'Ó', 'Ú'],
-            ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'],
-            $nombre,
-        );
+        $romanos = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
-        $soloLetras = preg_replace('/[^A-Za-z]/', '', $sinTildes) ?? '';
-
-        return mb_strtoupper(mb_substr($soloLetras, 0, 3));
+        return $romanos[$cicloCurricular] ?? (string) $cicloCurricular;
     }
 }
