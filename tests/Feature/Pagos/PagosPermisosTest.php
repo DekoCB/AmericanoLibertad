@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Pagos;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
@@ -258,21 +258,23 @@ class PagosPermisosTest extends TestCase
             ->assertSee('Certificado de estudios');
     }
 
-    public function test_cobros_grupal_elegir_un_grupo_reinicia_grado_y_curso(): void
+    public function test_cobros_grupal_elegir_un_ciclo_reinicia_carrera_ciclo_curricular_y_curso(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
         $ciclo = Ciclo::factory()->create();
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $this->actingAs($coordinador);
 
         Volt::test('pagos.index')
             ->set('tab', 'cobros')
-            ->set('cobrosGradoId', (string) $grado->id)
+            ->set('cobrosCarreraId', (string) $carrera->id)
+            ->set('cobrosCicloCurricular', '1')
             ->set('cobrosCursoId', '1')
             ->set('cobrosCicloId', (string) $ciclo->id)
-            ->assertSet('cobrosGradoId', '')
+            ->assertSet('cobrosCarreraId', '')
+            ->assertSet('cobrosCicloCurricular', '')
             ->assertSet('cobrosCursoId', '');
     }
 }

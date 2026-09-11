@@ -59,20 +59,20 @@ class CobranzaServiceTest extends TestCase
         $this->assertCount(0, $deuda['pagosAprobados']);
     }
 
-    public function test_deudores_por_concepto_mensualidad_filtra_por_grupo_y_grado(): void
+    public function test_deudores_por_concepto_mensualidad_filtra_por_ciclo_y_carrera(): void
     {
         $horarioA = Horario::factory()->create();
         $horarioB = Horario::factory()->create();
 
-        $matriculaA = Matricula::factory()->create(['grado_id' => $horarioA->grado_id, 'ciclo_id' => $horarioA->ciclo_id]);
+        $matriculaA = Matricula::factory()->create(['carrera_id' => $horarioA->carrera_id, 'ciclo_curricular' => $horarioA->ciclo_curricular, 'ciclo_id' => $horarioA->ciclo_id]);
         Cuota::factory()->create(['plan_pago_id' => PlanPago::factory()->create(['matricula_id' => $matriculaA->id])->id]);
 
-        $matriculaB = Matricula::factory()->create(['grado_id' => $horarioB->grado_id, 'ciclo_id' => $horarioB->ciclo_id]);
+        $matriculaB = Matricula::factory()->create(['carrera_id' => $horarioB->carrera_id, 'ciclo_curricular' => $horarioB->ciclo_curricular, 'ciclo_id' => $horarioB->ciclo_id]);
         Cuota::factory()->create(['plan_pago_id' => PlanPago::factory()->create(['matricula_id' => $matriculaB->id])->id]);
 
         $concepto = ConceptoPago::factory()->create(['tipo' => TipoConceptoEnum::MENSUALIDAD]);
 
-        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$concepto->id], $horarioA->ciclo_id, $horarioA->grado_id, null, null);
+        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$concepto->id], $horarioA->ciclo_id, $horarioA->carrera_id, $horarioA->ciclo_curricular, null, null);
 
         $this->assertCount(1, $reporte['filas']);
     }
@@ -83,21 +83,20 @@ class CobranzaServiceTest extends TestCase
         $horarioA = Horario::factory()->create(['curso_id' => $curso->id]);
         $horarioB = Horario::factory()->create([
             'curso_id' => $curso->id,
-            'grado_id' => $horarioA->grado_id,
             'ciclo_id' => $horarioA->ciclo_id,
         ]);
 
-        $matriculaAsignada = Matricula::factory()->create(['grado_id' => $horarioA->grado_id, 'ciclo_id' => $horarioA->ciclo_id]);
+        $matriculaAsignada = Matricula::factory()->create(['carrera_id' => $horarioA->carrera_id, 'ciclo_curricular' => $horarioA->ciclo_curricular, 'ciclo_id' => $horarioA->ciclo_id]);
         $matriculaAsignada->horarios()->attach($horarioA->id);
         Cuota::factory()->create(['plan_pago_id' => PlanPago::factory()->create(['matricula_id' => $matriculaAsignada->id])->id]);
 
-        // Matriculado en el mismo grado+ciclo, pero sin asignación a ninguno de los horarios de este curso.
-        $matriculaSinAsignar = Matricula::factory()->create(['grado_id' => $horarioA->grado_id, 'ciclo_id' => $horarioA->ciclo_id]);
+        // Matriculado en la misma carrera+ciclo, pero sin asignación a ninguno de los horarios de este curso.
+        $matriculaSinAsignar = Matricula::factory()->create(['carrera_id' => $horarioA->carrera_id, 'ciclo_curricular' => $horarioA->ciclo_curricular, 'ciclo_id' => $horarioA->ciclo_id]);
         Cuota::factory()->create(['plan_pago_id' => PlanPago::factory()->create(['matricula_id' => $matriculaSinAsignar->id])->id]);
 
         $concepto = ConceptoPago::factory()->create(['tipo' => TipoConceptoEnum::MENSUALIDAD]);
 
-        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$concepto->id], $horarioA->ciclo_id, $horarioA->grado_id, $curso->id, null);
+        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$concepto->id], $horarioA->ciclo_id, $horarioA->carrera_id, $horarioA->ciclo_curricular, $curso->id, null);
 
         $this->assertCount(1, $reporte['filas']);
     }
@@ -115,7 +114,7 @@ class CobranzaServiceTest extends TestCase
         $estudianteAprobado = Estudiante::factory()->create(['nombres' => 'Carla', 'apellidos' => 'Vega']);
         Pago::factory()->aprobado()->create(['estudiante_id' => $estudianteAprobado->id, 'concepto_id' => $concepto->id]);
 
-        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$concepto->id], null, null, null, null);
+        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$concepto->id], null, null, null, null, null);
 
         $this->assertCount(2, $reporte['filas']);
         $nombres = collect($reporte['filas'])->pluck(0)->implode(',');
@@ -135,7 +134,7 @@ class CobranzaServiceTest extends TestCase
         $estudianteB = Estudiante::factory()->create();
         Pago::factory()->create(['estudiante_id' => $estudianteB->id, 'concepto_id' => $conceptoB->id, 'estado' => EstadoPagoEnum::PENDIENTE]);
 
-        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$conceptoA->id, $conceptoB->id], null, null, null, null);
+        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$conceptoA->id, $conceptoB->id], null, null, null, null, null);
 
         $this->assertCount(2, $reporte['filas']);
         $conceptosEnFilas = collect($reporte['filas'])->pluck(3)->all();
@@ -147,7 +146,7 @@ class CobranzaServiceTest extends TestCase
     {
         $concepto = ConceptoPago::factory()->create(['tipo' => TipoConceptoEnum::MENSUALIDAD]);
 
-        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$concepto->id], null, null, null, null);
+        $reporte = app(CobranzaService::class)->deudoresPorConceptos([$concepto->id], null, null, null, null, null);
 
         $this->assertSame([], $reporte['filas']);
     }
