@@ -103,7 +103,7 @@ class EvaluacionesPermisosTest extends TestCase
     public function test_un_usuario_sin_permisos_de_evaluaciones_no_puede_ver_el_listado(): void
     {
         $usuario = User::factory()->create();
-        $usuario->assignRole(RolEnum::TESORERIA->value);
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
 
         $this->actingAs($usuario)
             ->get(route('evaluaciones.index'))
@@ -111,16 +111,16 @@ class EvaluacionesPermisosTest extends TestCase
     }
 
     /**
-     * Dirección tiene evaluaciones.registrar vía '*' sin ser docente: debía
+     * Gerencia tiene evaluaciones.registrar vía '*' sin ser docente: debía
      * mostrar la vista de supervisión, no la de "tus horarios" (vacía).
      */
-    public function test_direccion_ve_la_supervision_general_no_la_vista_de_docente(): void
+    public function test_gerencia_ve_la_supervision_general_no_la_vista_de_docente(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
         Horario::factory()->create();
 
-        $this->actingAs($direccion)
+        $this->actingAs($gerencia)
             ->get(route('evaluaciones.index'))
             ->assertOk()
             ->assertSee('Supervisión de evaluaciones')

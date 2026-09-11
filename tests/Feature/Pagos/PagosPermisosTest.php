@@ -31,16 +31,6 @@ class PagosPermisosTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_tesoreria_puede_ver_la_cola_de_pagos(): void
-    {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
-
-        $this->actingAs($tesoreria)
-            ->get(route('pagos.index'))
-            ->assertOk();
-    }
-
     public function test_un_docente_no_puede_ver_la_gestion_de_pagos(): void
     {
         $docente = User::factory()->create();
@@ -135,12 +125,12 @@ class PagosPermisosTest extends TestCase
         $this->assertSame('100.00', $concepto->fresh()->monto_base);
     }
 
-    public function test_solo_tesoreria_puede_gestionar_cuentas_bancarias(): void
+    public function test_solo_administrativo_puede_gestionar_cuentas_bancarias(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
 
-        $this->actingAs($tesoreria)
+        $this->actingAs($administrativo)
             ->get(route('pagos.cuentas-bancarias'))
             ->assertOk();
 
@@ -152,12 +142,12 @@ class PagosPermisosTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_tesoreria_registra_una_billetera_digital_sin_datos_bancarios(): void
+    public function test_administrativo_registra_una_billetera_digital_sin_datos_bancarios(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
 
-        $this->actingAs($tesoreria);
+        $this->actingAs($administrativo);
 
         Volt::test('pagos.cuentas-bancarias')
             ->call('abrirModal')
@@ -178,10 +168,10 @@ class PagosPermisosTest extends TestCase
 
     public function test_registrar_una_billetera_sin_elegir_tipo_falla(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
 
-        $this->actingAs($tesoreria);
+        $this->actingAs($administrativo);
 
         Volt::test('pagos.cuentas-bancarias')
             ->call('abrirModal')

@@ -23,12 +23,12 @@ class FlujoCajaPermisosTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_rol_tesoreria_puede_ver_flujo_de_caja(): void
+    public function test_rol_administrativo_puede_ver_flujo_de_caja(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
 
-        $this->actingAs($tesoreria)->get(route('flujo-caja.index'))->assertOk();
+        $this->actingAs($administrativo)->get(route('flujo-caja.index'))->assertOk();
     }
 
     public function test_un_docente_no_puede_ver_flujo_de_caja(): void
@@ -56,14 +56,14 @@ class FlujoCajaPermisosTest extends TestCase
         $this->assertDatabaseCount('egresos', 0);
     }
 
-    public function test_tesoreria_registra_un_egreso_con_comprobante_desde_la_ui(): void
+    public function test_administrativo_registra_un_egreso_con_comprobante_desde_la_ui(): void
     {
         Storage::fake('public');
 
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
 
-        $this->actingAs($tesoreria);
+        $this->actingAs($administrativo);
 
         Volt::test('flujo-caja.index')
             ->call('abrirModal')
@@ -82,11 +82,11 @@ class FlujoCajaPermisosTest extends TestCase
 
     public function test_el_resumen_muestra_ingresos_egresos_y_saldo_del_mes(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
         Pago::factory()->aprobado()->create(['monto' => 200, 'fecha_aprobacion' => now()]);
 
-        $this->actingAs($tesoreria);
+        $this->actingAs($administrativo);
 
         Volt::test('flujo-caja.index')
             ->assertSee('200.00')
@@ -96,11 +96,11 @@ class FlujoCajaPermisosTest extends TestCase
 
     public function test_exportar_pdf_devuelve_una_descarga(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
         Pago::factory()->aprobado()->create(['monto' => 200, 'fecha_aprobacion' => now()]);
 
-        $this->actingAs($tesoreria);
+        $this->actingAs($administrativo);
 
         $testable = Volt::test('flujo-caja.index')->call('exportarPdf');
 

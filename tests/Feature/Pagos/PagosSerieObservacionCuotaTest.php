@@ -35,14 +35,6 @@ class PagosSerieObservacionCuotaTest extends TestCase
         return $usuario;
     }
 
-    private function tesoreria(): User
-    {
-        $usuario = User::factory()->create();
-        $usuario->assignRole(RolEnum::TESORERIA->value);
-
-        return $usuario;
-    }
-
     public function test_registrar_pago_de_mensualidad_vincula_la_cuota_pendiente_mas_proxima(): void
     {
         $matricula = Matricula::factory()->create();
@@ -107,7 +99,7 @@ class PagosSerieObservacionCuotaTest extends TestCase
 
         $pago = Pago::query()->where('estudiante_id', $matricula->estudiante_id)->firstOrFail();
 
-        $this->actingAs($this->tesoreria());
+        $this->actingAs($this->administrativo());
         Volt::test('pagos.index')->call('aprobar', $pago->id);
 
         $html = view('pdf.recibo', [
@@ -139,7 +131,7 @@ class PagosSerieObservacionCuotaTest extends TestCase
 
         $pago = Pago::query()->where('estudiante_id', $matricula->estudiante_id)->firstOrFail();
 
-        $this->actingAs($this->tesoreria());
+        $this->actingAs($this->administrativo());
         Volt::test('pagos.index')->call('aprobar', $pago->id);
 
         $html = view('pdf.recibo', [
@@ -166,7 +158,7 @@ class PagosSerieObservacionCuotaTest extends TestCase
 
         $pago = Pago::query()->where('estudiante_id', $estudiante->id)->firstOrFail();
 
-        $this->actingAs($this->tesoreria());
+        $this->actingAs($this->administrativo());
         Volt::test('pagos.index')
             ->set('serieElegida.'.$pago->id, SerieReciboEnum::COPIA->value)
             ->call('aprobar', $pago->id)

@@ -27,12 +27,12 @@ class SidebarNavTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_direccion_no_ve_enlaces_exclusivos_de_estudiante(): void
+    public function test_gerencia_no_ve_enlaces_exclusivos_de_estudiante(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion)
+        $this->actingAs($gerencia)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertDontSee('Mi estado de cuenta')

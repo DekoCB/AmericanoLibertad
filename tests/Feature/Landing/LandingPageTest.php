@@ -13,9 +13,9 @@ class LandingPageTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('CEBA Peruano Británico')
-            ->assertSee('Matricúlate Ahora')
-            ->assertSee('Proceso de Admisión');
+            ->assertSee('Instituto Americano Libertad')
+            ->assertSee('Solicita tu admisión')
+            ->assertSee('Admisión');
     }
 
     public function test_el_boton_de_iniciar_sesion_sigue_llevando_al_login(): void

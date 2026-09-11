@@ -20,12 +20,12 @@ class RolesPermisosTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_direccion_puede_alternar_un_permiso_de_un_rol(): void
+    public function test_gerencia_puede_alternar_un_permiso_de_un_rol(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion);
+        $this->actingAs($gerencia);
 
         $docente = User::factory()->create();
         $docente->assignRole(RolEnum::DOCENTE->value);
@@ -40,10 +40,10 @@ class RolesPermisosTest extends TestCase
 
     public function test_un_rol_sin_permiso_no_puede_acceder_a_la_matriz(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
 
-        $this->actingAs($tesoreria)
+        $this->actingAs($administrativo)
             ->get('/roles')
             ->assertForbidden();
     }

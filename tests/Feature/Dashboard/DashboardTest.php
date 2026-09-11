@@ -34,12 +34,12 @@ class DashboardTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_direccion_carga_el_dashboard_sin_errores(): void
+    public function test_gerencia_carga_el_dashboard_sin_errores(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion)
+        $this->actingAs($gerencia)
             ->get(route('dashboard'))
             ->assertOk();
     }
@@ -197,13 +197,13 @@ class DashboardTest extends TestCase
             ->assertSee('Notificaciones');
     }
 
-    public function test_tesoreria_ve_la_cola_de_aprobacion(): void
+    public function test_administrativo_ve_la_cola_de_aprobacion(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
         Pago::factory()->count(2)->create(['estado' => 'pendiente']);
 
-        $this->actingAs($tesoreria)
+        $this->actingAs($administrativo)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Pagos por aprobar')
@@ -222,17 +222,6 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Ingresos aprobados');
-    }
-
-    public function test_administrativo_no_ve_la_cola_de_aprobacion_de_tesoreria(): void
-    {
-        $administrativo = User::factory()->create();
-        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
-
-        $this->actingAs($administrativo)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertDontSee('Pagos por aprobar');
     }
 
     public function test_coordinador_sin_alertas_ve_notificaciones_vacias(): void

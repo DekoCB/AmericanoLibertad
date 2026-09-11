@@ -43,7 +43,7 @@ class IncidenciasPermisosTest extends TestCase
     public function test_un_usuario_sin_permisos_de_incidencias_no_puede_ver_el_listado(): void
     {
         $usuario = User::factory()->create();
-        $usuario->assignRole(RolEnum::TESORERIA->value);
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
 
         $this->actingAs($usuario)
             ->get(route('incidencias.index'))

@@ -21,12 +21,12 @@ class UsuariosTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_direccion_puede_ver_el_listado_de_usuarios(): void
+    public function test_gerencia_puede_ver_el_listado_de_usuarios(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion)
+        $this->actingAs($gerencia)
             ->get('/usuarios')
             ->assertOk()
             ->assertSeeVolt('usuarios.index');
@@ -42,12 +42,12 @@ class UsuariosTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_direccion_puede_crear_un_usuario_con_rol(): void
+    public function test_gerencia_puede_crear_un_usuario_con_rol(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion);
+        $this->actingAs($gerencia);
 
         Volt::test('usuarios.index')
             ->set('name', 'Nueva Docente')
@@ -66,12 +66,12 @@ class UsuariosTest extends TestCase
 
     public function test_no_permite_crear_dos_usuarios_con_el_mismo_dni(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
         User::factory()->create(['dni' => '11223344']);
 
-        $this->actingAs($direccion);
+        $this->actingAs($gerencia);
 
         Volt::test('usuarios.index')
             ->set('name', 'Otro Usuario')
@@ -84,13 +84,13 @@ class UsuariosTest extends TestCase
 
     public function test_los_estudiantes_no_aparecen_en_el_listado_de_usuarios(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
         $estudiante = User::factory()->create(['name' => 'Estudiante Oculto']);
         $estudiante->assignRole(RolEnum::ESTUDIANTE->value);
 
-        $this->actingAs($direccion)
+        $this->actingAs($gerencia)
             ->get('/usuarios')
             ->assertOk()
             ->assertDontSee('Estudiante Oculto');
@@ -98,10 +98,10 @@ class UsuariosTest extends TestCase
 
     public function test_el_selector_de_rol_no_ofrece_estudiante(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion);
+        $this->actingAs($gerencia);
 
         $componente = Volt::test('usuarios.index');
 
@@ -112,10 +112,10 @@ class UsuariosTest extends TestCase
 
     public function test_no_permite_crear_un_usuario_con_rol_estudiante_desde_este_formulario(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion);
+        $this->actingAs($gerencia);
 
         Volt::test('usuarios.index')
             ->set('name', 'Intento Estudiante')
@@ -128,8 +128,8 @@ class UsuariosTest extends TestCase
 
     public function test_desactivar_un_usuario_desde_su_ficha_revoca_sus_sesiones_activas(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
         $docente = User::factory()->create(['dni' => '55667788']);
         $docente->assignRole(RolEnum::DOCENTE->value);
@@ -141,7 +141,7 @@ class UsuariosTest extends TestCase
             'last_activity' => now()->timestamp,
         ]);
 
-        $this->actingAs($direccion);
+        $this->actingAs($gerencia);
 
         Volt::test('usuarios.show', ['usuario' => $docente])
             ->set('estado', 'inactivo')

@@ -461,16 +461,16 @@ class AulaVirtualPermisosTest extends TestCase
         $this->assertSame(1, $cursoVirtualB->foros()->count());
     }
 
-    public function test_direccion_puede_gestionar_cualquier_curso(): void
+    public function test_gerencia_puede_gestionar_cualquier_curso(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
         $docente = User::factory()->create();
         $docente->assignRole(RolEnum::DOCENTE->value);
         $curso = $this->cursoDelDocente($docente);
 
-        $this->assertTrue($direccion->can('manage', $curso));
+        $this->assertTrue($gerencia->can('manage', $curso));
     }
 
     public function test_coordinador_puede_gestionar_cualquier_curso(): void
@@ -535,7 +535,7 @@ class AulaVirtualPermisosTest extends TestCase
     public function test_un_usuario_sin_permisos_de_aula_virtual_no_puede_ver_el_listado(): void
     {
         $usuario = User::factory()->create();
-        $usuario->assignRole(RolEnum::TESORERIA->value);
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
 
         $this->actingAs($usuario)
             ->get(route('aula-virtual.index'))
@@ -543,18 +543,18 @@ class AulaVirtualPermisosTest extends TestCase
     }
 
     /**
-     * Dirección tiene aula_virtual.gestionar_propio vía '*' sin ser docente:
+     * Gerencia tiene aula_virtual.gestionar_propio vía '*' sin ser docente:
      * debía mostrar la vista de supervisión, no la de "tus cursos" (vacía).
      */
-    public function test_direccion_ve_la_supervision_general_no_la_vista_de_docente(): void
+    public function test_gerencia_ve_la_supervision_general_no_la_vista_de_docente(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
         $docente = User::factory()->create();
         $docente->assignRole(RolEnum::DOCENTE->value);
         $this->cursoDelDocente($docente);
 
-        $this->actingAs($direccion)
+        $this->actingAs($gerencia)
             ->get(route('aula-virtual.index'))
             ->assertOk()
             ->assertSee('Todos los cursos virtuales activos.')

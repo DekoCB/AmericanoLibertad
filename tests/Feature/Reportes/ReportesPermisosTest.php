@@ -73,17 +73,17 @@ class ReportesPermisosTest extends TestCase
     }
 
     /**
-     * Dirección tiene todos los permisos vía el comodín '*', lo que
+     * Gerencia tiene todos los permisos vía el comodín '*', lo que
      * incluiría `reportes.propios` -- pero "Mis evaluaciones" es un reporte
      * pensado para el propio docente (sus horarios), así que no debe
      * ofrecerse en el selector a ningún rol superior que no sea Docente.
      */
-    public function test_direccion_no_ve_mis_evaluaciones_en_el_selector_de_reportes(): void
+    public function test_gerencia_no_ve_mis_evaluaciones_en_el_selector_de_reportes(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion)
+        $this->actingAs($gerencia)
             ->get(route('reportes.index'))
             ->assertOk()
             ->assertDontSee('Mis evaluaciones');

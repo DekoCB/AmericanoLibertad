@@ -38,14 +38,14 @@ class HeaderActionButtonsAreInteractiveTest extends TestCase
     public static function paginasConBotonDeAccion(): array
     {
         return [
-            'usuarios.index' => ['usuarios.index', RolEnum::DIRECCION->value, 'wire:click="abrirModal"'],
+            'usuarios.index' => ['usuarios.index', RolEnum::GERENCIA->value, 'wire:click="abrirModal"'],
             'academico.grados.index' => ['academico.grados.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
             'academico.ciclos.index' => ['academico.ciclos.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
             'academico.cursos.index' => ['academico.cursos.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
             'academico.aulas.index' => ['academico.aulas.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
             'academico.horarios.index' => ['academico.horarios.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
             'pagos.conceptos' => ['pagos.conceptos', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
-            'pagos.cuentas-bancarias' => ['pagos.cuentas-bancarias', RolEnum::TESORERIA->value, 'wire:click="abrirModal"'],
+            'pagos.cuentas-bancarias' => ['pagos.cuentas-bancarias', RolEnum::ADMINISTRATIVO->value, 'wire:click="abrirModal"'],
             'matricula.index' => ['matricula.index', RolEnum::COORDINADOR->value, "wire:click=\"\$set('mostrarWizard', true)\""],
         ];
     }

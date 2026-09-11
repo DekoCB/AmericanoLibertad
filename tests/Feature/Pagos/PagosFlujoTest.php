@@ -31,7 +31,7 @@ class PagosFlujoTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_administrativo_registra_un_pago_y_tesoreria_lo_aprueba(): void
+    public function test_administrativo_registra_un_pago_y_otro_administrativo_lo_aprueba(): void
     {
         $administrativo = User::factory()->create();
         $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
@@ -57,9 +57,9 @@ class PagosFlujoTest extends TestCase
 
         $pago = Pago::query()->where('estudiante_id', $estudiante->id)->firstOrFail();
 
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
-        $this->actingAs($tesoreria);
+        $otroAdministrativo = User::factory()->create();
+        $otroAdministrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
+        $this->actingAs($otroAdministrativo);
 
         Volt::test('pagos.index')
             ->call('aprobar', $pago->id)
@@ -162,17 +162,17 @@ class PagosFlujoTest extends TestCase
         $this->assertDatabaseCount('pago_partes', 1);
     }
 
-    public function test_tesoreria_rechaza_un_pago_con_motivo(): void
+    public function test_administrativo_rechaza_un_pago_con_motivo(): void
     {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
 
         $estudiante = Estudiante::factory()->create();
         $concepto = ConceptoPago::factory()->create();
         $pago = $this->app->make(PagoService::class)
             ->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'efectivo']], null, null, null);
 
-        $this->actingAs($tesoreria);
+        $this->actingAs($administrativo);
 
         Volt::test('pagos.index')
             ->set("motivoRechazo.{$pago->id}", 'Comprobante no corresponde')
@@ -186,17 +186,17 @@ class PagosFlujoTest extends TestCase
         ]);
     }
 
-    public function test_un_administrativo_no_puede_aprobar_pagos(): void
+    public function test_un_docente_no_puede_aprobar_pagos(): void
     {
-        $administrativo = User::factory()->create();
-        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
 
         $estudiante = Estudiante::factory()->create();
         $concepto = ConceptoPago::factory()->create();
         $pago = $this->app->make(PagoService::class)
             ->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'efectivo']], null, null, null);
 
-        $this->actingAs($administrativo);
+        $this->actingAs($docente);
 
         rescue(fn () => Volt::test('pagos.index')->call('aprobar', $pago->id), report: false);
 
@@ -225,16 +225,16 @@ class PagosFlujoTest extends TestCase
         ]);
     }
 
-    public function test_direccion_aprueba_un_cambio_de_monto_desde_la_vista_de_conceptos(): void
+    public function test_gerencia_aprueba_un_cambio_de_monto_desde_la_vista_de_conceptos(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
         $concepto = ConceptoPago::factory()->create(['monto_base' => 100]);
         $solicitud = $this->app->make(SolicitudCambioMontoService::class)->solicitar($concepto, 150.0, $coordinador->id);
 
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
-        $this->actingAs($direccion);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
+        $this->actingAs($gerencia);
 
         Volt::test('pagos.conceptos')
             ->call('aprobarCambioMonto', $solicitud->id)
@@ -328,9 +328,9 @@ class PagosFlujoTest extends TestCase
 
         $pago = Pago::query()->where('cuota_id', $cuota->id)->firstOrFail();
 
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
-        $this->actingAs($tesoreria);
+        $administrativo = User::factory()->create();
+        $administrativo->assignRole(RolEnum::ADMINISTRATIVO->value);
+        $this->actingAs($administrativo);
 
         Volt::test('pagos.index')
             ->call('aprobar', $pago->id)

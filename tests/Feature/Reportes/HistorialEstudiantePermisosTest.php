@@ -40,12 +40,12 @@ class HistorialEstudiantePermisosTest extends TestCase
             ->assertOk();
     }
 
-    public function test_direccion_puede_ver_el_historial_de_estudiante(): void
+    public function test_gerencia_puede_ver_el_historial_de_estudiante(): void
     {
-        $direccion = User::factory()->create();
-        $direccion->assignRole(RolEnum::DIRECCION->value);
+        $gerencia = User::factory()->create();
+        $gerencia->assignRole(RolEnum::GERENCIA->value);
 
-        $this->actingAs($direccion)
+        $this->actingAs($gerencia)
             ->get(route('historial-estudiante.index'))
             ->assertOk();
     }
@@ -56,16 +56,6 @@ class HistorialEstudiantePermisosTest extends TestCase
         $docente->assignRole(RolEnum::DOCENTE->value);
 
         $this->actingAs($docente)
-            ->get(route('historial-estudiante.index'))
-            ->assertForbidden();
-    }
-
-    public function test_tesoreria_no_puede_ver_el_historial_de_estudiante(): void
-    {
-        $tesoreria = User::factory()->create();
-        $tesoreria->assignRole(RolEnum::TESORERIA->value);
-
-        $this->actingAs($tesoreria)
             ->get(route('historial-estudiante.index'))
             ->assertForbidden();
     }

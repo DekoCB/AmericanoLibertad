@@ -166,7 +166,7 @@
             </a>
         @endcanany
 
-        {{-- pagos.ver_propio también lo tiene Dirección vía '*', pero mi-cuenta
+        {{-- pagos.ver_propio también lo tiene Gerencia vía '*', pero mi-cuenta
              exige además una ficha de Estudiante: sin ella el enlace 403ea. --}}
         @if (auth()->user()->can('pagos.ver_propio') && auth()->user()->estudiante)
             <a
@@ -264,7 +264,7 @@
             </a>
         @endcanany
 
-        {{-- certificados.solicitar también lo tiene Dirección vía '*', pero
+        {{-- certificados.solicitar también lo tiene Gerencia vía '*', pero
              mis-certificados/mis-constancias exigen además una ficha de
              Estudiante. --}}
         @if (auth()->user()->can('certificados.solicitar') && auth()->user()->estudiante)
