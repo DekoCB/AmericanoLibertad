@@ -4,11 +4,11 @@ namespace Tests\Feature\Matricula;
 
 use App\Models\Carrera;
 use App\Models\User;
-use App\Modules\Academico\Enums\TipoSiagieEnum;
+use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
-use App\Modules\Academico\Models\Siagie;
+use App\Modules\Academico\Models\Periodo;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\Enums\TipoDocumentoEnum;
 use App\Modules\Matricula\Models\Estudiante;
@@ -289,7 +289,7 @@ class MatriculaPermisosTest extends TestCase
         $this->assertSame('application/pdf', $testable->effects['download']['contentType']);
     }
 
-    public function test_registrar_matricula_desde_el_wizard_guarda_el_siagie_elegido(): void
+    public function test_registrar_matricula_desde_el_wizard_guarda_el_periodo_elegido(): void
     {
         Storage::fake('public');
 
@@ -305,7 +305,7 @@ class MatriculaPermisosTest extends TestCase
             'fecha_fin' => now()->addDays(10),
         ]);
         $carrera = Carrera::factory()->create();
-        $siagie = Siagie::factory()->create(['tipo' => TipoSiagieEnum::SEGUNDO]);
+        $periodo = Periodo::factory()->create(['tipo' => TipoPeriodoEnum::SEGUNDO]);
 
         $this->actingAs($usuario);
 
@@ -325,13 +325,13 @@ class MatriculaPermisosTest extends TestCase
             ->set('cicloId', (string) $ciclo->id)
             ->set('carreraId', (string) $carrera->id)
             ->set('cicloCurricular', '1')
-            ->set('siagieId', (string) $siagie->id)
+            ->set('periodoId', (string) $periodo->id)
             ->call('confirmar')
             ->assertHasNoErrors()
             ->assertDispatched('matricula-registrada');
 
         $estudiante = Estudiante::query()->where('dni', '55667711')->firstOrFail();
-        $this->assertDatabaseHas('matriculas', ['estudiante_id' => $estudiante->id, 'siagie_id' => $siagie->id]);
+        $this->assertDatabaseHas('matriculas', ['estudiante_id' => $estudiante->id, 'siagie_id' => $periodo->id]);
     }
 
     public function test_elegir_modalidad_anual_en_el_wizard_autoselecciona_el_ciclo_vigente(): void
@@ -342,7 +342,7 @@ class MatriculaPermisosTest extends TestCase
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
         // Sin periodo de matrícula: a diferencia de los Ciclos de 6 meses,
-        // SIAGIE anual no lo necesita para poder matricularse.
+        // el Periodo anual no lo necesita para poder matricularse.
         $cicloAnual = Ciclo::factory()->anual()->activo()->create();
         $carrera = Carrera::factory()->create();
 

@@ -36,7 +36,7 @@ class CicloService
     /**
      * Las 4 ventanas rotativas (modalidad=seis_meses) únicamente: el
      * SIAGIE anual ya no vive en este listado, tiene su propio módulo
-     * (ver SiagieService::listar()).
+     * (ver PeriodoService::listar()).
      */
     public function listar(int $perPage = 15): LengthAwarePaginator
     {

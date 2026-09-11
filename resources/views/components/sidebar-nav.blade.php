@@ -304,7 +304,7 @@
         </div>
 
         @foreach ([
-            ['route' => 'academico.siagie.index', 'prefix' => 'academico.siagie.*', 'label' => 'SIAGIE', 'icon' => 'identification'],
+            ['route' => 'academico.periodos.index', 'prefix' => 'academico.periodos.*', 'label' => 'Periodos', 'icon' => 'identification'],
             ['route' => 'academico.ciclos.index', 'prefix' => 'academico.ciclos.*', 'label' => 'Ciclos', 'icon' => 'arrow-path'],
             ['route' => 'academico.carreras.index', 'prefix' => 'academico.carreras.*', 'label' => 'Carreras', 'icon' => 'academic-cap'],
             ['route' => 'academico.cursos.index', 'prefix' => 'academico.cursos.*', 'label' => 'Cursos', 'icon' => 'book-open'],

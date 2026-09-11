@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Evaluaciones\Services;
 
-use App\Modules\Academico\Enums\TipoSiagieEnum;
+use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Evaluaciones\Enums\NotaLetraEnum;
@@ -98,7 +98,7 @@ class LibretaService
      */
     public function periodoPromocional(Ciclo $ciclo): string
     {
-        if ($ciclo->siagie?->tipo === TipoSiagieEnum::ANUAL) {
+        if ($ciclo->periodo?->tipo === TipoPeriodoEnum::ANUAL) {
             return 'ANUAL';
         }
 

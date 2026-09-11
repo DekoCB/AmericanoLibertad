@@ -8,7 +8,7 @@ use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Horario;
-use App\Modules\Academico\Models\Siagie;
+use App\Modules\Academico\Models\Periodo;
 use App\Modules\Identidad\Support\Auditable;
 use App\Modules\Matricula\Database\Factories\MatriculaFactory;
 use App\Modules\Matricula\Enums\EstadoMatriculaEnum;
@@ -35,7 +35,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read Estudiante|null $estudiante
  * @property-read Ciclo $ciclo
  * @property-read Carrera $carrera
- * @property-read Siagie|null $siagie
+ * @property-read Periodo|null $periodo
  */
 class Matricula extends Model implements HasMedia
 {
@@ -108,19 +108,19 @@ class Matricula extends Model implements HasMedia
         return $this->belongsTo(User::class, 'registrado_por');
     }
 
-    public function siagie(): BelongsTo
+    public function periodo(): BelongsTo
     {
-        return $this->belongsTo(Siagie::class);
+        return $this->belongsTo(Periodo::class, 'siagie_id');
     }
 
     /**
      * Texto para mostrar el periodo SIAGIE de esta matrícula (p. ej.
      * "2026-1", "2026-2", "2026 Anual"). Null si todavía no se registró
-     * ningún periodo SIAGIE para esta matrícula.
+     * ningún periodo para esta matrícula.
      */
-    public function siagieCompleto(): ?string
+    public function periodoCompleto(): ?string
     {
-        return $this->siagie?->nombreCompleto();
+        return $this->periodo?->nombreCompleto();
     }
 
     /**

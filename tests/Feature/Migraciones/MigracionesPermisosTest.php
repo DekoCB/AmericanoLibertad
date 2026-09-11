@@ -43,7 +43,7 @@ class MigracionesPermisosTest extends TestCase
         return $ciclo;
     }
 
-    // SIAGIE anual no depende de un periodo de matrícula abierto (a
+    // El Periodo anual no depende de un periodo de matrícula abierto (a
     // diferencia de los Ciclos de 6 meses): solo importa el año.
     private function cicloAnual(int $anio, bool $activo = true): Ciclo
     {
@@ -149,7 +149,7 @@ class MigracionesPermisosTest extends TestCase
         $this->assertDatabaseCount('matriculas', 4);
     }
 
-    public function test_migrar_de_forma_masiva_en_siagie_anual_no_pide_ciclo_y_usa_el_ciclo_vigente(): void
+    public function test_migrar_de_forma_masiva_en_periodo_anual_no_pide_ciclo_y_usa_el_ciclo_vigente(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);

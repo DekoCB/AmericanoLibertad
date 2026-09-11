@@ -161,7 +161,7 @@ class MatriculaService
                 'ciclo_id' => $ciclo->id,
                 'carrera_id' => $carrera->id,
                 'ciclo_curricular' => $data->cicloCurricular,
-                'siagie_id' => $data->siagieId,
+                'siagie_id' => $data->periodoId,
                 'fecha_matricula' => $fechaMatricula,
                 'fecha_fin_estudio' => $fechaFinEstudio,
                 'estado' => EstadoMatriculaEnum::APROBADA,

@@ -1,7 +1,7 @@
 <?php
 
-use App\Modules\Academico\Enums\TipoSiagieEnum;
-use App\Modules\Academico\Services\SiagieService;
+use App\Modules\Academico\Enums\TipoPeriodoEnum;
+use App\Modules\Academico\Services\PeriodoService;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -34,42 +34,42 @@ new #[Layout('layouts.app')] class extends Component
         $this->mostrarModal = true;
     }
 
-    public function guardar(SiagieService $service): void
+    public function guardar(PeriodoService $service): void
     {
         Gate::authorize('academico.gestionar');
 
-        $esAnual = $this->tipo === TipoSiagieEnum::ANUAL->value;
+        $esAnual = $this->tipo === TipoPeriodoEnum::ANUAL->value;
 
         $this->validate([
-            'tipo' => 'required|string|in:'.implode(',', array_column(TipoSiagieEnum::cases(), 'value')),
+            'tipo' => 'required|string|in:'.implode(',', array_column(TipoPeriodoEnum::cases(), 'value')),
             'anio' => 'required|integer|min:2020|max:2100',
             'fechaInicio' => $esAnual ? 'required|date' : 'nullable|date',
             'fechaFin' => $esAnual ? 'required|date' : 'nullable|date',
         ]);
 
         $service->crear([
-            'tipo' => TipoSiagieEnum::from($this->tipo),
+            'tipo' => TipoPeriodoEnum::from($this->tipo),
             'anio' => (int) $this->anio,
             'fecha_inicio' => $this->fechaInicio ?: null,
             'fecha_fin' => $this->fechaFin ?: null,
         ]);
 
         $this->mostrarModal = false;
-        session()->flash('status', 'SIAGIE creado correctamente.');
+        session()->flash('status', 'Periodo creado correctamente.');
     }
 
-    public function with(SiagieService $service): array
+    public function with(PeriodoService $service): array
     {
         return [
-            'siagies' => $service->listar(),
-            'tipos' => TipoSiagieEnum::cases(),
+            'periodos' => $service->listar(),
+            'tipos' => TipoPeriodoEnum::cases(),
         ];
     }
 }; ?>
 
 <div>
     <x-slot name="header">
-        <h1 class="font-display text-2xl text-ink">SIAGIE</h1>
+        <h1 class="font-display text-2xl text-ink">Periodos</h1>
         <p class="mt-1 text-sm text-ink-dim">Los periodos SIAGIE del MINEDU (1.er periodo, 2.° periodo, Anual) — independientes del Ciclo rotativo de Americano Libertad.</p>
     </x-slot>
 
@@ -77,7 +77,7 @@ new #[Layout('layouts.app')] class extends Component
         <div class="mb-4 flex justify-end">
             <x-primary-button type="button" wire:click="abrirModal" class="gap-2">
                 <x-heroicon-o-plus class="h-4 w-4" />
-                Nuevo SIAGIE
+                Nuevo periodo
             </x-primary-button>
         </div>
     @endcan
@@ -97,21 +97,21 @@ new #[Layout('layouts.app')] class extends Component
                 </tr>
             </thead>
             <tbody class="divide-y divide-border">
-                @forelse ($siagies as $siagie)
-                    <tr wire:key="siagie-{{ $siagie->id }}">
-                        <td class="px-4 py-3 font-medium text-ink">{{ $siagie->nombreCompleto() }}</td>
-                        <td class="px-4 py-3 text-ink-dim">{{ $siagie->tipo->label() }}</td>
+                @forelse ($periodos as $periodo)
+                    <tr wire:key="periodo-{{ $periodo->id }}">
+                        <td class="px-4 py-3 font-medium text-ink">{{ $periodo->nombreCompleto() }}</td>
+                        <td class="px-4 py-3 text-ink-dim">{{ $periodo->tipo->label() }}</td>
                         <td class="px-4 py-3 text-ink-dim">
-                            {{ $siagie->fecha_inicio ? $siagie->fecha_inicio->format('d/m/Y').' – '.$siagie->fecha_fin->format('d/m/Y') : '—' }}
+                            {{ $periodo->fecha_inicio ? $periodo->fecha_inicio->format('d/m/Y').' – '.$periodo->fecha_fin->format('d/m/Y') : '—' }}
                         </td>
                         <td class="px-4 py-3">
-                            <x-badge :variant="$siagie->estado->value === 'activo' ? 'ok' : 'neutral'">
-                                {{ $siagie->estado->label() }}
+                            <x-badge :variant="$periodo->estado->value === 'activo' ? 'ok' : 'neutral'">
+                                {{ $periodo->estado->label() }}
                             </x-badge>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-4 py-8 text-center text-sm text-ink-faint">No hay periodos SIAGIE registrados.</td></tr>
+                    <tr><td colspan="4" class="px-4 py-8 text-center text-sm text-ink-faint">No hay periodos registrados.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -139,7 +139,7 @@ new #[Layout('layouts.app')] class extends Component
             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
         >
-            <h2 class="font-display text-lg text-ink">Nuevo SIAGIE</h2>
+            <h2 class="font-display text-lg text-ink">Nuevo periodo</h2>
 
             <form wire:submit="guardar" class="mt-4 space-y-4">
                 <div class="grid grid-cols-2 gap-4">
@@ -161,7 +161,7 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 @if ($tipo === 'anual')
-                    <p class="text-xs text-ink-dim">El SIAGIE Anual crea además su propio Ciclo, con horarios reales: declara de qué mes a qué mes dura el periodo de clases (8 meses; los 2 restantes son vacaciones).</p>
+                    <p class="text-xs text-ink-dim">El periodo Anual crea además su propio Ciclo, con horarios reales: declara de qué mes a qué mes dura el periodo de clases (8 meses; los 2 restantes son vacaciones).</p>
                 @else
                     <p class="text-xs text-ink-dim">Las fechas son opcionales para este tipo — es solo una clasificación, sin horarios propios.</p>
                 @endif
@@ -180,7 +180,7 @@ new #[Layout('layouts.app')] class extends Component
 
                 <div class="flex justify-end gap-3 pt-2">
                     <x-secondary-button type="button" wire:click="$set('mostrarModal', false)">Cancelar</x-secondary-button>
-                    <x-primary-button type="submit">Crear SIAGIE</x-primary-button>
+                    <x-primary-button type="submit">Crear periodo</x-primary-button>
                 </div>
             </form>
         </div>

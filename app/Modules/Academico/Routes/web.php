@@ -30,9 +30,9 @@ Route::middleware(['auth'])->prefix('academico')->name('academico.')->group(func
         ->middleware('can:academico.ver')
         ->name('ciclos.index');
 
-    Volt::route('siagie', 'academico.siagie.index')
+    Volt::route('periodos', 'academico.periodos.index')
         ->middleware('can:academico.ver')
-        ->name('siagie.index');
+        ->name('periodos.index');
 
     Volt::route('ciclos/{ciclo}', 'academico.ciclos.show')
         ->middleware('can:academico.ver')

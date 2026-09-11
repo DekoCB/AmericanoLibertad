@@ -9,10 +9,10 @@ namespace App\Modules\Academico\Enums;
  * completamente independiente del Ciclo rotativo de Americano Libertad (ver
  * ModalidadCicloEnum) -- un alumno de cualquier Ciclo puede tener
  * cualquiera de estos 3 periodos. Solo ANUAL corresponde además a un
- * Ciclo real (ver Siagie::$ciclo): PRIMERO y SEGUNDO son clasificación
+ * Ciclo real (ver Periodo::$ciclo): PRIMERO y SEGUNDO son clasificación
  * pura, sin horarios propios.
  */
-enum TipoSiagieEnum: string
+enum TipoPeriodoEnum: string
 {
     case PRIMERO = 'primero';
     case SEGUNDO = 'segundo';

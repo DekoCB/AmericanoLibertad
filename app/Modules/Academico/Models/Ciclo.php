@@ -25,7 +25,7 @@ use Illuminate\Support\Carbon;
  * @property ModalidadCicloEnum $modalidad
  * @property EstadoCicloEnum $estado
  * @property int|null $siagie_id
- * @property-read Siagie|null $siagie
+ * @property-read Periodo|null $periodo
  */
 class Ciclo extends Model
 {
@@ -92,8 +92,8 @@ class Ciclo extends Model
      * en vez de comparar modalidad directamente (ver VacacionService,
      * EvaluacionService, LibretaService).
      */
-    public function siagie(): BelongsTo
+    public function periodo(): BelongsTo
     {
-        return $this->belongsTo(Siagie::class);
+        return $this->belongsTo(Periodo::class, 'siagie_id');
     }
 }

@@ -3,11 +3,11 @@
 namespace Tests\Feature\Reportes;
 
 use App\Models\User;
-use App\Modules\Academico\Enums\TipoSiagieEnum;
+use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
-use App\Modules\Academico\Models\Siagie;
+use App\Modules\Academico\Models\Periodo;
 use App\Modules\Evaluaciones\Models\Calificacion;
 use App\Modules\Evaluaciones\Models\Evaluacion;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
@@ -158,20 +158,20 @@ class HistorialEstudiantePermisosTest extends TestCase
             ->set('terminoBusqueda', 'Villar Soto')
             ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
             ->assertHasNoErrors()
-            ->assertSee('SIAGIE anual');
+            ->assertSee('Periodo anual');
     }
 
-    public function test_el_historial_muestra_el_siagie_de_la_matricula(): void
+    public function test_el_historial_muestra_el_periodo_de_la_matricula(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
         $estudiante = Estudiante::factory()->create(['dni' => '55667766', 'nombres' => 'Lucia', 'apellidos' => 'Ramos Chumbe']);
         $ciclo = Ciclo::factory()->create(['anio' => 2026]);
-        $siagie = Siagie::factory()->create(['tipo' => TipoSiagieEnum::PRIMERO, 'anio' => 2026]);
+        $periodo = Periodo::factory()->create(['tipo' => TipoPeriodoEnum::PRIMERO, 'anio' => 2026]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'siagie_id' => $siagie->id,
+            'siagie_id' => $periodo->id,
         ]);
 
         $this->actingAs($coordinador);
@@ -180,7 +180,7 @@ class HistorialEstudiantePermisosTest extends TestCase
             ->set('terminoBusqueda', 'Ramos Chumbe')
             ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
             ->assertHasNoErrors()
-            ->assertSee('SIAGIE 2026-1');
+            ->assertSee('Periodo 2026-1');
     }
 
     public function test_el_historial_muestra_el_detalle_de_pagos_ya_cobrados(): void

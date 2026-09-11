@@ -26,7 +26,7 @@ interface CicloRepositoryInterface extends RepositoryInterface
 
     /**
      * Las ventanas rotativas (modalidad=seis_meses) únicamente -- el listado
-     * de ciclos ya no incluye el SIAGIE anual (ver SiagieService).
+     * de ciclos ya no incluye el periodo anual (ver PeriodoService).
      */
     public function paginateCiclos(int $perPage = 15): LengthAwarePaginator;
 }

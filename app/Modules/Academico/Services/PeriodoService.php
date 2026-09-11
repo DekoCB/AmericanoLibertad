@@ -6,9 +6,9 @@ namespace App\Modules\Academico\Services;
 
 use App\Modules\Academico\Enums\EstadoCicloEnum;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
-use App\Modules\Academico\Enums\TipoSiagieEnum;
+use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Siagie;
+use App\Modules\Academico\Models\Periodo;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -21,34 +21,34 @@ use Illuminate\Validation\ValidationException;
  * CicloService::crear(), reutilizando la misma validación de fechas (8
  * meses de clases) y de solape que ya existía para el Ciclo anual.
  */
-class SiagieService
+class PeriodoService
 {
     public function __construct(
         private readonly CicloService $ciclos,
     ) {}
 
     /**
-     * @return Collection<int, Siagie>
+     * @return Collection<int, Periodo>
      */
     public function listar(): Collection
     {
-        return Siagie::query()->orderByDesc('anio')->orderBy('tipo')->get();
+        return Periodo::query()->orderByDesc('anio')->orderBy('tipo')->get();
     }
 
     /**
-     * @param  array{tipo: TipoSiagieEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado?: EstadoCicloEnum}  $datos
+     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado?: EstadoCicloEnum}  $datos
      */
-    public function crear(array $datos): Siagie
+    public function crear(array $datos): Periodo
     {
         $datos['estado'] ??= EstadoCicloEnum::PLANIFICADO;
 
         $this->validarSinDuplicado($datos['tipo'], $datos['anio']);
 
-        if ($datos['tipo'] === TipoSiagieEnum::ANUAL) {
+        if ($datos['tipo'] === TipoPeriodoEnum::ANUAL) {
             return $this->crearAnual($datos);
         }
 
-        return Siagie::query()->create([
+        return Periodo::query()->create([
             'tipo' => $datos['tipo'],
             'anio' => $datos['anio'],
             'fecha_inicio' => $datos['fecha_inicio'] ?? null,
@@ -58,19 +58,19 @@ class SiagieService
     }
 
     /**
-     * @param  array{tipo: TipoSiagieEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado?: EstadoCicloEnum}  $datos
+     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado?: EstadoCicloEnum}  $datos
      */
-    public function actualizar(Siagie $siagie, array $datos): Siagie
+    public function actualizar(Periodo $periodo, array $datos): Periodo
     {
-        $datos['estado'] ??= $siagie->estado;
+        $datos['estado'] ??= $periodo->estado;
 
-        $this->validarSinDuplicado($datos['tipo'], $datos['anio'], $siagie->id);
+        $this->validarSinDuplicado($datos['tipo'], $datos['anio'], $periodo->id);
 
-        if ($datos['tipo'] === TipoSiagieEnum::ANUAL) {
-            return $this->actualizarAnual($siagie, $datos);
+        if ($datos['tipo'] === TipoPeriodoEnum::ANUAL) {
+            return $this->actualizarAnual($periodo, $datos);
         }
 
-        $siagie->update([
+        $periodo->update([
             'tipo' => $datos['tipo'],
             'anio' => $datos['anio'],
             'fecha_inicio' => $datos['fecha_inicio'] ?? null,
@@ -78,12 +78,12 @@ class SiagieService
             'estado' => $datos['estado'],
         ]);
 
-        return $siagie->fresh();
+        return $periodo->fresh();
     }
 
-    private function validarSinDuplicado(TipoSiagieEnum $tipo, int $anio, ?int $exceptoId = null): void
+    private function validarSinDuplicado(TipoPeriodoEnum $tipo, int $anio, ?int $exceptoId = null): void
     {
-        $existe = Siagie::query()
+        $existe = Periodo::query()
             ->where('tipo', $tipo)
             ->where('anio', $anio)
             ->when($exceptoId, fn ($query) => $query->whereKeyNot($exceptoId))
@@ -91,26 +91,26 @@ class SiagieService
 
         if ($existe) {
             throw ValidationException::withMessages([
-                'anio' => "Ya existe un SIAGIE {$tipo->label()} para el año {$anio}.",
+                'anio' => "Ya existe un periodo {$tipo->label()} para el año {$anio}.",
             ]);
         }
     }
 
     /**
-     * @param  array{tipo: TipoSiagieEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado: EstadoCicloEnum}  $datos
+     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado: EstadoCicloEnum}  $datos
      */
-    private function crearAnual(array $datos): Siagie
+    private function crearAnual(array $datos): Periodo
     {
         if (($datos['fecha_inicio'] ?? null) === null || ($datos['fecha_fin'] ?? null) === null) {
             throw ValidationException::withMessages([
-                'fecha_inicio' => 'El SIAGIE Anual necesita fecha de inicio y de fin (su periodo de clases real).',
+                'fecha_inicio' => 'El periodo Anual necesita fecha de inicio y de fin (su periodo de clases real).',
             ]);
         }
 
         return DB::transaction(function () use ($datos) {
-            /** @var Siagie $siagie */
-            $siagie = Siagie::query()->create([
-                'tipo' => TipoSiagieEnum::ANUAL,
+            /** @var Periodo $periodo */
+            $periodo = Periodo::query()->create([
+                'tipo' => TipoPeriodoEnum::ANUAL,
                 'anio' => $datos['anio'],
                 'fecha_inicio' => $datos['fecha_inicio'],
                 'fecha_fin' => $datos['fecha_fin'],
@@ -118,7 +118,7 @@ class SiagieService
             ]);
 
             $ciclo = $this->ciclos->crear([
-                'nombre' => "SIAGIE Anual - {$datos['anio']}",
+                'nombre' => "Periodo Anual - {$datos['anio']}",
                 'modalidad' => ModalidadCicloEnum::ANUAL,
                 'tipo' => null,
                 'anio' => $datos['anio'],
@@ -126,25 +126,25 @@ class SiagieService
                 'fecha_fin' => $datos['fecha_fin'],
             ]);
 
-            $ciclo->update(['siagie_id' => $siagie->id, 'estado' => $datos['estado']]);
+            $ciclo->update(['siagie_id' => $periodo->id, 'estado' => $datos['estado']]);
 
-            return $siagie;
+            return $periodo;
         });
     }
 
     /**
-     * @param  array{tipo: TipoSiagieEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado: EstadoCicloEnum}  $datos
+     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado: EstadoCicloEnum}  $datos
      */
-    private function actualizarAnual(Siagie $siagie, array $datos): Siagie
+    private function actualizarAnual(Periodo $periodo, array $datos): Periodo
     {
         if (($datos['fecha_inicio'] ?? null) === null || ($datos['fecha_fin'] ?? null) === null) {
             throw ValidationException::withMessages([
-                'fecha_inicio' => 'El SIAGIE Anual necesita fecha de inicio y de fin (su periodo de clases real).',
+                'fecha_inicio' => 'El periodo Anual necesita fecha de inicio y de fin (su periodo de clases real).',
             ]);
         }
 
-        return DB::transaction(function () use ($siagie, $datos) {
-            $ciclo = Ciclo::query()->where('siagie_id', $siagie->id)->first();
+        return DB::transaction(function () use ($periodo, $datos) {
+            $ciclo = Ciclo::query()->where('siagie_id', $periodo->id)->first();
 
             if ($ciclo) {
                 $this->ciclos->actualizar($ciclo, [
@@ -158,14 +158,14 @@ class SiagieService
                 ]);
             }
 
-            $siagie->update([
+            $periodo->update([
                 'anio' => $datos['anio'],
                 'fecha_inicio' => $datos['fecha_inicio'],
                 'fecha_fin' => $datos['fecha_fin'],
                 'estado' => $datos['estado'],
             ]);
 
-            return $siagie->fresh();
+            return $periodo->fresh();
         });
     }
 }

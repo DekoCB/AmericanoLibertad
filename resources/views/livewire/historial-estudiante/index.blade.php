@@ -200,8 +200,8 @@ new #[Layout('layouts.app')] class extends Component
                                     @if ($matricula->fecha_fin_estudio)
                                         · Fin de estudios: {{ $matricula->fecha_fin_estudio->format('d/m/Y') }}
                                     @endif
-                                    @if ($matricula->siagieCompleto())
-                                        · SIAGIE {{ $matricula->siagieCompleto() }}
+                                    @if ($matricula->periodoCompleto())
+                                        · Periodo {{ $matricula->periodoCompleto() }}
                                     @endif
                                 </p>
                             </div>

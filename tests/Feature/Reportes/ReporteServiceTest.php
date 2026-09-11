@@ -4,10 +4,10 @@ namespace Tests\Feature\Reportes;
 
 use App\Models\User;
 use App\Modules\Academico\Enums\FranjaHorarioEnum;
-use App\Modules\Academico\Enums\TipoSiagieEnum;
+use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
-use App\Modules\Academico\Models\Siagie;
+use App\Modules\Academico\Models\Periodo;
 use App\Modules\Asistencia\Models\Asistencia;
 use App\Modules\Certificados\Models\Certificado;
 use App\Modules\Evaluaciones\Models\Calificacion;
@@ -113,30 +113,30 @@ class ReporteServiceTest extends TestCase
         $this->assertSame('—', $reporte['filas'][0][1]);
     }
 
-    public function test_reporte_de_matricula_filtra_por_siagie(): void
+    public function test_reporte_de_matricula_filtra_por_periodo(): void
     {
-        $siagieA = Siagie::factory()->create(['tipo' => TipoSiagieEnum::PRIMERO, 'anio' => 2026]);
-        $siagieB = Siagie::factory()->create(['tipo' => TipoSiagieEnum::SEGUNDO, 'anio' => 2026]);
-        Matricula::factory()->create(['siagie_id' => $siagieA->id, 'fecha_matricula' => now()]);
-        Matricula::factory()->create(['siagie_id' => $siagieB->id, 'fecha_matricula' => now()]);
+        $periodoA = Periodo::factory()->create(['tipo' => TipoPeriodoEnum::PRIMERO, 'anio' => 2026]);
+        $periodoB = Periodo::factory()->create(['tipo' => TipoPeriodoEnum::SEGUNDO, 'anio' => 2026]);
+        Matricula::factory()->create(['siagie_id' => $periodoA->id, 'fecha_matricula' => now()]);
+        Matricula::factory()->create(['siagie_id' => $periodoB->id, 'fecha_matricula' => now()]);
         Matricula::factory()->create(['siagie_id' => null, 'fecha_matricula' => now()]);
 
-        $reporte = app(ReporteService::class)->matricula(null, null, null, null, null, $siagieA->id);
+        $reporte = app(ReporteService::class)->matricula(null, null, null, null, null, $periodoA->id);
 
         $this->assertCount(1, $reporte['filas']);
     }
 
-    public function test_reporte_academico_filtra_por_siagie(): void
+    public function test_reporte_academico_filtra_por_periodo(): void
     {
-        $siagie = Siagie::factory()->create(['tipo' => TipoSiagieEnum::PRIMERO, 'anio' => 2026]);
-        $estudianteConSiagie = Estudiante::factory()->create();
-        $estudianteSinSiagie = Estudiante::factory()->create();
-        Matricula::factory()->create(['estudiante_id' => $estudianteConSiagie->id, 'siagie_id' => $siagie->id]);
-        Matricula::factory()->create(['estudiante_id' => $estudianteSinSiagie->id, 'siagie_id' => null]);
-        Calificacion::factory()->create(['estudiante_id' => $estudianteConSiagie->id]);
-        Calificacion::factory()->create(['estudiante_id' => $estudianteSinSiagie->id]);
+        $periodo = Periodo::factory()->create(['tipo' => TipoPeriodoEnum::PRIMERO, 'anio' => 2026]);
+        $estudianteConPeriodo = Estudiante::factory()->create();
+        $estudianteSinPeriodo = Estudiante::factory()->create();
+        Matricula::factory()->create(['estudiante_id' => $estudianteConPeriodo->id, 'siagie_id' => $periodo->id]);
+        Matricula::factory()->create(['estudiante_id' => $estudianteSinPeriodo->id, 'siagie_id' => null]);
+        Calificacion::factory()->create(['estudiante_id' => $estudianteConPeriodo->id]);
+        Calificacion::factory()->create(['estudiante_id' => $estudianteSinPeriodo->id]);
 
-        $reporte = app(ReporteService::class)->academico(null, null, null, null, null, $siagie->id);
+        $reporte = app(ReporteService::class)->academico(null, null, null, null, null, $periodo->id);
 
         $this->assertCount(1, $reporte['filas']);
     }

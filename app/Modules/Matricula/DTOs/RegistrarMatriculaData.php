@@ -12,7 +12,7 @@ final readonly class RegistrarMatriculaData
         public int $cicloCurricular,
         public ?string $observaciones,
         public ?int $registradoPor,
-        public ?int $siagieId = null,
+        public ?int $periodoId = null,
         public ?string $fechaMatricula = null,
     ) {}
 }

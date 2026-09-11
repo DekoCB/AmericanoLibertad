@@ -5,21 +5,21 @@ declare(strict_types=1);
 namespace App\Modules\Academico\Database\Factories;
 
 use App\Modules\Academico\Enums\EstadoCicloEnum;
-use App\Modules\Academico\Enums\TipoSiagieEnum;
-use App\Modules\Academico\Models\Siagie;
+use App\Modules\Academico\Enums\TipoPeriodoEnum;
+use App\Modules\Academico\Models\Periodo;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Siagie>
+ * @extends Factory<Periodo>
  */
-class SiagieFactory extends Factory
+class PeriodoFactory extends Factory
 {
-    protected $model = Siagie::class;
+    protected $model = Periodo::class;
 
     public function definition(): array
     {
         return [
-            'tipo' => TipoSiagieEnum::PRIMERO,
+            'tipo' => TipoPeriodoEnum::PRIMERO,
             'anio' => (int) $this->faker->year(),
             'fecha_inicio' => null,
             'fecha_fin' => null,
@@ -33,7 +33,7 @@ class SiagieFactory extends Factory
             $anio = $attributes['anio'];
 
             return [
-                'tipo' => TipoSiagieEnum::ANUAL,
+                'tipo' => TipoPeriodoEnum::ANUAL,
                 'fecha_inicio' => "{$anio}-03-01",
                 'fecha_fin' => "{$anio}-10-31",
             ];

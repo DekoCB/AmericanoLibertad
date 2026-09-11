@@ -7,9 +7,9 @@ namespace App\Modules\Academico\Database\Factories;
 use App\Modules\Academico\Enums\EstadoCicloEnum;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Enums\TipoCicloEnum;
-use App\Modules\Academico\Enums\TipoSiagieEnum;
+use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Siagie;
+use App\Modules\Academico\Models\Periodo;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,10 +20,10 @@ class CicloFactory extends Factory
     protected $model = Ciclo::class;
 
     /**
-     * Un Ciclo modalidad=anual real siempre tiene su Siagie tipo=anual
+     * Un Ciclo modalidad=anual real siempre tiene su Periodo tipo=anual
      * vinculado (ver migración 2027_01_23): sin esto, cualquier test que
      * use anual() quedaría con un Ciclo huérfano que Vacaciones/
-     * Evaluaciones (que ahora consultan Ciclo::siagie, no
+     * Evaluaciones (que ahora consultan Ciclo::periodo, no
      * Ciclo::modalidad) no reconocerían como anual.
      */
     public function configure(): static
@@ -33,12 +33,12 @@ class CicloFactory extends Factory
                 return;
             }
 
-            $siagie = Siagie::query()->firstOrCreate(
-                ['tipo' => TipoSiagieEnum::ANUAL, 'anio' => $ciclo->anio],
+            $periodo = Periodo::query()->firstOrCreate(
+                ['tipo' => TipoPeriodoEnum::ANUAL, 'anio' => $ciclo->anio],
                 ['fecha_inicio' => $ciclo->fecha_inicio, 'fecha_fin' => $ciclo->fecha_fin, 'estado' => $ciclo->estado],
             );
 
-            $ciclo->update(['siagie_id' => $siagie->id]);
+            $ciclo->update(['siagie_id' => $periodo->id]);
         });
     }
 
