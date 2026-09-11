@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Vacaciones;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
 use App\Modules\Matricula\DTOs\RegistrarMatriculaData;
@@ -52,7 +52,7 @@ class VacacionesPermisosTest extends TestCase
             celular: null,
             observaciones: null,
         ));
-        $matriculas->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, Grado::factory()->create()->id, null, null));
+        $matriculas->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, Carrera::factory()->create()->id, 1, null, null));
 
         return $estudiante;
     }

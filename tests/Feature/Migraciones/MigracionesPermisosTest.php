@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Migraciones;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
 use App\Modules\Matricula\DTOs\RegistrarMatriculaData;
@@ -44,7 +44,7 @@ class MigracionesPermisosTest extends TestCase
     }
 
     // SIAGIE anual no depende de un periodo de matrícula abierto (a
-    // diferencia de los Grupos de 6 meses): solo importa el año.
+    // diferencia de los Ciclos de 6 meses): solo importa el año.
     private function cicloAnual(int $anio, bool $activo = true): Ciclo
     {
         return Ciclo::factory()->create([
@@ -57,7 +57,7 @@ class MigracionesPermisosTest extends TestCase
         ]);
     }
 
-    private function estudianteMatriculado(Ciclo $ciclo, Grado $grado, string $dni): Estudiante
+    private function estudianteMatriculado(Ciclo $ciclo, Carrera $carrera, int $cicloCurricular, string $dni): Estudiante
     {
         $matriculas = $this->app->make(MatriculaService::class);
 
@@ -72,7 +72,7 @@ class MigracionesPermisosTest extends TestCase
             observaciones: null,
         ));
 
-        $matriculas->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matriculas->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, $cicloCurricular, null, null));
 
         return $estudiante;
     }
@@ -98,11 +98,10 @@ class MigracionesPermisosTest extends TestCase
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
-        $gradoOrigen = Grado::factory()->create(['orden' => 1]);
-        $gradoDestino = Grado::factory()->create(['orden' => 2]);
+        $carrera = Carrera::factory()->create(['total_ciclos' => 6]);
         $cicloOrigen = $this->cicloConPeriodoAbierto();
         $cicloDestino = $this->cicloConPeriodoAbierto();
-        $estudiante = $this->estudianteMatriculado($cicloOrigen, $gradoOrigen, '55667711');
+        $estudiante = $this->estudianteMatriculado($cicloOrigen, $carrera, 1, '55667711');
 
         $this->actingAs($usuario);
 
@@ -110,14 +109,15 @@ class MigracionesPermisosTest extends TestCase
             ->set('terminoBusqueda', 'Torres Huamán')
             ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
             ->set('cicloDestinoId', (string) $cicloDestino->id)
-            ->set('gradoDestinoId', (string) $gradoDestino->id)
+            ->set('cicloCurricularDestino', '2')
             ->call('migrarIndividual')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('matriculas', [
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $cicloDestino->id,
-            'grado_id' => $gradoDestino->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 2,
         ]);
     }
 
@@ -126,12 +126,11 @@ class MigracionesPermisosTest extends TestCase
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
-        $gradoOrigen = Grado::factory()->create(['orden' => 1]);
-        $gradoDestino = Grado::factory()->create(['orden' => 2]);
+        $carrera = Carrera::factory()->create(['total_ciclos' => 6]);
         $cicloOrigen = $this->cicloConPeriodoAbierto();
         $cicloDestino = $this->cicloConPeriodoAbierto();
-        $this->estudianteMatriculado($cicloOrigen, $gradoOrigen, '55667722');
-        $this->estudianteMatriculado($cicloOrigen, $gradoOrigen, '55667733');
+        $this->estudianteMatriculado($cicloOrigen, $carrera, 1, '55667722');
+        $this->estudianteMatriculado($cicloOrigen, $carrera, 1, '55667733');
 
         $this->actingAs($usuario);
 
@@ -139,9 +138,10 @@ class MigracionesPermisosTest extends TestCase
             ->set('tab', 'masivo')
             ->set('modalidadOrigen', 'seis_meses')
             ->set('cicloOrigenId', (string) $cicloOrigen->id)
-            ->set('gradoOrigenId', (string) $gradoOrigen->id)
+            ->set('carreraOrigenId', (string) $carrera->id)
+            ->set('cicloCurricularOrigen', '1')
             ->set('masivoCicloDestinoId', (string) $cicloDestino->id)
-            ->set('masivoGradoDestinoId', (string) $gradoDestino->id)
+            ->set('masivoCicloCurricularDestino', '2')
             ->call('migrarMasivo')
             ->assertHasNoErrors()
             ->assertSet('resultado.exitosos', 2);
@@ -149,34 +149,35 @@ class MigracionesPermisosTest extends TestCase
         $this->assertDatabaseCount('matriculas', 4);
     }
 
-    public function test_migrar_de_forma_masiva_en_siagie_anual_no_pide_grupo_y_usa_el_ciclo_vigente(): void
+    public function test_migrar_de_forma_masiva_en_siagie_anual_no_pide_ciclo_y_usa_el_ciclo_vigente(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
-        $gradoOrigen = Grado::factory()->create(['orden' => 1]);
-        $gradoDestino = Grado::factory()->create(['orden' => 2]);
+        $carrera = Carrera::factory()->create(['total_ciclos' => 6]);
         $cicloAnualOrigen = $this->cicloAnual(now()->year);
         $cicloAnualDestino = $this->cicloAnual(now()->year + 1, activo: false);
-        $this->estudianteMatriculado($cicloAnualOrigen, $gradoOrigen, '55667755');
+        $this->estudianteMatriculado($cicloAnualOrigen, $carrera, 1, '55667755');
 
         $this->actingAs($usuario);
 
         Volt::test('migraciones.index')
             ->set('tab', 'masivo')
             ->set('modalidadOrigen', 'anual')
-            ->assertDontSee('Todos los grupos')
+            ->assertDontSee('Todos los ciclos')
             ->assertSee((string) $cicloAnualOrigen->anio)
-            ->set('gradoOrigenId', (string) $gradoOrigen->id)
+            ->set('carreraOrigenId', (string) $carrera->id)
+            ->set('cicloCurricularOrigen', '1')
             ->assertSet('masivoCicloDestinoId', (string) $cicloAnualDestino->id)
-            ->set('masivoGradoDestinoId', (string) $gradoDestino->id)
+            ->set('masivoCicloCurricularDestino', '2')
             ->call('migrarMasivo')
             ->assertHasNoErrors()
             ->assertSet('resultado.exitosos', 1);
 
         $this->assertDatabaseHas('matriculas', [
             'ciclo_id' => $cicloAnualDestino->id,
-            'grado_id' => $gradoDestino->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 2,
         ]);
     }
 }

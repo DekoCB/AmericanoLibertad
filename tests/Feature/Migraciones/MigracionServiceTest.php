@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Migraciones;
 
+use App\Models\Carrera;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Enums\TipoCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Services\CicloService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
@@ -48,7 +48,7 @@ class MigracionServiceTest extends TestCase
         return $ciclo;
     }
 
-    private function estudianteMatriculado(Ciclo $ciclo, Grado $grado): Estudiante
+    private function estudianteMatriculado(Ciclo $ciclo, Carrera $carrera, int $cicloCurricular = 1): Estudiante
     {
         $matriculas = $this->app->make(MatriculaService::class);
 
@@ -63,81 +63,83 @@ class MigracionServiceTest extends TestCase
             observaciones: null,
         ));
 
-        $matriculas->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matriculas->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, $cicloCurricular, null, null));
 
         return $estudiante;
     }
 
-    public function test_migrar_crea_una_nueva_matricula_en_el_ciclo_y_grado_destino(): void
+    public function test_migrar_crea_una_nueva_matricula_en_el_ciclo_y_ciclo_curricular_destino(): void
     {
-        $gradoOrigen = Grado::factory()->create(['orden' => 1]);
-        $gradoDestino = Grado::factory()->create(['orden' => 2]);
+        // La carrera nunca cambia en una migración -- solo el ciclo
+        // curricular (I-VI) dentro de esa misma carrera (ver el docblock de
+        // MigracionService).
+        $carrera = Carrera::factory()->create(['total_ciclos' => 6]);
         $cicloOrigen = $this->cicloConPeriodoAbierto();
         $cicloDestino = $this->cicloConPeriodoAbierto();
 
-        $estudiante = $this->estudianteMatriculado($cicloOrigen, $gradoOrigen);
+        $estudiante = $this->estudianteMatriculado($cicloOrigen, $carrera, 1);
         $origen = $estudiante->matriculas()->first();
 
-        $destino = $this->service()->migrar($origen, $cicloDestino->id, $gradoDestino->id, null);
+        $destino = $this->service()->migrar($origen, $cicloDestino->id, 2, null);
 
         $this->assertSame($cicloDestino->id, $destino->ciclo_id);
-        $this->assertSame($gradoDestino->id, $destino->grado_id);
+        $this->assertSame($carrera->id, $destino->carrera_id);
+        $this->assertSame(2, $destino->ciclo_curricular);
         $this->assertDatabaseCount('matriculas', 2);
     }
 
     public function test_migrar_masivo_procesa_varios_estudiantes_y_tolera_errores_por_fila(): void
     {
-        $gradoOrigen = Grado::factory()->create(['orden' => 1]);
-        $gradoDestino = Grado::factory()->create(['orden' => 2]);
+        $carrera = Carrera::factory()->create(['total_ciclos' => 6]);
         $cicloOrigen = $this->cicloConPeriodoAbierto();
         $cicloDestino = $this->cicloConPeriodoAbierto();
 
-        $estudianteA = $this->estudianteMatriculado($cicloOrigen, $gradoOrigen);
-        $estudianteB = $this->estudianteMatriculado($cicloOrigen, $gradoOrigen);
+        $estudianteA = $this->estudianteMatriculado($cicloOrigen, $carrera, 1);
+        $estudianteB = $this->estudianteMatriculado($cicloOrigen, $carrera, 1);
 
         // Este ya tiene una matrícula en el ciclo destino -- matricular()
         // debe rechazarla como duplicada, y migrarMasivo() debe tolerarlo
         // sin frenar al resto.
-        $estudianteC = $this->estudianteMatriculado($cicloOrigen, $gradoOrigen);
-        $this->app->make(MatriculaService::class)->matricular($estudianteC, new RegistrarMatriculaData($cicloDestino->id, $gradoDestino->id, null, null));
+        $estudianteC = $this->estudianteMatriculado($cicloOrigen, $carrera, 1);
+        $this->app->make(MatriculaService::class)->matricular($estudianteC, new RegistrarMatriculaData($cicloDestino->id, $carrera->id, 2, null, null));
 
-        $origenes = $this->service()->matriculasVigentes(null, $cicloOrigen->id, null, $gradoOrigen->id);
+        $origenes = $this->service()->matriculasVigentes(null, $cicloOrigen->id, $carrera->id, 1);
         $this->assertCount(3, $origenes);
 
-        $resultado = $this->service()->migrarMasivo($origenes, $cicloDestino->id, $gradoDestino->id, null);
+        $resultado = $this->service()->migrarMasivo($origenes, $cicloDestino->id, 2, null);
 
         $this->assertSame(2, $resultado['exitosos']);
         $this->assertCount(1, $resultado['errores']);
         $this->assertSame($estudianteC->nombreCompleto(), $resultado['errores'][0]['estudiante']);
     }
 
-    public function test_matriculas_vigentes_filtra_por_ciclo_seccion_y_grado(): void
+    public function test_matriculas_vigentes_filtra_por_ciclo_carrera_y_ciclo_curricular(): void
     {
-        $gradoSeccionA = Grado::factory()->create(['orden' => 1]);
-        $gradoSeccionB = Grado::factory()->create(['orden' => 3]);
+        $carreraA = Carrera::factory()->create();
+        $carreraB = Carrera::factory()->create();
         $ciclo = $this->cicloConPeriodoAbierto();
 
-        $this->estudianteMatriculado($ciclo, $gradoSeccionA);
-        $this->estudianteMatriculado($ciclo, $gradoSeccionB);
+        $this->estudianteMatriculado($ciclo, $carreraA, 1);
+        $this->estudianteMatriculado($ciclo, $carreraB, 3);
 
-        $this->assertCount(1, $this->service()->matriculasVigentes(null, $ciclo->id, 'A', null));
-        $this->assertCount(1, $this->service()->matriculasVigentes(null, $ciclo->id, 'B', null));
+        $this->assertCount(1, $this->service()->matriculasVigentes(null, $ciclo->id, $carreraA->id, null));
+        $this->assertCount(1, $this->service()->matriculasVigentes(null, $ciclo->id, $carreraB->id, null));
         $this->assertCount(2, $this->service()->matriculasVigentes(null, $ciclo->id, null, null));
-        $this->assertCount(1, $this->service()->matriculasVigentes(null, $ciclo->id, null, $gradoSeccionA->id));
+        $this->assertCount(1, $this->service()->matriculasVigentes(null, $ciclo->id, null, 1));
     }
 
     public function test_matriculas_vigentes_filtra_por_modalidad(): void
     {
-        $grado = Grado::factory()->create(['orden' => 1]);
+        $carrera = Carrera::factory()->create();
         $cicloSeisMeses = $this->cicloConPeriodoAbierto();
         $cicloAnual = $this->cicloConPeriodoAbierto(['modalidad' => ModalidadCicloEnum::ANUAL, 'tipo' => null]);
 
-        $this->estudianteMatriculado($cicloSeisMeses, $grado);
-        $this->estudianteMatriculado($cicloAnual, $grado);
+        $this->estudianteMatriculado($cicloSeisMeses, $carrera, 1);
+        $this->estudianteMatriculado($cicloAnual, $carrera, 1);
 
-        $this->assertCount(1, $this->service()->matriculasVigentes(ModalidadCicloEnum::SEIS_MESES, null, null, $grado->id));
-        $this->assertCount(1, $this->service()->matriculasVigentes(ModalidadCicloEnum::ANUAL, null, null, $grado->id));
-        $this->assertCount(2, $this->service()->matriculasVigentes(null, null, null, $grado->id));
+        $this->assertCount(1, $this->service()->matriculasVigentes(ModalidadCicloEnum::SEIS_MESES, null, $carrera->id, null));
+        $this->assertCount(1, $this->service()->matriculasVigentes(ModalidadCicloEnum::ANUAL, null, $carrera->id, null));
+        $this->assertCount(2, $this->service()->matriculasVigentes(null, null, $carrera->id, null));
     }
 
     public function test_ciclo_anual_vigente_devuelve_el_mas_reciente(): void
@@ -149,19 +151,18 @@ class MigracionServiceTest extends TestCase
         $this->assertSame($masReciente->id, $this->service()->cicloAnualVigente()->id);
     }
 
-    public function test_grado_siguiente_devuelve_el_de_orden_inmediato_superior(): void
+    public function test_ciclo_curricular_siguiente_devuelve_el_inmediato_superior_acotado_por_la_carrera(): void
     {
-        $grado1 = Grado::factory()->create(['orden' => 1]);
-        $grado2 = Grado::factory()->create(['orden' => 2]);
+        $carrera = Carrera::factory()->create(['total_ciclos' => 6]);
 
-        $this->assertSame($grado2->id, $this->service()->gradoSiguiente($grado1)->id);
-        $this->assertNull($this->service()->gradoSiguiente($grado2));
+        $this->assertSame(2, $this->service()->cicloCurricularSiguiente($carrera, 1));
+        $this->assertNull($this->service()->cicloCurricularSiguiente($carrera, 6));
     }
 
     public function test_ciclo_destino_sugerido_usa_siguiente_ciclo_para_seis_meses(): void
     {
-        $actual = Ciclo::factory()->create(['tipo' => TipoCicloEnum::GRUPO_1, 'anio' => 2026]);
-        $siguiente = Ciclo::factory()->create(['tipo' => TipoCicloEnum::GRUPO_3, 'anio' => 2026]);
+        $actual = Ciclo::factory()->create(['tipo' => TipoCicloEnum::CICLO_1, 'anio' => 2026]);
+        $siguiente = Ciclo::factory()->create(['tipo' => TipoCicloEnum::CICLO_3, 'anio' => 2026]);
 
         $sugerido = $this->service()->cicloDestinoSugerido($actual, $this->app->make(CicloService::class));
 

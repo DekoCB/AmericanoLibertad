@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Vacaciones;
 
+use App\Models\Carrera;
 use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Enums\TipoCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
 use App\Modules\Matricula\DTOs\RegistrarMatriculaData;
@@ -51,7 +51,7 @@ class VacacionServiceTest extends TestCase
     private function estudianteMatriculado(Ciclo $ciclo): Estudiante
     {
         $matriculas = $this->app->make(MatriculaService::class);
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
 
         $estudiante = $matriculas->registrarEstudiante(new RegistrarEstudianteData(
             nombres: 'Fiorella',
@@ -64,14 +64,14 @@ class VacacionServiceTest extends TestCase
             observaciones: null,
         ));
 
-        $matriculas->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $grado->id, null, null));
+        $matriculas->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         return $estudiante;
     }
 
     public function test_activar_rechaza_un_estudiante_que_no_esta_en_siagie_anual(): void
     {
-        $ciclo = $this->cicloConPeriodoAbierto(['tipo' => TipoCicloEnum::GRUPO_1]);
+        $ciclo = $this->cicloConPeriodoAbierto(['tipo' => TipoCicloEnum::CICLO_1]);
         $estudiante = $this->estudianteMatriculado($ciclo);
 
         $this->expectException(ValidationException::class);
