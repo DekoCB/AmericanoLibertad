@@ -118,7 +118,8 @@ class IncidenciaServiceTest extends TestCase
         $miAlumno = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $miAlumno->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);
@@ -138,7 +139,8 @@ class IncidenciaServiceTest extends TestCase
         $estudiante = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);
@@ -161,7 +163,8 @@ class IncidenciaServiceTest extends TestCase
         $estudiante = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);

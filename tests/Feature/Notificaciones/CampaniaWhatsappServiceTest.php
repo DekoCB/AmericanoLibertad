@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Notificaciones;
 
+use App\Models\Carrera;
 use App\Models\User;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Notificaciones\Enums\EstadoCampaniaEnum;
@@ -20,19 +20,19 @@ class CampaniaWhatsappServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_resolver_destinatarios_filtra_por_grado(): void
+    public function test_resolver_destinatarios_filtra_por_carrera(): void
     {
-        $grado = Grado::factory()->create();
-        $estudianteEnGrado = Estudiante::factory()->create();
-        Matricula::factory()->create(['estudiante_id' => $estudianteEnGrado->id, 'grado_id' => $grado->id]);
+        $carrera = Carrera::factory()->create();
+        $estudianteEnCarrera = Estudiante::factory()->create();
+        Matricula::factory()->create(['estudiante_id' => $estudianteEnCarrera->id, 'carrera_id' => $carrera->id]);
 
         $otroEstudiante = Estudiante::factory()->create();
         Matricula::factory()->create(['estudiante_id' => $otroEstudiante->id]);
 
-        $destinatarios = app(CampaniaWhatsappService::class)->resolverDestinatarios(['grado_id' => $grado->id]);
+        $destinatarios = app(CampaniaWhatsappService::class)->resolverDestinatarios(['carrera_id' => $carrera->id]);
 
         $this->assertCount(1, $destinatarios);
-        $this->assertSame($estudianteEnGrado->id, $destinatarios->first()->id);
+        $this->assertSame($estudianteEnCarrera->id, $destinatarios->first()->id);
     }
 
     public function test_resolver_destinatarios_filtra_solo_con_deuda(): void
@@ -75,6 +75,6 @@ class CampaniaWhatsappServiceTest extends TestCase
 
         $this->expectException(ValidationException::class);
 
-        app(CampaniaWhatsappService::class)->crearYEnviar('Campaña vacía', $plantilla, ['grado_id' => 999999], $creador);
+        app(CampaniaWhatsappService::class)->crearYEnviar('Campaña vacía', $plantilla, ['carrera_id' => 999999], $creador);
     }
 }

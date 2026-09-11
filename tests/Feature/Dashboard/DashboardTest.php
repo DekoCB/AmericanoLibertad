@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Dashboard;
 
+use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Asistencia\Models\Asistencia;
 use App\Modules\AulaVirtual\Models\CursoVirtual;
@@ -246,13 +246,17 @@ class DashboardTest extends TestCase
             ->assertSee('Todo al día. No hay notificaciones pendientes.');
     }
 
-    public function test_coordinador_ve_asistencia_por_grado_cuando_hay_registros(): void
+    public function test_coordinador_ve_asistencia_por_carrera_cuando_hay_registros(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
 
-        $grado = Grado::factory()->create(['nombre' => '1ro de Secundaria']);
-        $horario = Horario::factory()->create(['grado_id' => $grado->id]);
+        // Sin tildes a propósito: :labels pasa por json_encode() en
+        // <x-chart-canvas>, que escapa acentos como \uXXXX -- assertSee no
+        // los encontraria en el HTML crudo (ver ReportesPermisosTest).
+        $carrera = Carrera::factory()->create(['name' => 'Enfermeria Tecnica']);
+        $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $horario = Horario::factory()->create(['curso_id' => $curso->id]);
         Asistencia::factory()->create([
             'horario_id' => $horario->id,
             'estado' => 'presente',
@@ -261,8 +265,8 @@ class DashboardTest extends TestCase
         $this->actingAs($coordinador)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Asistencia por grado')
-            ->assertSee('1ro de Secundaria');
+            ->assertSee('Asistencia por carrera')
+            ->assertSee('Enfermeria Tecnica');
     }
 
     public function test_estudiante_ve_solo_la_tarea_mas_proxima_de_cada_curso_en_vencimientos(): void
@@ -274,7 +278,8 @@ class DashboardTest extends TestCase
         $curso = CursoVirtual::factory()->create(['horario_id' => $horario->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
         $tareaService = $this->app->make(TareaService::class);
@@ -308,7 +313,8 @@ class DashboardTest extends TestCase
         $curso = CursoVirtual::factory()->create(['horario_id' => $horario->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
         $tareaService = $this->app->make(TareaService::class);
@@ -335,7 +341,8 @@ class DashboardTest extends TestCase
         $curso = CursoVirtual::factory()->create(['horario_id' => $horario->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
         $this->app->make(TareaService::class)->crear($curso, [
@@ -386,7 +393,8 @@ class DashboardTest extends TestCase
         $curso = CursoVirtual::factory()->create(['horario_id' => $horario->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
         $tarea = $this->app->make(TareaService::class)->crear($curso, [
@@ -416,7 +424,8 @@ class DashboardTest extends TestCase
         $curso = CursoVirtual::factory()->create(['horario_id' => $horario->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
         $tarea = $this->app->make(TareaService::class)->crear($curso, [
@@ -473,7 +482,8 @@ class DashboardTest extends TestCase
         $horario = Horario::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
         $evaluacion = Evaluacion::factory()->publicada()->create(['horario_id' => $horario->id]);
@@ -512,6 +522,6 @@ class DashboardTest extends TestCase
         $this->actingAs($usuario)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Bienvenido a CEBA');
+            ->assertSee('Bienvenido a Americano Libertad');
     }
 }
