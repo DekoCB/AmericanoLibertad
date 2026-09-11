@@ -38,14 +38,16 @@ class MiLibretaTest extends TestCase
         $horarioAnterior = Horario::factory()->create(['ciclo_id' => $cicloAnterior->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horarioAnterior->grado_id,
+            'carrera_id' => $horarioAnterior->carrera_id,
+            'ciclo_curricular' => $horarioAnterior->ciclo_curricular,
             'ciclo_id' => $cicloAnterior->id,
         ]);
 
         $horarioReciente = Horario::factory()->create(['ciclo_id' => $cicloReciente->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horarioReciente->grado_id,
+            'carrera_id' => $horarioReciente->carrera_id,
+            'ciclo_curricular' => $horarioReciente->ciclo_curricular,
             'ciclo_id' => $cicloReciente->id,
         ]);
 
@@ -71,7 +73,8 @@ class MiLibretaTest extends TestCase
         $horario = Horario::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 
@@ -93,14 +96,16 @@ class MiLibretaTest extends TestCase
         $horarioAnterior = Horario::factory()->create(['ciclo_id' => $cicloAnterior->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horarioAnterior->grado_id,
+            'carrera_id' => $horarioAnterior->carrera_id,
+            'ciclo_curricular' => $horarioAnterior->ciclo_curricular,
             'ciclo_id' => $cicloAnterior->id,
         ]);
 
         $horarioReciente = Horario::factory()->create(['ciclo_id' => $cicloReciente->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horarioReciente->grado_id,
+            'carrera_id' => $horarioReciente->carrera_id,
+            'ciclo_curricular' => $horarioReciente->ciclo_curricular,
             'ciclo_id' => $cicloReciente->id,
         ]);
 
@@ -150,7 +155,8 @@ class MiLibretaTest extends TestCase
         $horario = Horario::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 

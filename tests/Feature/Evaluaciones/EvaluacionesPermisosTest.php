@@ -63,7 +63,8 @@ class EvaluacionesPermisosTest extends TestCase
         $horario = Horario::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 

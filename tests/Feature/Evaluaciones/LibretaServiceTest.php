@@ -42,7 +42,8 @@ class LibretaServiceTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         $evaluacionService = $this->app->make(EvaluacionService::class);
@@ -67,7 +68,8 @@ class LibretaServiceTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         $this->libretaService()->generar($estudiante, $ciclo);
@@ -84,7 +86,8 @@ class LibretaServiceTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         $evaluacionService = $this->app->make(EvaluacionService::class);
@@ -118,7 +121,8 @@ class LibretaServiceTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         $evaluacionService = $this->app->make(EvaluacionService::class);
@@ -176,17 +180,17 @@ class LibretaServiceTest extends TestCase
         $this->assertSame('ANUAL', $this->libretaService()->periodoPromocional($ciclo));
     }
 
-    public function test_periodo_promocional_es_1_para_un_grupo_que_arranca_en_la_primera_mitad_del_anio(): void
+    public function test_periodo_promocional_es_1_para_un_ciclo_que_arranca_en_la_primera_mitad_del_anio(): void
     {
-        // Ciclo::factory() por defecto es Grupo 1 (mesInicioFijo = 1).
+        // Ciclo::factory() por defecto es Ciclo 1 (mesInicioFijo = 1).
         $ciclo = Ciclo::factory()->create(['anio' => 2026]);
 
         $this->assertSame('2026-1', $this->libretaService()->periodoPromocional($ciclo));
     }
 
-    public function test_periodo_promocional_es_2_para_un_grupo_que_arranca_en_la_segunda_mitad_del_anio(): void
+    public function test_periodo_promocional_es_2_para_un_ciclo_que_arranca_en_la_segunda_mitad_del_anio(): void
     {
-        $ciclo = Ciclo::factory()->grupo3()->create(['anio' => 2026]);
+        $ciclo = Ciclo::factory()->ciclo3()->create(['anio' => 2026]);
 
         $this->assertSame('2026-2', $this->libretaService()->periodoPromocional($ciclo));
     }
@@ -199,7 +203,8 @@ class LibretaServiceTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
         $evaluacionService = $this->app->make(EvaluacionService::class);

@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Asistencia;
 
+use App\Models\Carrera;
 use App\Modules\Academico\Enums\DiaSemanaEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
-use App\Modules\Academico\Models\Grado;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Asistencia\Enums\EstadoAsistenciaEnum;
 use App\Modules\Asistencia\Models\Asistencia;
@@ -54,7 +54,8 @@ class AsistenciaServiceTest extends TestCase
         $matriculado = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $matriculado->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 
@@ -66,7 +67,7 @@ class AsistenciaServiceTest extends TestCase
         $this->assertFalse($estudiantes->contains('id', $noMatriculado->id));
     }
 
-    public function test_estudiantes_del_horario_no_mezcla_otros_grados_o_ciclos(): void
+    public function test_estudiantes_del_horario_no_mezcla_otras_carreras_o_ciclos(): void
     {
         $horarioA = Horario::factory()->create();
         $horarioB = Horario::factory()->create();
@@ -74,14 +75,16 @@ class AsistenciaServiceTest extends TestCase
         $estudianteA = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudianteA->id,
-            'grado_id' => $horarioA->grado_id,
+            'carrera_id' => $horarioA->carrera_id,
+            'ciclo_curricular' => $horarioA->ciclo_curricular,
             'ciclo_id' => $horarioA->ciclo_id,
         ]);
 
         $estudianteB = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudianteB->id,
-            'grado_id' => $horarioB->grado_id,
+            'carrera_id' => $horarioB->carrera_id,
+            'ciclo_curricular' => $horarioB->ciclo_curricular,
             'ciclo_id' => $horarioB->ciclo_id,
         ]);
 
@@ -92,25 +95,28 @@ class AsistenciaServiceTest extends TestCase
     }
 
     /**
-     * Cuando un grado tiene varios cursos (cada uno con un solo horario,
-     * sin secciones paralelas), un estudiante matriculado en el grado
-     * pertenece a TODOS esos cursos automáticamente -- no hace falta
-     * asignarle explícitamente el horario de cada uno. Solo cuando un
-     * MISMO curso tiene varias secciones (ver el siguiente test) hace
-     * falta la asignación explícita.
+     * Cuando una carrera+ciclo curricular tiene varios cursos (cada uno con
+     * un solo horario, sin secciones paralelas), un estudiante matriculado
+     * en esa carrera+ciclo pertenece a TODOS esos cursos automáticamente --
+     * no hace falta asignarle explícitamente el horario de cada uno. Solo
+     * cuando un MISMO curso tiene varias secciones (ver el siguiente test)
+     * hace falta la asignación explícita.
      */
-    public function test_estudiantes_del_horario_incluye_al_matriculado_en_otro_curso_del_mismo_grado(): void
+    public function test_estudiantes_del_horario_incluye_al_matriculado_en_otro_curso_de_la_misma_carrera_y_ciclo(): void
     {
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
         $ciclo = Ciclo::factory()->create();
+        $cursoUno = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $cursoDos = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
 
-        $curso1 = Horario::factory()->create(['grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
-        $curso2 = Horario::factory()->create(['grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        Horario::factory()->create(['curso_id' => $cursoUno->id, 'ciclo_id' => $ciclo->id]);
+        $curso2 = Horario::factory()->create(['curso_id' => $cursoDos->id, 'ciclo_id' => $ciclo->id]);
 
         $estudiante = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $grado->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 1,
             'ciclo_id' => $ciclo->id,
         ]);
 
@@ -121,25 +127,25 @@ class AsistenciaServiceTest extends TestCase
 
     /**
      * Cuando el MISMO curso tiene dos secciones (dos Horario con igual
-     * curso_id+grado_id+ciclo_id), ya no basta con estar matriculado en el
-     * grado: cada estudiante debe aparecer solo en la sección que se le
-     * asignó explícitamente, no en ambas.
+     * curso_id+carrera_id+ciclo_curricular+ciclo_id), ya no basta con estar
+     * matriculado en la carrera+ciclo: cada estudiante debe aparecer solo en
+     * la sección que se le asignó explícitamente, no en ambas.
      */
     public function test_estudiantes_del_horario_con_secciones_paralelas_solo_incluye_a_quien_fue_asignado_a_esa_seccion(): void
     {
-        $grado = Grado::factory()->create();
+        $carrera = Carrera::factory()->create();
         $ciclo = Ciclo::factory()->create();
-        $curso = Curso::factory()->create(['grado_id' => $grado->id]);
+        $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
 
-        $seccionA = Horario::factory()->create(['curso_id' => $curso->id, 'grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
-        $seccionB = Horario::factory()->create(['curso_id' => $curso->id, 'grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        $seccionA = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $ciclo->id]);
+        $seccionB = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $ciclo->id]);
 
         $estudianteA = Estudiante::factory()->create();
-        $matriculaA = Matricula::factory()->create(['estudiante_id' => $estudianteA->id, 'grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        $matriculaA = Matricula::factory()->create(['estudiante_id' => $estudianteA->id, 'carrera_id' => $carrera->id, 'ciclo_curricular' => 1, 'ciclo_id' => $ciclo->id]);
         $matriculaA->horarios()->attach($seccionA->id);
 
         $estudianteB = Estudiante::factory()->create();
-        $matriculaB = Matricula::factory()->create(['estudiante_id' => $estudianteB->id, 'grado_id' => $grado->id, 'ciclo_id' => $ciclo->id]);
+        $matriculaB = Matricula::factory()->create(['estudiante_id' => $estudianteB->id, 'carrera_id' => $carrera->id, 'ciclo_curricular' => 1, 'ciclo_id' => $ciclo->id]);
         $matriculaB->horarios()->attach($seccionB->id);
 
         $rosterSeccionA = $this->service()->estudiantesDelHorario($seccionA);
@@ -338,7 +344,8 @@ class AsistenciaServiceTest extends TestCase
         $estudiante = Estudiante::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);

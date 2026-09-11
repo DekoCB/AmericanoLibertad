@@ -51,7 +51,8 @@ class MarcarAsistenciaTest extends TestCase
         $estudiante = Estudiante::factory()->create(['user_id' => $usuario->id, 'dni' => '87654321']);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);

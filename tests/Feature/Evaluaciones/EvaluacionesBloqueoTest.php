@@ -37,7 +37,8 @@ class EvaluacionesBloqueoTest extends TestCase
         $horario = Horario::factory()->create();
         $matricula = Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
         $plan = PlanPago::factory()->create(['matricula_id' => $matricula->id]);
@@ -73,7 +74,8 @@ class EvaluacionesBloqueoTest extends TestCase
         $horario = Horario::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 
@@ -109,7 +111,8 @@ class EvaluacionesBloqueoTest extends TestCase
         $horario = Horario::factory()->create(['ciclo_id' => $cicloActivo->id]);
         $matricula = Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $cicloActivo->id,
         ]);
         $plan = PlanPago::factory()->create(['matricula_id' => $matricula->id]);
@@ -186,7 +189,8 @@ class EvaluacionesBloqueoTest extends TestCase
         $horario = Horario::factory()->create(['ciclo_id' => $cicloActivo->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $cicloActivo->id,
         ]);
 

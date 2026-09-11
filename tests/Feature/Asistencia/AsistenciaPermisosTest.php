@@ -53,7 +53,7 @@ class AsistenciaPermisosTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_un_estudiante_matriculado_en_el_grado_y_ciclo_del_horario_puede_ver_su_resumen(): void
+    public function test_un_estudiante_matriculado_en_la_carrera_y_ciclo_curricular_del_horario_puede_ver_su_resumen(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::ESTUDIANTE->value);
@@ -62,7 +62,8 @@ class AsistenciaPermisosTest extends TestCase
         $horario = Horario::factory()->create();
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
         ]);
 
@@ -71,7 +72,7 @@ class AsistenciaPermisosTest extends TestCase
             ->assertOk();
     }
 
-    public function test_un_estudiante_no_matriculado_en_ese_grado_y_ciclo_no_puede_ver_la_asistencia(): void
+    public function test_un_estudiante_no_matriculado_en_esa_carrera_y_ciclo_no_puede_ver_la_asistencia(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::ESTUDIANTE->value);
@@ -117,7 +118,8 @@ class AsistenciaPermisosTest extends TestCase
         $estudiante = Estudiante::factory()->create(['user_id' => $usuarioEstudiante->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);
@@ -148,7 +150,8 @@ class AsistenciaPermisosTest extends TestCase
         $estudiante = Estudiante::factory()->create(['user_id' => $usuarioEstudiante->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);
@@ -221,7 +224,8 @@ class AsistenciaPermisosTest extends TestCase
         $estudiante = Estudiante::factory()->create(['user_id' => $usuarioEstudiante->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);
@@ -291,7 +295,8 @@ class AsistenciaPermisosTest extends TestCase
         $estudiante = Estudiante::factory()->create(['user_id' => $usuarioEstudiante->id]);
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
-            'grado_id' => $horario->grado_id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
             'ciclo_id' => $horario->ciclo_id,
             'estado' => 'aprobada',
         ]);
