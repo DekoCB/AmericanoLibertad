@@ -43,7 +43,30 @@ class PeriodosPermisosTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_crear_un_periodo_no_anual_no_crea_ningun_ciclo(): void
+    public function test_crear_un_periodo_crea_ademas_su_ciclo_vinculado(): void
+    {
+        $coordinador = User::factory()->create();
+        $coordinador->assignRole(RolEnum::COORDINADOR->value);
+
+        $this->actingAs($coordinador);
+
+        Volt::test('academico.periodos.index')
+            ->set('tipo', TipoPeriodoEnum::PRIMERO->value)
+            ->set('anio', '2026')
+            ->set('fechaInicio', '2026-01-01')
+            ->set('fechaFin', '2026-06-30')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $periodo = Periodo::query()->where('anio', 2026)->where('tipo', 'primero')->firstOrFail();
+        $ciclo = Ciclo::query()->where('siagie_id', $periodo->id)->first();
+
+        $this->assertNotNull($ciclo);
+        $this->assertSame('Periodo 2026-1', $ciclo->nombre);
+        $this->assertNull($ciclo->tipo);
+    }
+
+    public function test_crear_un_periodo_sin_fechas_falla(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
@@ -54,39 +77,13 @@ class PeriodosPermisosTest extends TestCase
             ->set('tipo', TipoPeriodoEnum::PRIMERO->value)
             ->set('anio', '2026')
             ->call('guardar')
-            ->assertHasNoErrors();
-
-        $this->assertDatabaseHas('siagies', ['tipo' => 'primero', 'anio' => 2026]);
-        $this->assertSame(0, Ciclo::query()->count());
-    }
-
-    public function test_crear_un_periodo_anual_crea_ademas_su_ciclo_vinculado(): void
-    {
-        $coordinador = User::factory()->create();
-        $coordinador->assignRole(RolEnum::COORDINADOR->value);
-
-        $this->actingAs($coordinador);
-
-        Volt::test('academico.periodos.index')
-            ->set('tipo', TipoPeriodoEnum::ANUAL->value)
-            ->set('anio', '2026')
-            ->set('fechaInicio', '2026-03-01')
-            ->set('fechaFin', '2026-10-31')
-            ->call('guardar')
-            ->assertHasNoErrors();
-
-        $periodo = Periodo::query()->where('anio', 2026)->where('tipo', 'anual')->firstOrFail();
-        $ciclo = Ciclo::query()->where('siagie_id', $periodo->id)->first();
-
-        $this->assertNotNull($ciclo);
-        $this->assertSame('Periodo Anual - 2026', $ciclo->nombre);
+            ->assertHasErrors(['fechaInicio']);
     }
 
     public function test_el_listado_muestra_los_periodos_disponibles(): void
     {
         Periodo::factory()->create(['tipo' => TipoPeriodoEnum::PRIMERO, 'anio' => 2026]);
-        Periodo::factory()->create(['tipo' => TipoPeriodoEnum::SEGUNDO, 'anio' => 2026]);
-        Periodo::factory()->anual()->create(['anio' => 2026]);
+        Periodo::factory()->segundo()->create(['tipo' => TipoPeriodoEnum::SEGUNDO, 'anio' => 2026]);
 
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
@@ -94,8 +91,7 @@ class PeriodosPermisosTest extends TestCase
 
         Volt::test('academico.periodos.index')
             ->assertSee('2026-1')
-            ->assertSee('2026-2')
-            ->assertSee('2026 Anual');
+            ->assertSee('2026-2');
     }
 
     public function test_no_permite_dos_periodos_del_mismo_tipo_y_anio(): void

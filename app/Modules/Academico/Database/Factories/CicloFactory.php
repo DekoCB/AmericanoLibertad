@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Academico\Database\Factories;
 
 use App\Modules\Academico\Enums\EstadoCicloEnum;
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Enums\TipoCicloEnum;
 use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Ciclo;
@@ -20,21 +19,21 @@ class CicloFactory extends Factory
     protected $model = Ciclo::class;
 
     /**
-     * Un Ciclo modalidad=anual real siempre tiene su Periodo tipo=anual
-     * vinculado (ver migración 2027_01_23): sin esto, cualquier test que
-     * use anual() quedaría con un Ciclo huérfano que Vacaciones/
-     * Evaluaciones (que ahora consultan Ciclo::periodo, no
-     * Ciclo::modalidad) no reconocerían como anual.
+     * Un Ciclo sin ventana rotativa (`tipo` nulo) siempre tiene un Periodo
+     * real vinculado (ver PeriodoService::crear()): sin esto, cualquier
+     * test que use conPeriodo() quedaría con un Ciclo huérfano que
+     * Vacaciones/Evaluaciones/Libreta (que consultan Ciclo::periodo) no
+     * reconocerían como tal.
      */
     public function configure(): static
     {
         return $this->afterCreating(function (Ciclo $ciclo): void {
-            if ($ciclo->modalidad !== ModalidadCicloEnum::ANUAL || $ciclo->siagie_id !== null) {
+            if ($ciclo->tipo !== null || $ciclo->siagie_id !== null) {
                 return;
             }
 
             $periodo = Periodo::query()->firstOrCreate(
-                ['tipo' => TipoPeriodoEnum::ANUAL, 'anio' => $ciclo->anio],
+                ['tipo' => TipoPeriodoEnum::PRIMERO, 'anio' => $ciclo->anio],
                 ['fecha_inicio' => $ciclo->fecha_inicio, 'fecha_fin' => $ciclo->fecha_fin, 'estado' => $ciclo->estado],
             );
 
@@ -77,17 +76,21 @@ class CicloFactory extends Factory
         return $this->state(['estado' => EstadoCicloEnum::ACTIVO]);
     }
 
-    public function anual(): static
+    /**
+     * Un Ciclo nacido de un Periodo (ver PeriodoService): sin la ventana
+     * rotativa de 6 meses (`tipo` nulo), con su Periodo real vinculado por
+     * configure() arriba.
+     */
+    public function conPeriodo(): static
     {
         return $this->state(function (array $attributes) {
             $anio = $attributes['anio'];
 
             return [
-                'nombre' => "SIAGIE Anual - {$anio}",
-                'modalidad' => ModalidadCicloEnum::ANUAL,
+                'nombre' => "Periodo {$anio}-1",
                 'tipo' => null,
-                'fecha_inicio' => "{$anio}-03-01",
-                'fecha_fin' => "{$anio}-10-31",
+                'fecha_inicio' => "{$anio}-01-01",
+                'fecha_fin' => "{$anio}-06-30",
             ];
         });
     }

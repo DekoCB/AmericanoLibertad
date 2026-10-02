@@ -15,12 +15,14 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Dos modalidades de ciclo (ver ModalidadCicloEnum): las 4 ventanas de
- * admisión rotativas del año (Ciclo 1 a 4, 6 meses cada una) y SIAGIE
- * anual (un ciclo independiente que corre el año escolar completo, sin
- * ventana rotativa asociada). Aplica la "doble validación" del roadmap:
- * las fechas del propio ciclo deben ser coherentes con su modalidad/tipo,
- * y las fechas de matrícula deben ser coherentes con las del ciclo.
+ * Un Ciclo nace de una de dos formas: las 4 ventanas de admisión rotativas
+ * heredadas (Ciclo 1 a 4, `tipo` no nulo, ver TipoCicloEnum) -- ya no se
+ * crean nuevas, quedan las que ya existían -- o, de aquí en adelante,
+ * siempre como espejo de un Periodo (`tipo` nulo, ver PeriodoService). En
+ * ambos casos dura 6 meses de clases. Aplica la "doble validación" del
+ * roadmap: las fechas del propio ciclo deben ser coherentes con su tipo
+ * (o genéricas si no tiene), y las fechas de matrícula deben ser
+ * coherentes con las del ciclo.
  */
 class CicloService
 {
@@ -69,31 +71,24 @@ class CicloService
 
     private function validarSegunModalidad(ModalidadCicloEnum $modalidad, ?TipoCicloEnum $tipo, string $fechaInicio, string $fechaFin, ?int $exceptoId = null): void
     {
-        if ($modalidad === ModalidadCicloEnum::SEIS_MESES) {
-            if ($tipo === null) {
-                throw ValidationException::withMessages([
-                    'tipo' => 'Un ciclo de 6 meses (ventana rotativa) necesita indicar cuál de los 4 ciclos (1 a 4) es.',
-                ]);
-            }
-
+        if ($tipo !== null) {
             $this->validarFechasDelCiclo($tipo, $fechaInicio, $fechaFin);
             $this->validarSinSolapeDeMismoTipo($tipo, $fechaInicio, $fechaFin, $exceptoId);
 
             return;
         }
 
-        $this->validarFechasCicloAnual($fechaInicio, $fechaFin);
-        $this->validarSinSolapeAnual($fechaInicio, $fechaFin, $exceptoId);
+        $this->validarFechasGenericas($fechaInicio, $fechaFin);
+        $this->validarSinSolapeDeCiclosSinTipo($fechaInicio, $fechaFin, $exceptoId);
     }
 
     /**
-     * Un ciclo SIAGIE anual no tiene mes de inicio fijo ni ventana rotativa asociada:
-     * su periodo de clases dura 8 meses, declarados a mano (de qué mes a
-     * qué mes) por quien lo registra -- los 2 meses restantes del año son
-     * las vacaciones propias de esta modalidad (ver módulo Vacaciones),
-     * fuera del ciclo mismo.
+     * Validación de fechas para un Ciclo sin ventana rotativa asociada
+     * (`tipo` nulo): los que nacen de un Periodo (ver PeriodoService) no
+     * tienen un mes de inicio fijo propio, así que solo se exige que fin
+     * sea posterior a inicio -- la duración real la define el Periodo.
      */
-    public function validarFechasCicloAnual(string $fechaInicio, string $fechaFin): void
+    private function validarFechasGenericas(string $fechaInicio, string $fechaFin): void
     {
         $inicio = Carbon::parse($fechaInicio);
         $fin = Carbon::parse($fechaFin);
@@ -103,25 +98,16 @@ class CicloService
                 'fecha_fin' => 'La fecha de fin debe ser posterior a la fecha de inicio.',
             ]);
         }
-
-        $finEsperado = $inicio->copy()->addMonths(8);
-        $diferenciaEnDias = abs($fin->diffInDays($finEsperado));
-
-        if ($diferenciaEnDias > 15) {
-            throw ValidationException::withMessages([
-                'fecha_fin' => 'Un ciclo SIAGIE anual dura 8 meses de clases; la fecha de fin no cuadra con la de inicio (margen de 15 días).',
-            ]);
-        }
     }
 
-    private function validarSinSolapeAnual(string $fechaInicio, string $fechaFin, ?int $exceptoId = null): void
+    private function validarSinSolapeDeCiclosSinTipo(string $fechaInicio, string $fechaFin, ?int $exceptoId = null): void
     {
         $solapados = $this->ciclos->solapadosCon($fechaInicio, $fechaFin, $exceptoId)
-            ->where('modalidad', ModalidadCicloEnum::ANUAL);
+            ->whereNull('tipo');
 
         if ($solapados->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'fecha_inicio' => 'Ya existe un ciclo SIAGIE anual con fechas que se cruzan: '.$solapados->first()->nombre,
+                'fecha_inicio' => 'Ya existe un ciclo con fechas que se cruzan: '.$solapados->first()->nombre,
             ]);
         }
     }
@@ -226,7 +212,7 @@ class CicloService
      */
     public function siguienteCiclo(Ciclo $actual): ?Ciclo
     {
-        if ($actual->modalidad !== ModalidadCicloEnum::SEIS_MESES || $actual->tipo === null) {
+        if ($actual->tipo === null) {
             return null;
         }
 
@@ -236,26 +222,5 @@ class CicloService
             ->where('tipo', $actual->tipo->siguiente())
             ->where('anio', $siguienteAnio)
             ->first();
-    }
-
-    /**
-     * SIAGIE anual no rota entre ciclos como el de 6 meses: a lo sumo hay un
-     * ciclo anual "vigente" a la vez, el marcado Activo. Si todavía no hay
-     * ninguno activo, cae al más reciente por fecha de inicio. Sin periodo
-     * de matrícula que abrir de por medio -- esta modalidad se identifica
-     * solo por año, y su matrícula está disponible mientras el ciclo esté
-     * vigente (ver MatriculaService::matricular()).
-     */
-    public function cicloAnualVigente(): ?Ciclo
-    {
-        return Ciclo::query()
-            ->where('modalidad', ModalidadCicloEnum::ANUAL)
-            ->where('estado', EstadoCicloEnum::ACTIVO)
-            ->orderByDesc('fecha_inicio')
-            ->first()
-            ?? Ciclo::query()
-                ->where('modalidad', ModalidadCicloEnum::ANUAL)
-                ->orderByDesc('fecha_inicio')
-                ->first();
     }
 }

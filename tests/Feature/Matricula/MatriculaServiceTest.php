@@ -13,6 +13,7 @@ use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\DTOs\RegistrarApoderadoData;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
 use App\Modules\Matricula\DTOs\RegistrarMatriculaData;
+use App\Modules\Matricula\Enums\ModalidadEstudioEnum;
 use App\Modules\Matricula\Events\EstudianteMatriculado;
 use App\Modules\Matricula\Services\MatriculaService;
 use App\Shared\Enums\RolEnum;
@@ -227,6 +228,35 @@ class MatriculaServiceTest extends TestCase
         $this->assertSame(1, $estudianteFresco->ciclo_actual);
     }
 
+    public function test_matricular_guarda_la_modalidad_de_estudio_elegida(): void
+    {
+        $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
+        $ciclo = $this->cicloConPeriodoAbierto();
+        $carrera = Carrera::factory()->create();
+
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData(
+            cicloId: $ciclo->id,
+            carreraId: $carrera->id,
+            cicloCurricular: 1,
+            observaciones: null,
+            registradoPor: null,
+            modalidadEstudio: ModalidadEstudioEnum::VIRTUAL,
+        ));
+
+        $this->assertSame(ModalidadEstudioEnum::VIRTUAL, $matricula->modalidad_estudio);
+    }
+
+    public function test_matricular_sin_elegir_modalidad_de_estudio_usa_presencial_por_defecto(): void
+    {
+        $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
+        $ciclo = $this->cicloConPeriodoAbierto();
+        $carrera = Carrera::factory()->create();
+
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
+
+        $this->assertSame(ModalidadEstudioEnum::PRESENCIAL, $matricula->modalidad_estudio);
+    }
+
     public function test_matricular_en_una_carrera_sin_horarios_deja_la_matricula_sin_horarios_asignados(): void
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
@@ -258,20 +288,6 @@ class MatriculaServiceTest extends TestCase
         $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
 
         $this->assertTrue($matricula->fecha_matricula->addMonths(8)->isSameDay($matricula->fecha_fin_estudio));
-    }
-
-    public function test_matricular_en_un_ciclo_anual_no_exige_periodo_de_matricula_abierto(): void
-    {
-        // A diferencia de los Ciclos de 6 meses, SIAGIE anual no depende de
-        // un PeriodoMatricula: este ciclo no tiene ninguno y aun así debe
-        // poder matricularse.
-        $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
-        $ciclo = Ciclo::factory()->anual()->activo()->create();
-        $carrera = Carrera::factory()->create();
-
-        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData($ciclo->id, $carrera->id, 1, null, null));
-
-        $this->assertTrue($ciclo->fecha_fin->isSameDay($matricula->fecha_fin_estudio));
     }
 
     public function test_reasignar_fecha_fin_estudio_la_actualiza(): void

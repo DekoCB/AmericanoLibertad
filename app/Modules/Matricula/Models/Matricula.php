@@ -12,11 +12,15 @@ use App\Modules\Academico\Models\Periodo;
 use App\Modules\Identidad\Support\Auditable;
 use App\Modules\Matricula\Database\Factories\MatriculaFactory;
 use App\Modules\Matricula\Enums\EstadoMatriculaEnum;
+use App\Modules\Matricula\Enums\ModalidadEstudioEnum;
+use App\Modules\Migraciones\Models\MatriculaRefuerzo;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\MediaLibrary\HasMedia;
@@ -28,6 +32,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int $ciclo_id
  * @property int $carrera_id
  * @property int $ciclo_curricular
+ * @property ModalidadEstudioEnum $modalidad_estudio
  * @property int|null $siagie_id
  * @property Carbon $fecha_matricula
  * @property Carbon|null $fecha_fin_estudio
@@ -47,6 +52,7 @@ class Matricula extends Model implements HasMedia
         'ciclo_id',
         'carrera_id',
         'ciclo_curricular',
+        'modalidad_estudio',
         'siagie_id',
         'fecha_matricula',
         'fecha_fin_estudio',
@@ -61,6 +67,7 @@ class Matricula extends Model implements HasMedia
             'fecha_matricula' => 'date',
             'fecha_fin_estudio' => 'date',
             'estado' => EstadoMatriculaEnum::class,
+            'modalidad_estudio' => ModalidadEstudioEnum::class,
         ];
     }
 
@@ -106,6 +113,41 @@ class Matricula extends Model implements HasMedia
     public function registradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'registrado_por');
+    }
+
+    /**
+     * Los cursos que esta matrícula está repitiendo por haberlos
+     * desaprobado en un ciclo anterior -- ver MatriculaRefuerzo.
+     *
+     * @return HasMany<MatriculaRefuerzo, $this>
+     */
+    public function refuerzos(): HasMany
+    {
+        return $this->hasMany(MatriculaRefuerzo::class);
+    }
+
+    /**
+     * Todos los horarios de esta matrícula: los de la cohorte normal
+     * (mismo carrera+ciclo_curricular+ciclo, ver Horario::scopeDeLaMatricula())
+     * más los de cualquier curso en recuperación que ya tenga sección
+     * asignada. Punto único de integración para los módulos que arman "qué
+     * cursos tiene este estudiante" por estudiante individual (Evaluaciones,
+     * Aula Virtual, Asistencia, Incidencias, Libreta, Reportes por
+     * estudiante) -- sin esto, un curso en recuperación quedaría invisible
+     * para esos módulos porque su ciclo_curricular no calza con el de la
+     * matrícula.
+     *
+     * @return EloquentCollection<int, Horario>
+     */
+    public function todosLosHorarios(): EloquentCollection
+    {
+        $deRefuerzo = $this->refuerzos()
+            ->whereNotNull('horario_id')
+            ->with('horario')
+            ->get()
+            ->pluck('horario');
+
+        return Horario::query()->deLaMatricula($this)->get()->merge($deRefuerzo);
     }
 
     public function periodo(): BelongsTo

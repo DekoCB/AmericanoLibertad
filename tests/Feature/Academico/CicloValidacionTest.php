@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Academico;
 
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Enums\TipoCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Services\CicloService;
@@ -186,61 +185,59 @@ class CicloValidacionTest extends TestCase
         $this->assertNull($this->service()->siguienteCiclo($actual));
     }
 
-    public function test_un_ciclo_anual_no_exige_tipo_ni_mes_de_inicio_fijo(): void
+    public function test_un_ciclo_sin_tipo_rotativo_no_exige_mes_de_inicio_fijo(): void
     {
         $ciclo = $this->service()->crear([
-            'nombre' => 'SIAGIE Anual - 2026',
-            'modalidad' => ModalidadCicloEnum::ANUAL,
+            'nombre' => 'Periodo 2026-1',
             'tipo' => null,
             'anio' => 2026,
             'fecha_inicio' => '2026-03-01',
             'fecha_fin' => '2026-10-31',
         ]);
 
-        $this->assertDatabaseHas('ciclos', ['id' => $ciclo->id, 'modalidad' => 'anual', 'tipo' => null]);
+        $this->assertDatabaseHas('ciclos', ['id' => $ciclo->id, 'tipo' => null]);
     }
 
-    public function test_un_ciclo_anual_debe_durar_los_8_meses_declarados(): void
+    public function test_un_ciclo_sin_tipo_rotativo_solo_exige_que_fin_sea_posterior_a_inicio(): void
     {
         $this->expectException(ValidationException::class);
 
         $this->service()->crear([
-            'nombre' => 'SIAGIE Anual - 2026 (corto)',
-            'modalidad' => ModalidadCicloEnum::ANUAL,
+            'nombre' => 'Periodo 2026-1 (invertido)',
             'tipo' => null,
             'anio' => 2026,
-            'fecha_inicio' => '2026-03-01',
-            'fecha_fin' => '2026-06-01',
+            'fecha_inicio' => '2026-06-01',
+            'fecha_fin' => '2026-03-01',
         ]);
     }
 
-    public function test_no_permite_dos_ciclos_anuales_con_fechas_cruzadas(): void
+    public function test_no_permite_dos_ciclos_sin_tipo_con_fechas_cruzadas(): void
     {
         $this->service()->crear([
-            'nombre' => 'SIAGIE Anual - 2026',
-            'modalidad' => ModalidadCicloEnum::ANUAL,
+            'nombre' => 'Periodo 2026-1',
             'tipo' => null,
             'anio' => 2026,
-            'fecha_inicio' => '2026-03-01',
-            'fecha_fin' => '2026-10-31',
+            'fecha_inicio' => '2026-01-01',
+            'fecha_fin' => '2026-06-30',
         ]);
 
         $this->expectException(ValidationException::class);
 
         $this->service()->crear([
-            'nombre' => 'SIAGIE Anual - 2026 (duplicado)',
-            'modalidad' => ModalidadCicloEnum::ANUAL,
+            'nombre' => 'Periodo 2026-1 (duplicado)',
             'tipo' => null,
             'anio' => 2026,
             'fecha_inicio' => '2026-04-01',
-            'fecha_fin' => '2026-11-30',
+            'fecha_fin' => '2026-09-30',
         ]);
     }
 
-    public function test_un_ciclo_anual_puede_solaparse_con_un_ciclo_rotativo_sin_problema(): void
+    public function test_un_ciclo_sin_tipo_puede_solaparse_con_un_ciclo_rotativo_sin_problema(): void
     {
-        // Son modalidades independientes: un Ciclo 1 y un SIAGIE anual con
-        // fechas que se cruzan no es un error de carga.
+        // Son clasificaciones independientes: un Ciclo 1 rotativo y un
+        // Ciclo nacido de un Periodo con fechas que se cruzan no es un
+        // error de carga -- el solape solo se valida entre ciclos del
+        // mismo tipo (rotativo) o entre ciclos sin tipo entre sí.
         $this->service()->crear([
             'nombre' => 'Ciclo 1 - 2026',
             'tipo' => TipoCicloEnum::CICLO_1,
@@ -250,8 +247,7 @@ class CicloValidacionTest extends TestCase
         ]);
 
         $ciclo = $this->service()->crear([
-            'nombre' => 'SIAGIE Anual - 2026',
-            'modalidad' => ModalidadCicloEnum::ANUAL,
+            'nombre' => 'Periodo 2026-1',
             'tipo' => null,
             'anio' => 2026,
             'fecha_inicio' => '2026-03-01',
@@ -261,9 +257,9 @@ class CicloValidacionTest extends TestCase
         $this->assertDatabaseHas('ciclos', ['id' => $ciclo->id]);
     }
 
-    public function test_siguiente_ciclo_es_null_para_un_ciclo_anual(): void
+    public function test_siguiente_ciclo_es_null_para_un_ciclo_sin_tipo_rotativo(): void
     {
-        $actual = Ciclo::factory()->anual()->create();
+        $actual = Ciclo::factory()->conPeriodo()->create();
 
         $this->assertNull($this->service()->siguienteCiclo($actual));
     }

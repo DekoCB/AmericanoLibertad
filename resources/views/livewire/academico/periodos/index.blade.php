@@ -38,20 +38,18 @@ new #[Layout('layouts.app')] class extends Component
     {
         Gate::authorize('academico.gestionar');
 
-        $esAnual = $this->tipo === TipoPeriodoEnum::ANUAL->value;
-
         $this->validate([
             'tipo' => 'required|string|in:'.implode(',', array_column(TipoPeriodoEnum::cases(), 'value')),
             'anio' => 'required|integer|min:2020|max:2100',
-            'fechaInicio' => $esAnual ? 'required|date' : 'nullable|date',
-            'fechaFin' => $esAnual ? 'required|date' : 'nullable|date',
+            'fechaInicio' => 'required|date',
+            'fechaFin' => 'required|date',
         ]);
 
         $service->crear([
             'tipo' => TipoPeriodoEnum::from($this->tipo),
             'anio' => (int) $this->anio,
-            'fecha_inicio' => $this->fechaInicio ?: null,
-            'fecha_fin' => $this->fechaFin ?: null,
+            'fecha_inicio' => $this->fechaInicio,
+            'fecha_fin' => $this->fechaFin,
         ]);
 
         $this->mostrarModal = false;
@@ -70,7 +68,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Periodos</h1>
-        <p class="mt-1 text-sm text-ink-dim">Los periodos SIAGIE del MINEDU (1.er periodo, 2.° periodo, Anual) — independientes del Ciclo rotativo de Americano Libertad.</p>
+        <p class="mt-1 text-sm text-ink-dim">Los periodos de matrícula del año (1.er periodo, 2.° periodo) — cada uno crea su propio Ciclo, con horarios reales.</p>
     </x-slot>
 
     @can('academico.gestionar')
@@ -160,11 +158,7 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
 
-                @if ($tipo === 'anual')
-                    <p class="text-xs text-ink-dim">El periodo Anual crea además su propio Ciclo, con horarios reales: declara de qué mes a qué mes dura el periodo de clases (8 meses; los 2 restantes son vacaciones).</p>
-                @else
-                    <p class="text-xs text-ink-dim">Las fechas son opcionales para este tipo — es solo una clasificación, sin horarios propios.</p>
-                @endif
+                <p class="text-xs text-ink-dim">Cada periodo crea además su propio Ciclo, con horarios reales: declara de qué mes a qué mes dura el periodo de clases.</p>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <x-input-label for="fechaInicio" value="Fecha inicio" />

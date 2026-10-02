@@ -58,10 +58,10 @@ class LibretaService
             return collect();
         }
 
-        $horarios = Horario::query()
-            ->deLaMatricula($matricula)
-            ->with(['curso', 'ciclo'])
-            ->get();
+        // Incluye cualquier curso en recuperación que ya tenga sección
+        // asignada, además de los de la cohorte normal -- ver
+        // Matricula::todosLosHorarios().
+        $horarios = $matricula->todosLosHorarios()->load(['curso', 'ciclo']);
 
         return $horarios->map(function (Horario $horario) use ($estudiante) {
             $promedio = $this->evaluaciones->promedioDelEstudiante($estudiante, $horario);
@@ -91,15 +91,19 @@ class LibretaService
 
     /**
      * El "periodo promocional" tal como lo pide SIAGIE: "{año}-1"/"{año}-2"
-     * para los Ciclos de 6 meses (según si el Ciclo arranca en la primera
-     * o segunda mitad del año calendario), o "ANUAL" para SIAGIE anual --
-     * a diferencia de Ciclo::nombre (texto libre tipo "Ciclo 1 (Enero -
-     * Junio)"), esto es el formato exigido en la libreta oficial.
+     * -- a diferencia de Ciclo::nombre (texto libre tipo "Ciclo 1 (Enero -
+     * Junio)" o "Periodo 2026-1"), esto es el formato exigido en la
+     * libreta oficial. Si el Ciclo nace de un Periodo (lo habitual de
+     * aquí en adelante), se usa el tipo de ESE Periodo directamente; si no
+     * (un Ciclo rotativo heredado, sin Periodo detrás), se infiere del mes
+     * de inicio de su propia ventana.
      */
     public function periodoPromocional(Ciclo $ciclo): string
     {
-        if ($ciclo->periodo?->tipo === TipoPeriodoEnum::ANUAL) {
-            return 'ANUAL';
+        if ($ciclo->periodo !== null) {
+            $semestre = $ciclo->periodo->tipo === TipoPeriodoEnum::SEGUNDO ? 2 : 1;
+
+            return "{$ciclo->periodo->anio}-{$semestre}";
         }
 
         $semestre = ($ciclo->tipo?->mesInicioFijo() ?? 1) > 6 ? 2 : 1;

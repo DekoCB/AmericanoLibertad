@@ -5,25 +5,21 @@ declare(strict_types=1);
 namespace App\Modules\Academico\Enums;
 
 /**
- * Los 3 periodos en que el MINEDU clasifica a cada estudiante en SIAGIE:
- * completamente independiente del Ciclo rotativo de Americano Libertad (ver
- * ModalidadCicloEnum) -- un alumno de cualquier Ciclo puede tener
- * cualquiera de estos 3 periodos. Solo ANUAL corresponde además a un
- * Ciclo real (ver Periodo::$ciclo): PRIMERO y SEGUNDO son clasificación
- * pura, sin horarios propios.
+ * Los 2 periodos de matrícula del año: cada uno tiene siempre un Ciclo
+ * real detrás con sus propios Horarios (ver Periodo::$ciclo) -- el tipo
+ * ANUAL que existía antes se retiró (el instituto nunca llegó a usarlo en
+ * producción); de aquí en adelante todo periodo dura 6 meses de clases.
  */
 enum TipoPeriodoEnum: string
 {
     case PRIMERO = 'primero';
     case SEGUNDO = 'segundo';
-    case ANUAL = 'anual';
 
     public function label(): string
     {
         return match ($this) {
             self::PRIMERO => '1.er periodo',
             self::SEGUNDO => '2.° periodo',
-            self::ANUAL => 'Anual',
         };
     }
 }

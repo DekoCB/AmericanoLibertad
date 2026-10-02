@@ -40,7 +40,10 @@ class HeaderActionButtonsAreInteractiveTest extends TestCase
         return [
             'usuarios.index' => ['usuarios.index', RolEnum::GERENCIA->value, 'wire:click="abrirModal"'],
             'academico.grados.index' => ['academico.grados.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
-            'academico.ciclos.index' => ['academico.ciclos.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
+            // academico.ciclos.index ya no tiene botón "Nuevo ciclo": desde
+            // que Periodo reemplazó al Ciclo rotativo de 4 ventanas, todo
+            // Ciclo nuevo nace de un Periodo (ver PeriodoService) y esta
+            // pantalla quedó de solo lectura.
             'academico.cursos.index' => ['academico.cursos.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
             'academico.aulas.index' => ['academico.aulas.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],
             'academico.horarios.index' => ['academico.horarios.index', RolEnum::COORDINADOR->value, 'wire:click="abrirModal"'],

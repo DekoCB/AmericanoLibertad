@@ -134,13 +134,17 @@ class HistorialEstudiantePermisosTest extends TestCase
             ->assertSee('DNI 55667788');
     }
 
-    public function test_el_historial_muestra_la_modalidad_de_cada_matricula(): void
+    public function test_el_historial_muestra_la_modalidad_de_estudio_de_cada_matricula(): void
     {
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
         $estudiante = Estudiante::factory()->create(['dni' => '55667799', 'nombres' => 'Marco', 'apellidos' => 'Villar Soto']);
-        $cicloAnual = Ciclo::factory()->anual()->create();
-        Matricula::factory()->create(['estudiante_id' => $estudiante->id, 'ciclo_id' => $cicloAnual->id]);
+        $ciclo = Ciclo::factory()->create();
+        Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'ciclo_id' => $ciclo->id,
+            'modalidad_estudio' => \App\Modules\Matricula\Enums\ModalidadEstudioEnum::VIRTUAL,
+        ]);
 
         $this->actingAs($coordinador);
 
@@ -148,7 +152,7 @@ class HistorialEstudiantePermisosTest extends TestCase
             ->set('terminoBusqueda', 'Villar Soto')
             ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
             ->assertHasNoErrors()
-            ->assertSee('Periodo anual');
+            ->assertSee('Virtual');
     }
 
     public function test_el_historial_muestra_el_periodo_de_la_matricula(): void

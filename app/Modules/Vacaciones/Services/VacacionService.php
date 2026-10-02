@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Vacaciones\Services;
 
-use App\Modules\Academico\Enums\TipoPeriodoEnum;
-use App\Modules\Matricula\Enums\EstadoMatriculaEnum;
 use App\Modules\Matricula\Models\Estudiante;
-use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Vacaciones\Models\Vacacion;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -16,27 +13,17 @@ use Illuminate\Validation\ValidationException;
 class VacacionService
 {
     /**
-     * La duración de vacaciones de SIAGIE anual es fija: 2 meses desde la
-     * fecha que el coordinador elija como inicio.
+     * El periodo SIAGIE anual -- la única modalidad a la que aplicaban
+     * las vacaciones -- se retiró (el instituto nunca llegó a usarlo en
+     * producción, ver TipoPeriodoEnum). Sin esa modalidad no hay ninguna
+     * matrícula a la que activarle vacaciones; el módulo queda sin
+     * manera de usarse (oculto del menú) hasta que se decida una regla
+     * de negocio que lo reemplace.
      */
-    private const MESES_DE_VACACIONES = 2;
-
     public function activar(Estudiante $estudiante, string $fechaInicio, ?int $registradoPor): Vacacion
     {
-        $matricula = $this->matriculaVigente($estudiante);
-
-        if ($matricula === null || $matricula->ciclo->periodo?->tipo !== TipoPeriodoEnum::ANUAL) {
-            throw ValidationException::withMessages([
-                'estudiante' => 'Las vacaciones solo aplican a estudiantes matriculados en SIAGIE anual.',
-            ]);
-        }
-
-        return Vacacion::query()->create([
-            'estudiante_id' => $estudiante->id,
-            'matricula_id' => $matricula->id,
-            'fecha_inicio' => $fechaInicio,
-            'fecha_fin' => Carbon::parse($fechaInicio)->addMonths(self::MESES_DE_VACACIONES),
-            'registrado_por' => $registradoPor,
+        throw ValidationException::withMessages([
+            'estudiante' => 'Las vacaciones solo aplicaban a estudiantes matriculados en SIAGIE anual, una modalidad que ya no está disponible.',
         ]);
     }
 
@@ -65,15 +52,5 @@ class VacacionService
             ->with(['estudiante', 'matricula.carrera'])
             ->latest('fecha_fin')
             ->get();
-    }
-
-    private function matriculaVigente(Estudiante $estudiante): ?Matricula
-    {
-        return Matricula::query()
-            ->where('estudiante_id', $estudiante->id)
-            ->where('estado', EstadoMatriculaEnum::APROBADA)
-            ->latest('fecha_matricula')
-            ->with('ciclo.periodo')
-            ->first();
     }
 }

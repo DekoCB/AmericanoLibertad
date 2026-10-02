@@ -39,26 +39,23 @@ class AsistenciaService
     }
 
     /**
+     * Incluye, además de los horarios de la cohorte normal de cada
+     * matrícula aprobada, los de cualquier curso en recuperación que ya
+     * tenga sección asignada (ver Matricula::todosLosHorarios()).
+     *
      * @return Collection<int, Horario>
      */
     public function horariosDelEstudiante(Estudiante $estudiante): Collection
     {
-        $matriculas = $estudiante->matriculas()
-            ->where('estado', 'aprobada')
-            ->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
+        $matriculas = $estudiante->matriculas()->where('estado', 'aprobada')->get();
 
-        if ($matriculas->isEmpty()) {
-            return new Collection;
+        $horarios = new Collection;
+
+        foreach ($matriculas as $matricula) {
+            $horarios = $horarios->merge($matricula->todosLosHorarios());
         }
 
-        return Horario::query()
-            ->where(function ($query) use ($matriculas) {
-                foreach ($matriculas as $matricula) {
-                    $query->orWhere(fn ($query) => $query->deLaMatricula($matricula));
-                }
-            })
-            ->with(['curso', 'carrera', 'ciclo', 'docente', 'dias'])
-            ->get();
+        return $horarios->unique('id')->values()->load(['curso', 'carrera', 'ciclo', 'docente', 'dias']);
     }
 
     /**
@@ -71,14 +68,21 @@ class AsistenciaService
 
     /**
      * Estudiantes matriculados (aprobados) en la carrera y ciclo de un
-     * horario -- ver Matricula::scopeDelHorario().
+     * horario (ver Matricula::scopeDelHorario()), más cualquier estudiante
+     * que tenga este horario asignado como curso en recuperación.
      *
      * @return Collection<int, Estudiante>
      */
     public function estudiantesDelHorario(Horario $horario): Collection
     {
+        $porMatricula = Matricula::query()->delHorario($horario)->pluck('estudiante_id');
+
+        $porRefuerzo = Matricula::query()
+            ->whereHas('refuerzos', fn ($query) => $query->where('horario_id', $horario->id))
+            ->pluck('estudiante_id');
+
         return Estudiante::query()
-            ->whereIn('id', Matricula::query()->delHorario($horario)->pluck('estudiante_id'))
+            ->whereIn('id', $porMatricula->merge($porRefuerzo)->unique())
             ->orderBy('apellidos')
             ->orderBy('nombres')
             ->get();

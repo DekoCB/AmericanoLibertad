@@ -4,6 +4,7 @@ namespace Tests\Feature\Evaluaciones;
 
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Academico\Models\Periodo;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Evaluaciones\Services\LibretaService;
 use App\Modules\Matricula\Models\Estudiante;
@@ -173,11 +174,12 @@ class LibretaServiceTest extends TestCase
         $this->assertSame('APROBADO', $this->libretaService()->calcularSituacionFinal($cursos));
     }
 
-    public function test_periodo_promocional_es_anual_para_un_ciclo_anual(): void
+    public function test_periodo_promocional_usa_el_tipo_del_periodo_real_cuando_el_ciclo_nace_de_uno(): void
     {
-        $ciclo = Ciclo::factory()->anual()->create();
+        $periodo = Periodo::factory()->segundo()->create(['anio' => 2026]);
+        $ciclo = Ciclo::factory()->conPeriodo()->create(['anio' => 2026, 'siagie_id' => $periodo->id]);
 
-        $this->assertSame('ANUAL', $this->libretaService()->periodoPromocional($ciclo));
+        $this->assertSame('2026-2', $this->libretaService()->periodoPromocional($ciclo));
     }
 
     public function test_periodo_promocional_es_1_para_un_ciclo_que_arranca_en_la_primera_mitad_del_anio(): void

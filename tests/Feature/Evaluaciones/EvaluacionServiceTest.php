@@ -8,9 +8,12 @@ use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Evaluaciones\Enums\EstadoEvaluacionEnum;
+use App\Modules\Evaluaciones\Enums\NotaLetraEnum;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
+use App\Modules\Migraciones\Enums\EstadoRefuerzoEnum;
+use App\Modules\Migraciones\Models\MatriculaRefuerzo;
 use App\Modules\Notificaciones\Models\Notificacion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -162,6 +165,49 @@ class EvaluacionServiceTest extends TestCase
         $this->assertFalse($horarios->contains('id', $horarioDeOtraCarrera->id));
     }
 
+    public function test_horarios_del_estudiante_incluye_un_curso_en_recuperacion_de_otro_ciclo_curricular(): void
+    {
+        $carrera = Carrera::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $matricula = Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 2,
+        ]);
+
+        // Un curso de ciclo_curricular 1 (uno menos que la matrícula) que
+        // el estudiante está repitiendo -- jamás calzaría con
+        // scopeDeLaMatricula() de esta matrícula.
+        $cursoJalado = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1]);
+        $horarioDeRefuerzo = Horario::factory()->create(['curso_id' => $cursoJalado->id]);
+        MatriculaRefuerzo::factory()->create([
+            'matricula_id' => $matricula->id,
+            'curso_id' => $cursoJalado->id,
+            'horario_id' => $horarioDeRefuerzo->id,
+            'estado' => EstadoRefuerzoEnum::CURSANDO,
+        ]);
+
+        $horarios = $this->service()->horariosDelEstudiante($estudiante);
+
+        $this->assertTrue($horarios->contains('id', $horarioDeRefuerzo->id));
+    }
+
+    public function test_estudiantes_del_horario_incluye_a_quien_lo_tiene_como_curso_en_recuperacion(): void
+    {
+        $horarioDeRefuerzo = Horario::factory()->create();
+        $matricula = Matricula::factory()->create();
+        MatriculaRefuerzo::factory()->create([
+            'matricula_id' => $matricula->id,
+            'curso_id' => $horarioDeRefuerzo->curso_id,
+            'horario_id' => $horarioDeRefuerzo->id,
+            'estado' => EstadoRefuerzoEnum::CURSANDO,
+        ]);
+
+        $estudiantes = $this->service()->estudiantesDelHorario($horarioDeRefuerzo);
+
+        $this->assertTrue($estudiantes->contains('id', $matricula->estudiante_id));
+    }
+
     public function test_calificar_dos_veces_al_mismo_estudiante_actualiza_en_vez_de_duplicar(): void
     {
         $horario = Horario::factory()->create();
@@ -227,29 +273,6 @@ class EvaluacionServiceTest extends TestCase
 
         foreach (range(2, 7) as $numero) {
             $evaluacion = $service->crear($horario, "Evaluación {$numero}", "2026-0{$numero}-10");
-            $service->calificar($evaluacion, $estudiante, 20.0, null, null);
-            $service->publicar($evaluacion);
-        }
-
-        $this->assertSame(20.0, $service->promedioDelEstudiante($estudiante, $horario));
-    }
-
-    public function test_promedio_del_estudiante_considera_los_ultimos_8_examenes_en_un_ciclo_anual(): void
-    {
-        $ciclo = Ciclo::factory()->anual()->create();
-        $horario = Horario::factory()->create(['ciclo_id' => $ciclo->id]);
-        $estudiante = Estudiante::factory()->create();
-        $service = $this->service();
-
-        // 9 evaluaciones publicadas, la más antigua (nota 0) queda fuera:
-        // solo cuentan las últimas 8 por fecha.
-        $evaluacionMasAntigua = $service->crear($horario, 'Marzo', '2026-03-10');
-        $service->calificar($evaluacionMasAntigua, $estudiante, 0.0, null, null);
-        $service->publicar($evaluacionMasAntigua);
-
-        $meses = ['04', '05', '06', '07', '08', '09', '10', '11'];
-        foreach ($meses as $mes) {
-            $evaluacion = $service->crear($horario, "Evaluación {$mes}", "2026-{$mes}-10");
             $service->calificar($evaluacion, $estudiante, 20.0, null, null);
             $service->publicar($evaluacion);
         }
@@ -355,6 +378,40 @@ class EvaluacionServiceTest extends TestCase
         $estudiante = Estudiante::factory()->create();
 
         $this->assertNull($this->service()->promedioDelEstudiante($estudiante, $horario));
+    }
+
+    public function test_nota_letra_del_estudiante_es_c_si_el_promedio_desaprueba(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+
+        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15');
+        $service->calificar($evaluacion, $estudiante, 10.0, null, null);
+        $service->publicar($evaluacion);
+
+        $this->assertSame(NotaLetraEnum::C, $service->notaLetraDelEstudiante($estudiante, $horario));
+    }
+
+    public function test_nota_letra_del_estudiante_aprueba_con_promedio_de_11_a_mas(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+
+        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15');
+        $service->calificar($evaluacion, $estudiante, 15.0, null, null);
+        $service->publicar($evaluacion);
+
+        $this->assertSame(NotaLetraEnum::A, $service->notaLetraDelEstudiante($estudiante, $horario));
+    }
+
+    public function test_nota_letra_del_estudiante_es_null_sin_calificaciones_publicadas(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+
+        $this->assertNull($this->service()->notaLetraDelEstudiante($estudiante, $horario));
     }
 
     public function test_crear_una_evaluacion_con_enlace_lo_persiste(): void

@@ -1,7 +1,5 @@
 <?php
 
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
-use App\Modules\Academico\Enums\TipoCicloEnum;
 use App\Modules\Academico\Services\CicloService;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -9,64 +7,15 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component
 {
-    public bool $mostrarModal = false;
-
-    public string $nombre = '';
-
-    public string $tipo = '';
-
-    public string $anio = '';
-
-    public string $fechaInicio = '';
-
-    public string $fechaFin = '';
-
     public function mount(): void
     {
         Gate::authorize('academico.ver');
-        $this->anio = (string) now()->year;
-    }
-
-    public function abrirModal(): void
-    {
-        Gate::authorize('academico.gestionar');
-
-        $this->resetValidation();
-        $this->reset(['nombre', 'tipo', 'fechaInicio', 'fechaFin']);
-        $this->anio = (string) now()->year;
-        $this->mostrarModal = true;
-    }
-
-    public function guardar(CicloService $service): void
-    {
-        Gate::authorize('academico.gestionar');
-
-        $this->validate([
-            'nombre' => 'required|string|max:100',
-            'tipo' => 'required|string|in:'.implode(',', array_column(TipoCicloEnum::cases(), 'value')),
-            'anio' => 'required|integer|min:2020|max:2100',
-            'fechaInicio' => 'required|date',
-            'fechaFin' => 'required|date',
-        ]);
-
-        $service->crear([
-            'nombre' => $this->nombre,
-            'modalidad' => ModalidadCicloEnum::SEIS_MESES,
-            'tipo' => TipoCicloEnum::from($this->tipo),
-            'anio' => (int) $this->anio,
-            'fecha_inicio' => $this->fechaInicio,
-            'fecha_fin' => $this->fechaFin,
-        ]);
-
-        $this->mostrarModal = false;
-        session()->flash('status', 'Ciclo creado correctamente.');
     }
 
     public function with(CicloService $service): array
     {
         return [
             'ciclos' => $service->listar(),
-            'tipos' => TipoCicloEnum::cases(),
         ];
     }
 }; ?>
@@ -74,18 +23,8 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Ciclos</h1>
-        <p class="mt-1 text-sm text-ink-dim">4 ventanas de admisión rotativas al año: Ciclo 1 ene-jun, Ciclo 2 may-oct, Ciclo 3 jul-dic, Ciclo 4 nov-abr.</p>
+        <p class="mt-1 text-sm text-ink-dim">Cada Ciclo nace de un Periodo (ver Académico → Periodos) — esta pantalla es solo de consulta.</p>
     </x-slot>
-
-    {{-- Ver academico/carreras/index.blade.php: el botón no puede vivir en x-slot="header". --}}
-    @can('academico.gestionar')
-        <div class="mb-4 flex justify-end">
-            <x-primary-button type="button" wire:click="abrirModal" class="gap-2">
-                <x-heroicon-o-plus class="h-4 w-4" />
-                Nuevo ciclo
-            </x-primary-button>
-        </div>
-    @endcan
 
     @if (session('status'))
         <x-alert class="mb-4">{{ session('status') }}</x-alert>
@@ -135,76 +74,6 @@ new #[Layout('layouts.app')] class extends Component
     </div>
 
     <div class="mt-4">{{ $ciclos->links() }}</div>
-
-    <div
-        x-show="$wire.mostrarModal"
-        x-cloak
-        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
-        wire:click.self="$set('mostrarModal', false)"
-        x-transition:enter="ease-out duration-300"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
-        x-transition:leave="ease-in duration-200"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-    >
-        <div
-            x-show="$wire.mostrarModal"
-            class="w-full max-w-md rounded-2xl border border-border bg-surface-elevated p-6 shadow-lg"
-            x-transition:enter="ease-out duration-300"
-            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-            x-transition:leave="ease-in duration-200"
-            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-        >
-            <h2 class="font-display text-lg text-ink">Nuevo ciclo</h2>
-
-            <form wire:submit="guardar" class="mt-4 space-y-4">
-                <div>
-                    <x-input-label for="nombre" value="Nombre" />
-                    <x-text-input wire:model="nombre" id="nombre" class="mt-1 block w-full" placeholder="Ej. Ciclo 1 - 2027" />
-                    <x-input-error :messages="$errors->get('nombre')" class="mt-1" />
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <x-input-label for="tipo" value="Tipo" />
-                        <x-select-input
-                            wire:model="tipo"
-                            id="tipo"
-                            class="mt-1 block w-full"
-                            :options="collect($tipos)->mapWithKeys(fn ($tipoOpcion) => [$tipoOpcion->value => $tipoOpcion->label()])"
-                        />
-                        <x-input-error :messages="$errors->get('tipo')" class="mt-1" />
-                    </div>
-                    <div>
-                        <x-input-label for="anio" value="Año" />
-                        <x-text-input wire:model="anio" id="anio" type="number" class="mt-1 block w-full" />
-                        <x-input-error :messages="$errors->get('anio')" class="mt-1" />
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <x-input-label for="fechaInicio" value="Fecha inicio" />
-                        <x-date-input wire:model="fechaInicio" id="fechaInicio" class="mt-1 block w-full" />
-                        <x-input-error :messages="$errors->get('fechaInicio')" class="mt-1" />
-                    </div>
-                    <div>
-                        <x-input-label for="fechaFin" value="Fecha fin" />
-                        <x-date-input wire:model="fechaFin" id="fechaFin" class="mt-1 block w-full" />
-                        <x-input-error :messages="$errors->get('fechaFin')" class="mt-1" />
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-3 pt-2">
-                    <x-secondary-button type="button" wire:click="$set('mostrarModal', false)">Cancelar</x-secondary-button>
-                    <x-primary-button type="submit">Crear ciclo</x-primary-button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <livewire:academico.ciclos.ficha-modal wire:key="ficha-ciclo-modal" />
 </div>

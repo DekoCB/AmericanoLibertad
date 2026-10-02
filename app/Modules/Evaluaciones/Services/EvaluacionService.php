@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Evaluaciones\Services;
 
-use App\Modules\Academico\Enums\TipoPeriodoEnum;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Evaluaciones\Enums\EstadoEvaluacionEnum;
+use App\Modules\Evaluaciones\Enums\NotaLetraEnum;
 use App\Modules\Evaluaciones\Models\Calificacion;
 use App\Modules\Evaluaciones\Models\Evaluacion;
 use App\Modules\Matricula\Models\Estudiante;
@@ -27,14 +27,23 @@ class EvaluacionService
 
     /**
      * Estudiantes matriculados (aprobados) en la carrera y ciclo de un
-     * horario -- ver Matricula::scopeDelHorario().
+     * horario (ver Matricula::scopeDelHorario()), más cualquier estudiante
+     * que tenga este horario asignado como curso en recuperación -- sin
+     * esto, un estudiante repitiendo un curso de un ciclo_curricular menor
+     * no aparecería en la lista del docente para calificar/pasar asistencia.
      *
      * @return Collection<int, Estudiante>
      */
     public function estudiantesDelHorario(Horario $horario): Collection
     {
+        $porMatricula = Matricula::query()->delHorario($horario)->pluck('estudiante_id');
+
+        $porRefuerzo = Matricula::query()
+            ->whereHas('refuerzos', fn ($query) => $query->where('horario_id', $horario->id))
+            ->pluck('estudiante_id');
+
         return Estudiante::query()
-            ->whereIn('id', Matricula::query()->delHorario($horario)->pluck('estudiante_id'))
+            ->whereIn('id', $porMatricula->merge($porRefuerzo)->unique())
             ->orderBy('apellidos')
             ->orderBy('nombres')
             ->get();
@@ -52,26 +61,26 @@ class EvaluacionService
     }
 
     /**
+     * Incluye, además de los horarios de la cohorte normal de cada
+     * matrícula aprobada, los de cualquier curso en recuperación que ya
+     * tenga sección asignada (ver Matricula::todosLosHorarios()) -- sin
+     * esto, un curso jalado que se repite en otro ciclo_curricular
+     * quedaría invisible acá, porque no calza con ninguna matrícula por
+     * carrera+ciclo_curricular+ciclo.
+     *
      * @return Collection<int, Horario>
      */
     public function horariosDelEstudiante(Estudiante $estudiante): Collection
     {
-        $matriculas = $estudiante->matriculas()
-            ->where('estado', 'aprobada')
-            ->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
+        $matriculas = $estudiante->matriculas()->where('estado', 'aprobada')->get();
 
-        if ($matriculas->isEmpty()) {
-            return new Collection;
+        $horarios = new Collection;
+
+        foreach ($matriculas as $matricula) {
+            $horarios = $horarios->merge($matricula->todosLosHorarios());
         }
 
-        return Horario::query()
-            ->where(function ($query) use ($matriculas) {
-                foreach ($matriculas as $matricula) {
-                    $query->orWhere(fn ($query) => $query->deLaMatricula($matricula));
-                }
-            })
-            ->with(['curso', 'carrera', 'ciclo', 'docente', 'dias'])
-            ->get();
+        return $horarios->unique('id')->values()->load(['curso', 'carrera', 'ciclo', 'docente', 'dias']);
     }
 
     /**
@@ -275,20 +284,25 @@ class EvaluacionService
     }
 
     /**
+     * Cuántos exámenes mensuales entran en el promedio final de un curso
+     * (los últimos N por fecha, ver misCalificaciones()): todo Ciclo dura
+     * 6 meses de clases desde que se retiró el SIAGIE anual (que llegaba
+     * a 8), así que son siempre 6.
+     */
+    private const EXAMENES_QUE_CUENTAN = 6;
+
+    /**
      * Promedio de las calificaciones publicadas del estudiante en un
-     * horario, considerando solo los últimos N exámenes mensuales por
-     * fecha -- 6 para un Ciclo de 6 meses, 8 para SIAGIE anual (ver
-     * Ciclo::periodo()). Si hay menos de N registrados, promedia los que
-     * existan. La ponderación por tipo de evaluación queda fuera de
-     * alcance: hoy solo existe un tipo (mensual).
+     * horario, considerando solo los últimos EXAMENES_QUE_CUENTAN
+     * exámenes mensuales por fecha. Si hay menos registrados, promedia
+     * los que existan. La ponderación por tipo de evaluación queda fuera
+     * de alcance: hoy solo existe un tipo (mensual).
      */
     public function promedioDelEstudiante(Estudiante $estudiante, Horario $horario): ?float
     {
-        $examenesQueCuentan = $horario->ciclo->periodo?->tipo === TipoPeriodoEnum::ANUAL ? 8 : 6;
-
         $notas = $this->misCalificaciones($estudiante, $horario)
             ->sortByDesc(fn (Calificacion $calificacion) => $calificacion->evaluacion->fecha)
-            ->take($examenesQueCuentan)
+            ->take(self::EXAMENES_QUE_CUENTAN)
             ->pluck('nota_numerica');
 
         if ($notas->isEmpty()) {
@@ -296,6 +310,21 @@ class EvaluacionService
         }
 
         return round((float) $notas->avg(), 2);
+    }
+
+    /**
+     * La letra de la nota final del estudiante en este horario, o null si
+     * todavía no tiene ninguna calificación publicada -- misma regla que ya
+     * usa LibretaService::calcularSituacionFinal() (letra C = desaprobado;
+     * sin calificar nunca cuenta como desaprobado). Usado por
+     * MigracionService para decidir qué cursos se arrastran como refuerzo
+     * al migrar de ciclo.
+     */
+    public function notaLetraDelEstudiante(Estudiante $estudiante, Horario $horario): ?NotaLetraEnum
+    {
+        $promedio = $this->promedioDelEstudiante($estudiante, $horario);
+
+        return $promedio !== null ? NotaLetraEnum::desde($promedio) : null;
     }
 
     /**

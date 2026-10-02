@@ -1,9 +1,10 @@
 <?php
 
 use App\Models\Carrera;
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
+use App\Modules\Academico\Models\Periodo;
 use App\Modules\Academico\Services\CicloService;
+use App\Modules\Academico\Services\PeriodoService;
 use App\Modules\Matricula\Enums\EstadoMatriculaEnum;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
@@ -30,9 +31,7 @@ new #[Layout('layouts.app')] class extends Component
     public string $cicloCurricularDestino = '';
 
     // Masivo
-    public string $modalidadOrigen = '';
-
-    public string $cicloOrigenId = '';
+    public string $periodoOrigenId = '';
 
     public string $carreraOrigenId = '';
 
@@ -50,7 +49,7 @@ new #[Layout('layouts.app')] class extends Component
         Gate::authorize('migraciones.ver');
     }
 
-    public function seleccionarEstudiante(int $estudianteId, string $nombre, MigracionService $service, CicloService $ciclos): void
+    public function seleccionarEstudiante(int $estudianteId, string $nombre, MigracionService $service, CicloService $ciclos, PeriodoService $periodos): void
     {
         $this->estudianteId = $estudianteId;
         $this->estudianteNombre = $nombre;
@@ -59,7 +58,7 @@ new #[Layout('layouts.app')] class extends Component
         $origen = $this->matriculaVigenteDe($estudianteId);
 
         if ($origen) {
-            $cicloSugerido = $service->cicloDestinoSugerido($origen->ciclo, $ciclos);
+            $cicloSugerido = $service->cicloDestinoSugerido($origen->ciclo, $ciclos, $periodos);
             $this->cicloDestinoId = $cicloSugerido ? (string) $cicloSugerido->id : '';
             $this->cicloCurricularDestino = (string) ($service->cicloCurricularSiguiente($origen->carrera, $origen->ciclo_curricular) ?? '');
         }
@@ -94,9 +93,8 @@ new #[Layout('layouts.app')] class extends Component
         session()->flash('status', 'Estudiante migrado correctamente.');
     }
 
-    public function updatedModalidadOrigen(): void
+    public function updatedPeriodoOrigenId(): void
     {
-        $this->cicloOrigenId = '';
         $this->carreraOrigenId = '';
         $this->cicloCurricularOrigen = '';
         $this->masivoCicloDestinoId = '';
@@ -109,7 +107,7 @@ new #[Layout('layouts.app')] class extends Component
         $this->masivoCicloCurricularDestino = '';
     }
 
-    public function updatedCicloCurricularOrigen(MigracionService $service, CicloService $ciclos): void
+    public function updatedCicloCurricularOrigen(MigracionService $service, CicloService $ciclos, PeriodoService $periodos): void
     {
         if ($this->cicloCurricularOrigen === '' || $this->carreraOrigenId === '') {
             $this->masivoCicloCurricularDestino = '';
@@ -121,10 +119,10 @@ new #[Layout('layouts.app')] class extends Component
         $siguiente = $carrera ? $service->cicloCurricularSiguiente($carrera, (int) $this->cicloCurricularOrigen) : null;
         $this->masivoCicloCurricularDestino = $siguiente !== null ? (string) $siguiente : '';
 
-        $cicloOrigen = $this->cicloOrigenParaSugerencia($service);
+        $cicloOrigen = $this->periodoOrigenId !== '' ? Periodo::query()->find($this->periodoOrigenId)?->ciclo : null;
 
         if ($cicloOrigen) {
-            $cicloSugerido = $service->cicloDestinoSugerido($cicloOrigen, $ciclos);
+            $cicloSugerido = $service->cicloDestinoSugerido($cicloOrigen, $ciclos, $periodos);
             $this->masivoCicloDestinoId = $cicloSugerido ? (string) $cicloSugerido->id : '';
         }
     }
@@ -134,7 +132,7 @@ new #[Layout('layouts.app')] class extends Component
         Gate::authorize('migraciones.gestionar');
 
         $this->validate([
-            'modalidadOrigen' => 'required|string|in:seis_meses,anual',
+            'periodoOrigenId' => 'required|integer|exists:siagies,id',
             'carreraOrigenId' => 'required|integer|exists:carreras,id',
             'cicloCurricularOrigen' => 'required|integer|min:1|max:10',
             'masivoCicloDestinoId' => 'required|integer|exists:ciclos,id',
@@ -157,37 +155,17 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * El "Ciclo" con el que se sugiere el destino: para 6 meses es el que
-     * el usuario eligió; SIAGIE anual no tiene selector de Ciclo (ver
-     * MigracionService::cicloAnualVigente()), así que se usa ese
-     * automáticamente.
-     */
-    private function cicloOrigenParaSugerencia(MigracionService $service): ?Ciclo
-    {
-        if ($this->modalidadOrigen === ModalidadCicloEnum::ANUAL->value) {
-            return $service->cicloAnualVigente();
-        }
-
-        return $this->cicloOrigenId !== '' ? Ciclo::query()->find($this->cicloOrigenId) : null;
-    }
-
-    /**
      * @return Collection<int, Matricula>
      */
     private function cohorteMasivaActual(MigracionService $service): Collection
     {
-        if ($this->modalidadOrigen === '' || $this->carreraOrigenId === '' || $this->cicloCurricularOrigen === '') {
+        if ($this->periodoOrigenId === '' || $this->carreraOrigenId === '' || $this->cicloCurricularOrigen === '') {
             return new Collection;
         }
 
-        $modalidad = ModalidadCicloEnum::from($this->modalidadOrigen);
-
-        $cicloId = $this->modalidadOrigen === ModalidadCicloEnum::ANUAL->value
-            ? $service->cicloAnualVigente()?->id
-            : ($this->cicloOrigenId !== '' ? (int) $this->cicloOrigenId : null);
+        $cicloId = Periodo::query()->find($this->periodoOrigenId)?->ciclo?->id;
 
         return $service->matriculasVigentes(
-            $modalidad,
             $cicloId,
             (int) $this->carreraOrigenId,
             (int) $this->cicloCurricularOrigen,
@@ -212,15 +190,19 @@ new #[Layout('layouts.app')] class extends Component
 
         $ciclosCurriculares = ['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI'];
 
+        $matriculaOrigenIndividual = $this->estudianteId ? $this->matriculaVigenteDe($this->estudianteId) : null;
+        $cohorteMasiva = $this->cohorteMasivaActual($service);
+
         return [
             'resultadosBusqueda' => $resultadosBusqueda,
-            'matriculaOrigenIndividual' => $this->estudianteId ? $this->matriculaVigenteDe($this->estudianteId) : null,
+            'matriculaOrigenIndividual' => $matriculaOrigenIndividual,
+            'previsualizacionIndividual' => $matriculaOrigenIndividual ? $service->previsualizarCursos($matriculaOrigenIndividual) : null,
             'ciclos' => Ciclo::query()->orderByDesc('fecha_inicio')->get(),
-            'ciclosSeisMeses' => Ciclo::query()->where('modalidad', ModalidadCicloEnum::SEIS_MESES)->orderByDesc('fecha_inicio')->get(),
-            'cicloAnualVigente' => $service->cicloAnualVigente(),
+            'periodos' => Periodo::query()->orderByDesc('anio')->orderBy('tipo')->get(),
             'carreras' => Carrera::query()->orderBy('name')->get(),
             'ciclosCurriculares' => $ciclosCurriculares,
-            'cohorteMasiva' => $this->cohorteMasivaActual($service),
+            'cohorteMasiva' => $cohorteMasiva,
+            'repitenPorMatricula' => $cohorteMasiva->mapWithKeys(fn (Matricula $matricula) => [$matricula->id => count($service->previsualizarCursos($matricula)['porRepetir'])]),
         ];
     }
 }; ?>
@@ -228,7 +210,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Migraciones</h1>
-        <p class="mt-1 text-sm text-ink-dim">Avanzar de ciclo a un estudiante, o a varios a la vez filtrados por Modalidad/Ciclo académico/Carrera/Ciclo curricular.</p>
+        <p class="mt-1 text-sm text-ink-dim">Avanzar de ciclo a un estudiante, o a varios a la vez filtrados por Periodo/Carrera/Ciclo curricular.</p>
     </x-slot>
 
     @if (session('status'))
@@ -279,6 +261,16 @@ new #[Layout('layouts.app')] class extends Component
                     · {{ $matriculaOrigenIndividual->ciclo->nombre }} ({{ $matriculaOrigenIndividual->ciclo->modalidad->label() }})
                 </p>
 
+                @if ($previsualizacionIndividual)
+                    <div class="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-ink-dim">
+                        {{ $previsualizacionIndividual['total'] }} curso{{ $previsualizacionIndividual['total'] === 1 ? '' : 's' }}
+                        · {{ $previsualizacionIndividual['aprobados'] }} aprobado{{ $previsualizacionIndividual['aprobados'] === 1 ? '' : 's' }}
+                        @if (count($previsualizacionIndividual['porRepetir']) > 0)
+                            · <span class="font-medium text-warn">{{ count($previsualizacionIndividual['porRepetir']) }} para repetir: {{ implode(', ', $previsualizacionIndividual['porRepetir']) }}</span>
+                        @endif
+                    </div>
+                @endif
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <x-input-label for="cicloDestinoId" value="Ciclo destino" />
@@ -320,41 +312,20 @@ new #[Layout('layouts.app')] class extends Component
         <div class="space-y-4">
             <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
                 <h2 class="font-display text-sm text-ink">Origen</h2>
-                <p class="mt-1 text-xs text-ink-faint">Primero elige la modalidad — el de 6 meses se filtra por Ciclo, SIAGIE anual no tiene Ciclos (no rota).</p>
+                <p class="mt-1 text-xs text-ink-faint">Primero elige el periodo de matrícula.</p>
                 <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
-                        <x-input-label for="modalidadOrigen" value="Modalidad" />
+                        <x-input-label for="periodoOrigenId" value="Periodo" />
                         <x-select-input
-                            wire:model.live="modalidadOrigen"
-                            id="modalidadOrigen"
+                            wire:model.live="periodoOrigenId"
+                            id="periodoOrigenId"
                             class="mt-1 block w-full"
-                            :options="collect(['' => 'Selecciona…'])->merge(collect(\App\Modules\Academico\Enums\ModalidadCicloEnum::cases())->mapWithKeys(fn ($modalidad) => [$modalidad->value => $modalidad->label()]))"
+                            :options="collect($periodos)->mapWithKeys(fn ($periodo) => [$periodo->id => $periodo->nombreCompleto()])->prepend('Selecciona…', '')"
                         />
-                        <x-input-error :messages="$errors->get('modalidadOrigen')" class="mt-1" />
+                        <x-input-error :messages="$errors->get('periodoOrigenId')" class="mt-1" />
                     </div>
 
-                    @if ($modalidadOrigen === 'seis_meses')
-                        <div>
-                            <x-input-label for="cicloOrigenId" value="Ciclo" />
-                            <x-select-input
-                                wire:model.live="cicloOrigenId"
-                                id="cicloOrigenId"
-                                class="mt-1 block w-full"
-                                :options="collect($ciclosSeisMeses)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])->prepend('Todos los ciclos', '')"
-                            />
-                        </div>
-                    @elseif ($modalidadOrigen === 'anual')
-                        <div>
-                            <x-input-label value="Año" />
-                            @if ($cicloAnualVigente)
-                                <p class="mt-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-ink">{{ $cicloAnualVigente->anio }}</p>
-                            @else
-                                <p class="mt-1 text-xs text-danger">No hay ningún ciclo SIAGIE anual registrado todavía. Créalo primero en Ciclos.</p>
-                            @endif
-                        </div>
-                    @endif
-
-                    @if ($modalidadOrigen !== '')
+                    @if ($periodoOrigenId !== '')
                         <div>
                             <x-input-label for="carreraOrigenId" value="Carrera" />
                             <x-select-input
@@ -379,16 +350,23 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             </div>
 
-            @if ($modalidadOrigen !== '' && $carreraOrigenId !== '' && $cicloCurricularOrigen !== '')
+            @if ($periodoOrigenId !== '' && $carreraOrigenId !== '' && $cicloCurricularOrigen !== '')
                 <div class="rounded-2xl border border-border bg-surface shadow-sm">
                     <div class="border-b border-border px-4 py-3">
                         <h3 class="font-display text-sm text-ink">{{ $cohorteMasiva->count() }} estudiante{{ $cohorteMasiva->count() === 1 ? '' : 's' }} coincide{{ $cohorteMasiva->count() === 1 ? '' : 'n' }}</h3>
                     </div>
                     <div class="max-h-64 divide-y divide-border overflow-y-auto">
                         @forelse ($cohorteMasiva as $matricula)
-                            <p class="px-4 py-2 text-sm text-ink">
-                                {{ $matricula->estudiante->nombreCompleto() }}
-                                <span class="text-ink-faint">· {{ $matricula->estudiante->dni }}</span>
+                            <p class="flex items-center justify-between gap-2 px-4 py-2 text-sm text-ink">
+                                <span>
+                                    {{ $matricula->estudiante->nombreCompleto() }}
+                                    <span class="text-ink-faint">· {{ $matricula->estudiante->dni }}</span>
+                                </span>
+                                @if (($repitenPorMatricula[$matricula->id] ?? 0) > 0)
+                                    <span class="shrink-0 rounded-full bg-warn/10 px-2 py-0.5 text-xs font-medium text-warn">
+                                        repite {{ $repitenPorMatricula[$matricula->id] }} curso{{ $repitenPorMatricula[$matricula->id] === 1 ? '' : 's' }}
+                                    </span>
+                                @endif
                             </p>
                         @empty
                             <p class="px-4 py-6 text-center text-sm text-ink-faint">Nadie coincide con estos filtros.</p>

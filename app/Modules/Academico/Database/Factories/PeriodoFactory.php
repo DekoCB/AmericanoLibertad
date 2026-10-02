@@ -18,24 +18,26 @@ class PeriodoFactory extends Factory
 
     public function definition(): array
     {
+        $anio = (int) $this->faker->year();
+
         return [
             'tipo' => TipoPeriodoEnum::PRIMERO,
-            'anio' => (int) $this->faker->year(),
-            'fecha_inicio' => null,
-            'fecha_fin' => null,
+            'anio' => $anio,
+            'fecha_inicio' => "{$anio}-01-01",
+            'fecha_fin' => "{$anio}-06-30",
             'estado' => EstadoCicloEnum::ACTIVO,
         ];
     }
 
-    public function anual(): static
+    public function segundo(): static
     {
         return $this->state(function (array $attributes) {
             $anio = $attributes['anio'];
 
             return [
-                'tipo' => TipoPeriodoEnum::ANUAL,
-                'fecha_inicio' => "{$anio}-03-01",
-                'fecha_fin' => "{$anio}-10-31",
+                'tipo' => TipoPeriodoEnum::SEGUNDO,
+                'fecha_inicio' => "{$anio}-07-01",
+                'fecha_fin' => "{$anio}-12-31",
             ];
         });
     }

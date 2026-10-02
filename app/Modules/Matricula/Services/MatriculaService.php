@@ -6,7 +6,6 @@ namespace App\Modules\Matricula\Services;
 
 use App\Models\Carrera;
 use App\Models\User;
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\PeriodoMatricula;
@@ -18,6 +17,7 @@ use App\Modules\Matricula\DTOs\RegistrarMatriculaData;
 use App\Modules\Matricula\Enums\EstadoCivilEnum;
 use App\Modules\Matricula\Enums\EstadoEstudianteEnum;
 use App\Modules\Matricula\Enums\EstadoMatriculaEnum;
+use App\Modules\Matricula\Enums\ModalidadEstudioEnum;
 use App\Modules\Matricula\Events\EstudianteMatriculado;
 use App\Modules\Matricula\Models\Apoderado;
 use App\Modules\Matricula\Models\Estudiante;
@@ -140,9 +140,7 @@ class MatriculaService
         $ciclo = Ciclo::query()->findOrFail($data->cicloId);
         $carrera = Carrera::query()->findOrFail($data->carreraId);
 
-        if ($ciclo->modalidad !== ModalidadCicloEnum::ANUAL) {
-            $this->validarPeriodoDeMatriculaAbierto($ciclo);
-        }
+        $this->validarPeriodoDeMatriculaAbierto($ciclo);
 
         if ($this->matriculas->existeParaEstudianteYCiclo($estudiante->id, $ciclo->id)) {
             throw ValidationException::withMessages([
@@ -151,9 +149,7 @@ class MatriculaService
         }
 
         $fechaMatricula = $data->fechaMatricula !== null ? Carbon::parse($data->fechaMatricula) : now();
-        $fechaFinEstudio = $ciclo->modalidad === ModalidadCicloEnum::ANUAL
-            ? $ciclo->fecha_fin
-            : $fechaMatricula->clone()->addMonths($estudiante->es_menor_edad ? 8 : 6);
+        $fechaFinEstudio = $fechaMatricula->clone()->addMonths($estudiante->es_menor_edad ? 8 : 6);
 
         return DB::transaction(function () use ($estudiante, $ciclo, $carrera, $data, $fechaMatricula, $fechaFinEstudio) {
             $matricula = $this->matriculas->create([
@@ -161,6 +157,7 @@ class MatriculaService
                 'ciclo_id' => $ciclo->id,
                 'carrera_id' => $carrera->id,
                 'ciclo_curricular' => $data->cicloCurricular,
+                'modalidad_estudio' => $data->modalidadEstudio ?? ModalidadEstudioEnum::PRESENCIAL,
                 'siagie_id' => $data->periodoId,
                 'fecha_matricula' => $fechaMatricula,
                 'fecha_fin_estudio' => $fechaFinEstudio,

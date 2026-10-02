@@ -134,14 +134,23 @@ class IncidenciaService
             return new Collection;
         }
 
+        $porMatricula = Matricula::query()
+            ->where(function ($query) use ($horarios) {
+                foreach ($horarios as $horario) {
+                    $query->orWhere(fn ($query) => $query->delHorario($horario));
+                }
+            })
+            ->pluck('estudiante_id');
+
+        // Más cualquier estudiante que tenga uno de estos horarios
+        // asignado como curso en recuperación (ver
+        // Matricula::todosLosHorarios()).
+        $porRefuerzo = Matricula::query()
+            ->whereHas('refuerzos', fn ($query) => $query->whereIn('horario_id', $horarios->pluck('id')))
+            ->pluck('estudiante_id');
+
         return Estudiante::query()
-            ->whereIn('id', Matricula::query()
-                ->where(function ($query) use ($horarios) {
-                    foreach ($horarios as $horario) {
-                        $query->orWhere(fn ($query) => $query->delHorario($horario));
-                    }
-                })
-                ->pluck('estudiante_id'))
+            ->whereIn('id', $porMatricula->merge($porRefuerzo)->unique())
             ->orderBy('apellidos')
             ->orderBy('nombres')
             ->get();
@@ -199,24 +208,22 @@ class IncidenciaService
     }
 
     /**
+     * Incluye, además de los horarios de la cohorte normal de cada
+     * matrícula aprobada, los de cualquier curso en recuperación que ya
+     * tenga sección asignada (ver Matricula::todosLosHorarios()).
+     *
      * @return Collection<int, Horario>
      */
     private function horariosDelEstudiante(Estudiante $estudiante): Collection
     {
-        $matriculas = $estudiante->matriculas()
-            ->where('estado', 'aprobada')
-            ->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
+        $matriculas = $estudiante->matriculas()->where('estado', 'aprobada')->get();
 
-        if ($matriculas->isEmpty()) {
-            return new Collection;
+        $horarios = new Collection;
+
+        foreach ($matriculas as $matricula) {
+            $horarios = $horarios->merge($matricula->todosLosHorarios());
         }
 
-        return Horario::query()
-            ->where(function ($query) use ($matriculas) {
-                foreach ($matriculas as $matricula) {
-                    $query->orWhere(fn ($query) => $query->deLaMatricula($matricula));
-                }
-            })
-            ->get();
+        return $horarios->unique('id')->values();
     }
 }

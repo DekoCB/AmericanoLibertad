@@ -16,17 +16,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
- * El periodo SIAGIE del MINEDU (1.er periodo, 2.° periodo, Anual), por
- * año -- independiente del Ciclo rotativo de Americano Libertad (ver ModalidadCicloEnum,
- * un eje completamente aparte). Cada matrícula puede tener su propio
- * Periodo sin importar en qué Ciclo esté (ver Matricula::periodo()). La
- * tabla sigue llamándose `siagies` (y la columna FK `siagie_id`) porque
- * es cosmético renombrar la clase/UI, no el esquema -- ver el plan de
+ * El periodo de matrícula del año (1.er periodo, 2.° periodo) -- desde que
+ * se retiró el Ciclo rotativo de 4 ventanas, este es el eje real que usan
+ * Horarios/Aulas/Matrículas: cada Periodo tiene siempre un Ciclo real
+ * detrás (ver ciclo(), creado/sincronizado por PeriodoService). La tabla
+ * sigue llamándose `siagies` (y la columna FK `siagie_id`) porque es
+ * cosmético renombrar la clase/UI, no el esquema -- ver el plan de
  * migración Grado->Carrera+Ciclo.
- *
- * Solo el tipo ANUAL corresponde además a un Ciclo real con horarios
- * propios (ver ciclo()): 1.er y 2.° periodo son clasificación pura, sin
- * fechas obligatorias ni horarios asociados.
  *
  * @property int $id
  * @property TipoPeriodoEnum $tipo
@@ -67,8 +63,8 @@ class Periodo extends Model
     }
 
     /**
-     * El Ciclo real (modalidad=anual) que le corresponde, si este Periodo
-     * es de tipo ANUAL -- ahí es donde viven sus Horarios/Matrículas.
+     * El Ciclo real que le corresponde a este Periodo -- ahí es donde
+     * viven sus Horarios/Matrículas (ver PeriodoService::crear()).
      *
      * @return HasOne<Ciclo, $this>
      */
@@ -86,13 +82,11 @@ class Periodo extends Model
     }
 
     /**
-     * Texto para mostrar (p. ej. "2026-1", "2026-2", "2026 Anual").
+     * Texto para mostrar (p. ej. "2026-1", "2026-2").
      */
     public function nombreCompleto(): string
     {
-        return $this->tipo === TipoPeriodoEnum::ANUAL
-            ? "{$this->anio} Anual"
-            : "{$this->anio}-{$this->numeroDePeriodo()}";
+        return "{$this->anio}-{$this->numeroDePeriodo()}";
     }
 
     private function numeroDePeriodo(): string
@@ -100,7 +94,6 @@ class Periodo extends Model
         return match ($this->tipo) {
             TipoPeriodoEnum::PRIMERO => '1',
             TipoPeriodoEnum::SEGUNDO => '2',
-            TipoPeriodoEnum::ANUAL => 'Anual',
         };
     }
 }

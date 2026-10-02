@@ -1,7 +1,5 @@
 <?php
 
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
-use App\Modules\Matricula\Enums\EstadoMatriculaEnum;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Vacaciones\Services\VacacionService;
 use Illuminate\Support\Carbon;
@@ -63,21 +61,10 @@ new #[Layout('layouts.app')] class extends Component
     {
         $resultadosBusqueda = collect();
 
-        if ($this->terminoBusqueda !== '') {
-            $termino = $this->terminoBusqueda;
-            $resultadosBusqueda = Estudiante::query()
-                ->where(function ($query) use ($termino) {
-                    $query->where('nombres', 'like', "%{$termino}%")
-                        ->orWhere('apellidos', 'like', "%{$termino}%")
-                        ->orWhere('dni', 'like', "%{$termino}%");
-                })
-                ->whereHas('matriculas', function ($query) {
-                    $query->where('estado', EstadoMatriculaEnum::APROBADA)
-                        ->whereHas('ciclo', fn ($q) => $q->where('modalidad', ModalidadCicloEnum::ANUAL));
-                })
-                ->limit(8)
-                ->get();
-        }
+        // El periodo SIAGIE anual (la única modalidad a la que aplicaban
+        // las vacaciones) ya no existe -- ver VacacionService::activar().
+        // La búsqueda queda deshabilitada hasta que se decida una regla de
+        // negocio que reemplace esto.
 
         return [
             'resultadosBusqueda' => $resultadosBusqueda,

@@ -1,14 +1,12 @@
 <?php
 
 use App\Models\Carrera;
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
-use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Periodo;
-use App\Modules\Academico\Services\CicloService;
 use App\Modules\Matricula\DTOs\RegistrarApoderadoData;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
 use App\Modules\Matricula\DTOs\RegistrarMatriculaData;
 use App\Modules\Matricula\Enums\EstadoCivilEnum;
+use App\Modules\Matricula\Enums\ModalidadEstudioEnum;
 use App\Modules\Matricula\Enums\TipoDocumentoEnum;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
@@ -115,15 +113,13 @@ new class extends Component
     public string $examenObservaciones = '';
 
     // Paso 5 — matrícula
-    public string $modalidadCiclo = 'seis_meses';
+    public string $periodoId = '';
 
-    public string $cicloId = '';
+    public string $modalidadEstudio = 'presencial';
 
     public string $carreraId = '';
 
     public string $cicloCurricular = '';
-
-    public string $periodoId = '';
 
     public string $fechaMatricula = '';
 
@@ -203,31 +199,7 @@ new class extends Component
         $this->esRematricula = true;
         $this->resetValidation();
 
-        $ultimaMatricula = Matricula::query()
-            ->where('estudiante_id', $this->estudianteEncontradoId)
-            ->latest('fecha_matricula')
-            ->with('ciclo')
-            ->first();
-
-        $this->modalidadCiclo = $ultimaMatricula?->ciclo?->modalidad->value ?? 'seis_meses';
-
         $this->paso = 5;
-    }
-
-    /**
-     * Al cambiar de modalidad se limpia el ciclo elegido; para Periodo anual
-     * no hay selector -- se autoasigna el ciclo anual vigente, si existe
-     * (ver CicloService::cicloAnualVigente() y with()). A diferencia de
-     * los Ciclos de 6 meses, no depende de un periodo de matrícula abierto.
-     */
-    public function updatedModalidadCiclo(CicloService $ciclos): void
-    {
-        $this->cicloId = '';
-
-        if ($this->modalidadCiclo === ModalidadCicloEnum::ANUAL->value) {
-            $cicloAnual = $ciclos->cicloAnualVigente();
-            $this->cicloId = $cicloAnual !== null ? (string) $cicloAnual->id : '';
-        }
     }
 
     public function avanzar(MatriculaService $service): void
@@ -307,11 +279,10 @@ new class extends Component
 
         if ($this->paso === 5) {
             $this->validate([
-                'modalidadCiclo' => 'required|string|in:seis_meses,anual',
-                'cicloId' => 'required|integer|exists:ciclos,id',
+                'periodoId' => 'required|integer|exists:siagies,id',
+                'modalidadEstudio' => 'required|string|in:presencial,virtual',
                 'carreraId' => 'required|integer|exists:carreras,id',
                 'cicloCurricular' => 'required|integer|min:1|max:6',
-                'periodoId' => 'nullable|integer|exists:siagies,id',
                 'fechaMatricula' => 'required|date',
             ]);
 
@@ -407,13 +378,14 @@ new class extends Component
                 $estudiante = Estudiante::query()->findOrFail($this->estudianteEncontradoId);
 
                 $matricula = $matriculaService->matricular($estudiante, new RegistrarMatriculaData(
-                    cicloId: (int) $this->cicloId,
+                    cicloId: $this->cicloIdDelPeriodo(),
                     carreraId: (int) $this->carreraId,
                     cicloCurricular: (int) $this->cicloCurricular,
                     observaciones: $this->observacionesMatricula ?: null,
                     registradoPor: auth()->id(),
-                    periodoId: $this->periodoId !== '' ? (int) $this->periodoId : null,
+                    periodoId: (int) $this->periodoId,
                     fechaMatricula: $this->fechaMatricula !== '' ? $this->fechaMatricula : null,
+                    modalidadEstudio: ModalidadEstudioEnum::from($this->modalidadEstudio),
                 ));
 
                 $this->crearCronogramaSiCorresponde($matricula, $planPagoService);
@@ -502,13 +474,14 @@ new class extends Component
             }
 
             $matricula = $matriculaService->matricular($estudiante, new RegistrarMatriculaData(
-                cicloId: (int) $this->cicloId,
+                cicloId: $this->cicloIdDelPeriodo(),
                 carreraId: (int) $this->carreraId,
                 cicloCurricular: (int) $this->cicloCurricular,
                 observaciones: $this->observacionesMatricula ?: null,
                 registradoPor: auth()->id(),
-                periodoId: $this->periodoId !== '' ? (int) $this->periodoId : null,
+                periodoId: (int) $this->periodoId,
                 fechaMatricula: $this->fechaMatricula !== '' ? $this->fechaMatricula : null,
+                modalidadEstudio: ModalidadEstudioEnum::from($this->modalidadEstudio),
             ));
 
             $this->crearCronogramaSiCorresponde($matricula, $planPagoService);
@@ -517,6 +490,18 @@ new class extends Component
         });
 
         $this->dispatch('matricula-registrada', estudianteId: $estudiante->id, nombre: $estudiante->nombreCompleto());
+    }
+
+    /**
+     * El Ciclo real donde queda la matrícula: desde que Periodo reemplazó
+     * al Ciclo rotativo de 4 ventanas, el usuario solo elige un Periodo
+     * (ver with()) y este resuelve su Ciclo espejo (ver
+     * PeriodoService::crear()). $periodoId ya se validó en el paso 5, así
+     * que su Ciclo siempre existe.
+     */
+    private function cicloIdDelPeriodo(): int
+    {
+        return Periodo::query()->findOrFail($this->periodoId)->ciclo->id;
     }
 
     private function crearCronogramaSiCorresponde(Matricula $matricula, PlanPagoService $planPagoService): void
@@ -541,18 +526,23 @@ new class extends Component
         );
     }
 
-    public function with(CicloService $ciclos): array
+    public function with(): array
     {
         $carreras = Carrera::query()->orderBy('name')->get();
 
-        $ciclosConMatriculaAbierta = Ciclo::query()
-            ->where('modalidad', ModalidadCicloEnum::SEIS_MESES)
-            ->whereHas('periodosMatricula', function ($query) {
+        // Solo periodos cuyo Ciclo espejo ya tiene una ventana de
+        // matrícula abierta hoy (ver CicloService::crearPeriodoMatricula(),
+        // Académico → Ciclos → Ver) -- MatriculaService::matricular()
+        // exige esto para cualquier Ciclo, igual que antes exigía para los
+        // de 6 meses.
+        $periodosDisponibles = Periodo::query()
+            ->whereHas('ciclo.periodosMatricula', function ($query) {
                 $query->where('estado', 'abierto')
                     ->where('fecha_inicio', '<=', now())
                     ->where('fecha_fin', '>=', now());
             })
-            ->orderByDesc('fecha_inicio')
+            ->orderByDesc('anio')
+            ->orderBy('tipo')
             ->get();
 
         return [
@@ -560,10 +550,8 @@ new class extends Component
             'carrerasCompatibles' => $carreras,
             'todasLasCarreras' => $carreras,
             'ciclosCurriculares' => ['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI'],
-            'modalidadesCiclo' => ModalidadCicloEnum::cases(),
-            'periodosDisponibles' => Periodo::query()->orderByDesc('anio')->orderBy('tipo')->get(),
-            'ciclosDisponibles' => $ciclosConMatriculaAbierta,
-            'cicloAnualVigente' => $ciclos->cicloAnualVigente(),
+            'modalidadesEstudio' => ModalidadEstudioEnum::cases(),
+            'periodosDisponibles' => $periodosDisponibles,
             'numerosCuotas' => NumeroCuotasEnum::cases(),
         ];
     }
@@ -876,53 +864,29 @@ new class extends Component
                 </p>
             @endif
             <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div class="sm:col-span-2">
-                    <x-input-label for="modalidadCiclo" value="Modalidad" />
-                    <x-select-input
-                        wire:model.live="modalidadCiclo"
-                        id="modalidadCiclo"
-                        class="mt-1 block w-full"
-                        :options="collect($modalidadesCiclo)->mapWithKeys(fn ($modalidad) => [$modalidad->value => $modalidad->label()])"
-                    />
-                    <x-input-error :messages="$errors->get('modalidadCiclo')" class="mt-1" />
-                </div>
-                <div class="sm:col-span-2">
-                    <x-input-label for="periodoId" value="Periodo (opcional)" />
+                <div>
+                    <x-input-label for="periodoId" value="Periodo" />
                     <x-select-input
                         wire:model="periodoId"
                         id="periodoId"
-                        placeholder="Sin registrar…"
                         class="mt-1 block w-full"
                         :options="collect($periodosDisponibles)->mapWithKeys(fn ($periodo) => [$periodo->id => $periodo->nombreCompleto()])"
                     />
-                    <p class="mt-1 text-xs text-ink-faint">Independiente del Ciclo: es la clasificación propia del sistema SIAGIE del MINEDU.</p>
+                    @if ($periodosDisponibles->isEmpty())
+                        <p class="mt-1 text-xs text-danger">No hay periodos con matrícula abierta hoy.</p>
+                    @endif
                     <x-input-error :messages="$errors->get('periodoId')" class="mt-1" />
                 </div>
-                @if ($modalidadCiclo === 'anual')
-                    <div>
-                        <x-input-label value="Año" />
-                        @if ($cicloAnualVigente)
-                            <p class="mt-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-ink">{{ $cicloAnualVigente->anio }}</p>
-                        @else
-                            <p class="mt-1 text-xs text-danger">No hay ningún ciclo Periodo anual registrado todavía. Créalo primero en Ciclos.</p>
-                        @endif
-                        <x-input-error :messages="$errors->get('cicloId')" class="mt-1" />
-                    </div>
-                @else
-                    <div>
-                        <x-input-label for="cicloId" value="Ciclo" />
-                        <x-select-input
-                            wire:model.live="cicloId"
-                            id="cicloId"
-                            class="mt-1 block w-full"
-                            :options="collect($ciclosDisponibles)->mapWithKeys(fn ($ciclo) => [$ciclo->id => $ciclo->nombre])"
-                        />
-                        @if ($ciclosDisponibles->isEmpty())
-                            <p class="mt-1 text-xs text-danger">No hay ciclos con periodo de matrícula abierto hoy.</p>
-                        @endif
-                        <x-input-error :messages="$errors->get('cicloId')" class="mt-1" />
-                    </div>
-                @endif
+                <div>
+                    <x-input-label for="modalidadEstudio" value="Modalidad" />
+                    <x-select-input
+                        wire:model="modalidadEstudio"
+                        id="modalidadEstudio"
+                        class="mt-1 block w-full"
+                        :options="collect($modalidadesEstudio)->mapWithKeys(fn ($modalidad) => [$modalidad->value => $modalidad->label()])"
+                    />
+                    <x-input-error :messages="$errors->get('modalidadEstudio')" class="mt-1" />
+                </div>
                 <div>
                     <x-input-label for="carreraId" value="Carrera" />
                     <x-select-input

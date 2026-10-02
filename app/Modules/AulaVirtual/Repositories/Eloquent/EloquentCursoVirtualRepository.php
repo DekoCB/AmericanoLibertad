@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\AulaVirtual\Repositories\Eloquent;
 
-use App\Modules\Academico\Models\Horario;
 use App\Modules\AulaVirtual\Models\CursoVirtual;
 use App\Modules\AulaVirtual\Repositories\Contracts\CursoVirtualRepositoryInterface;
 use App\Modules\Matricula\Models\Estudiante;
+use App\Modules\Matricula\Models\Matricula;
 use App\Shared\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -32,31 +32,27 @@ class EloquentCursoVirtualRepository extends BaseRepository implements CursoVirt
             ->get();
     }
 
+    /**
+     * Incluye los cursos virtuales de cualquier curso en recuperación que
+     * el estudiante tenga asignado (ver Matricula::todosLosHorarios()),
+     * además de los de su cohorte normal.
+     */
     public function delEstudiante(Estudiante $estudiante): Collection
     {
-        $matriculas = $estudiante->matriculas()
-            ->where('estado', 'aprobada')
-            ->get(['id', 'carrera_id', 'ciclo_curricular', 'ciclo_id']);
+        $matriculas = $estudiante->matriculas()->where('estado', 'aprobada')->get();
 
         if ($matriculas->isEmpty()) {
             return new Collection;
         }
 
-        /** @param Builder<Horario> $query */
-        $filtroPorMatriculas = function (Builder $query) use ($matriculas) {
-            foreach ($matriculas as $matricula) {
-                $condicion = function (Builder $query) use ($matricula) {
-                    /** @var Builder<Horario> $query */
-                    $query->deLaMatricula($matricula);
-                };
-
-                $query->orWhere($condicion);
-            }
-        };
+        $horarioIds = $matriculas
+            ->flatMap(fn (Matricula $matricula) => $matricula->todosLosHorarios())
+            ->pluck('id')
+            ->unique();
 
         return $this->query()
             ->where('activo', true)
-            ->whereHas('horario', fn (Builder $query) => $query->where($filtroPorMatriculas))
+            ->whereIn('horario_id', $horarioIds)
             ->get();
     }
 

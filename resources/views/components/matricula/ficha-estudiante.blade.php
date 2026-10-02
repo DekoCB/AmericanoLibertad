@@ -4,6 +4,7 @@
     'examenes',
     'matriculas',
     'cursosConHorarios' => [],
+    'refuerzosPorMatricula' => [],
     'editandoHorarioMatriculaId' => null,
     'editandoHorarioCursoId' => null,
     'horarioSeleccionado' => '',
@@ -145,7 +146,7 @@
             @forelse ($matriculas as $matricula)
                 <div class="py-3 text-sm">
                     <div class="flex items-center justify-between">
-                        <p class="text-ink">{{ $matricula->ciclo->nombre }} · {{ $matricula->ciclo->modalidad->label() }} · {{ $matricula->carrera->name }} (ciclo {{ $matricula->ciclo_curricular }})</p>
+                        <p class="text-ink">{{ $matricula->ciclo->nombre }} · {{ $matricula->modalidad_estudio->label() }} · {{ $matricula->carrera->name }} (ciclo {{ $matricula->ciclo_curricular }})</p>
                         <span @class([
                             'rounded-full px-2 py-0.5 text-xs font-medium',
                             'bg-ok/10 text-ok' => $matricula->estado->value === 'aprobada',
@@ -225,6 +226,37 @@
                             @endforelse
                         </div>
                     </div>
+
+                    @if (($refuerzosPorMatricula[$matricula->id] ?? collect())->isNotEmpty())
+                        <div class="mt-3">
+                            <p class="text-ink-faint">Cursos en recuperación:</p>
+                            <div class="mt-1 space-y-1">
+                                @foreach ($refuerzosPorMatricula[$matricula->id] as $refuerzo)
+                                    <div class="flex items-center justify-between gap-2">
+                                        <p>
+                                            <span class="text-ink">{{ $refuerzo['curso']->nombre }}</span>
+                                            <span class="text-ink-faint">(ciclo {{ $refuerzo['curso']->cicloRomano() }})
+                                                @if ($refuerzo['horario'])
+                                                    · {{ $refuerzo['horario']->docente?->name }} · {{ $refuerzo['horario']->diasResumen() }}
+                                                @else
+                                                    · pendiente de asignar sección
+                                                @endif
+                                            </span>
+                                        </p>
+                                        <span @class([
+                                            'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
+                                            'bg-ok/10 text-ok' => $refuerzo['estado']->value === 'aprobado',
+                                            'bg-danger/10 text-danger' => $refuerzo['estado']->value === 'desaprobado',
+                                            'bg-accent/10 text-accent' => $refuerzo['estado']->value === 'cursando',
+                                            'bg-warn/10 text-warn' => $refuerzo['estado']->value === 'pendiente',
+                                        ])>
+                                            {{ $refuerzo['estado']->label() }}
+                                        </span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="mt-2 flex gap-4">
                         @if ($matricula->getFirstMedia('ficha'))

@@ -14,12 +14,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * El periodo SIAGIE del MINEDU (1.er periodo, 2.° periodo, Anual): un eje
- * completamente aparte del Ciclo rotativo de Americano Libertad (ver ModalidadCicloEnum,
- * CicloService). Solo el tipo ANUAL tiene además un Ciclo real detrás (con
- * Horarios propios, igual que un Ciclo rotativo) -- por eso su creación delega en
- * CicloService::crear(), reutilizando la misma validación de fechas (8
- * meses de clases) y de solape que ya existía para el Ciclo anual.
+ * El periodo de matrícula del año (1.er periodo, 2.° periodo): desde que
+ * se retiró el Ciclo rotativo de 4 ventanas, todo Periodo tiene siempre un
+ * Ciclo real detrás (con sus propios Horarios) -- su creación delega en
+ * CicloService::crear(), reutilizando la misma validación de fechas/solape
+ * que antes solo corría para el extinto Periodo anual.
  */
 class PeriodoService
 {
@@ -36,49 +35,94 @@ class PeriodoService
     }
 
     /**
-     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado?: EstadoCicloEnum}  $datos
+     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio: string, fecha_fin: string, estado?: EstadoCicloEnum}  $datos
      */
     public function crear(array $datos): Periodo
     {
         $datos['estado'] ??= EstadoCicloEnum::PLANIFICADO;
 
         $this->validarSinDuplicado($datos['tipo'], $datos['anio']);
+        $this->validarFechasCompletas($datos);
 
-        if ($datos['tipo'] === TipoPeriodoEnum::ANUAL) {
-            return $this->crearAnual($datos);
-        }
+        return DB::transaction(function () use ($datos) {
+            /** @var Periodo $periodo */
+            $periodo = Periodo::query()->create([
+                'tipo' => $datos['tipo'],
+                'anio' => $datos['anio'],
+                'fecha_inicio' => $datos['fecha_inicio'],
+                'fecha_fin' => $datos['fecha_fin'],
+                'estado' => $datos['estado'],
+            ]);
 
-        return Periodo::query()->create([
-            'tipo' => $datos['tipo'],
-            'anio' => $datos['anio'],
-            'fecha_inicio' => $datos['fecha_inicio'] ?? null,
-            'fecha_fin' => $datos['fecha_fin'] ?? null,
-            'estado' => $datos['estado'],
-        ]);
+            $ciclo = $this->ciclos->crear([
+                'nombre' => "Periodo {$periodo->nombreCompleto()}",
+                'modalidad' => ModalidadCicloEnum::SEIS_MESES,
+                'tipo' => null,
+                'anio' => $datos['anio'],
+                'fecha_inicio' => $datos['fecha_inicio'],
+                'fecha_fin' => $datos['fecha_fin'],
+            ]);
+
+            $ciclo->update(['siagie_id' => $periodo->id, 'estado' => $datos['estado']]);
+
+            return $periodo;
+        });
     }
 
     /**
-     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado?: EstadoCicloEnum}  $datos
+     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio: string, fecha_fin: string, estado?: EstadoCicloEnum}  $datos
      */
     public function actualizar(Periodo $periodo, array $datos): Periodo
     {
         $datos['estado'] ??= $periodo->estado;
 
         $this->validarSinDuplicado($datos['tipo'], $datos['anio'], $periodo->id);
+        $this->validarFechasCompletas($datos);
 
-        if ($datos['tipo'] === TipoPeriodoEnum::ANUAL) {
-            return $this->actualizarAnual($periodo, $datos);
-        }
+        return DB::transaction(function () use ($periodo, $datos) {
+            $ciclo = Ciclo::query()->where('siagie_id', $periodo->id)->first();
 
-        $periodo->update([
-            'tipo' => $datos['tipo'],
-            'anio' => $datos['anio'],
-            'fecha_inicio' => $datos['fecha_inicio'] ?? null,
-            'fecha_fin' => $datos['fecha_fin'] ?? null,
-            'estado' => $datos['estado'],
-        ]);
+            $periodo->update([
+                'tipo' => $datos['tipo'],
+                'anio' => $datos['anio'],
+                'fecha_inicio' => $datos['fecha_inicio'],
+                'fecha_fin' => $datos['fecha_fin'],
+                'estado' => $datos['estado'],
+            ]);
 
-        return $periodo->fresh();
+            if ($ciclo) {
+                $this->ciclos->actualizar($ciclo, [
+                    'nombre' => "Periodo {$periodo->nombreCompleto()}",
+                    'modalidad' => ModalidadCicloEnum::SEIS_MESES,
+                    'tipo' => null,
+                    'anio' => $datos['anio'],
+                    'fecha_inicio' => $datos['fecha_inicio'],
+                    'fecha_fin' => $datos['fecha_fin'],
+                    'estado' => $datos['estado'],
+                ]);
+            }
+
+            return $periodo->fresh();
+        });
+    }
+
+    /**
+     * El periodo cronológicamente siguiente a $actual (1.er periodo ->
+     * 2.° del mismo año -> 1.er periodo del año siguiente), si ya se
+     * creó. Es la fuente de "cuál sigue" para migrar un Ciclo nacido de
+     * un Periodo -- esos Ciclos no tienen el `tipo` rotativo (1 a 4) que
+     * usaba CicloService::siguienteCiclo().
+     */
+    public function periodoSiguiente(Periodo $actual): ?Periodo
+    {
+        [$anioSiguiente, $tipoSiguiente] = $actual->tipo === TipoPeriodoEnum::PRIMERO
+            ? [$actual->anio, TipoPeriodoEnum::SEGUNDO]
+            : [$actual->anio + 1, TipoPeriodoEnum::PRIMERO];
+
+        return Periodo::query()
+            ->where('anio', $anioSiguiente)
+            ->where('tipo', $tipoSiguiente)
+            ->first();
     }
 
     private function validarSinDuplicado(TipoPeriodoEnum $tipo, int $anio, ?int $exceptoId = null): void
@@ -97,75 +141,14 @@ class PeriodoService
     }
 
     /**
-     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado: EstadoCicloEnum}  $datos
+     * @param  array{fecha_inicio?: ?string, fecha_fin?: ?string}  $datos
      */
-    private function crearAnual(array $datos): Periodo
+    private function validarFechasCompletas(array $datos): void
     {
         if (($datos['fecha_inicio'] ?? null) === null || ($datos['fecha_fin'] ?? null) === null) {
             throw ValidationException::withMessages([
-                'fecha_inicio' => 'El periodo Anual necesita fecha de inicio y de fin (su periodo de clases real).',
+                'fecha_inicio' => 'El periodo necesita fecha de inicio y de fin (su periodo de clases real).',
             ]);
         }
-
-        return DB::transaction(function () use ($datos) {
-            /** @var Periodo $periodo */
-            $periodo = Periodo::query()->create([
-                'tipo' => TipoPeriodoEnum::ANUAL,
-                'anio' => $datos['anio'],
-                'fecha_inicio' => $datos['fecha_inicio'],
-                'fecha_fin' => $datos['fecha_fin'],
-                'estado' => $datos['estado'],
-            ]);
-
-            $ciclo = $this->ciclos->crear([
-                'nombre' => "Periodo Anual - {$datos['anio']}",
-                'modalidad' => ModalidadCicloEnum::ANUAL,
-                'tipo' => null,
-                'anio' => $datos['anio'],
-                'fecha_inicio' => $datos['fecha_inicio'],
-                'fecha_fin' => $datos['fecha_fin'],
-            ]);
-
-            $ciclo->update(['siagie_id' => $periodo->id, 'estado' => $datos['estado']]);
-
-            return $periodo;
-        });
-    }
-
-    /**
-     * @param  array{tipo: TipoPeriodoEnum, anio: int, fecha_inicio?: ?string, fecha_fin?: ?string, estado: EstadoCicloEnum}  $datos
-     */
-    private function actualizarAnual(Periodo $periodo, array $datos): Periodo
-    {
-        if (($datos['fecha_inicio'] ?? null) === null || ($datos['fecha_fin'] ?? null) === null) {
-            throw ValidationException::withMessages([
-                'fecha_inicio' => 'El periodo Anual necesita fecha de inicio y de fin (su periodo de clases real).',
-            ]);
-        }
-
-        return DB::transaction(function () use ($periodo, $datos) {
-            $ciclo = Ciclo::query()->where('siagie_id', $periodo->id)->first();
-
-            if ($ciclo) {
-                $this->ciclos->actualizar($ciclo, [
-                    'nombre' => $ciclo->nombre,
-                    'modalidad' => ModalidadCicloEnum::ANUAL,
-                    'tipo' => null,
-                    'anio' => $datos['anio'],
-                    'fecha_inicio' => $datos['fecha_inicio'],
-                    'fecha_fin' => $datos['fecha_fin'],
-                    'estado' => $datos['estado'],
-                ]);
-            }
-
-            $periodo->update([
-                'anio' => $datos['anio'],
-                'fecha_inicio' => $datos['fecha_inicio'],
-                'fecha_fin' => $datos['fecha_fin'],
-                'estado' => $datos['estado'],
-            ]);
-
-            return $periodo->fresh();
-        });
     }
 }

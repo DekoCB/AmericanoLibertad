@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Matricula\DTOs;
 
+use App\Modules\Matricula\Enums\ModalidadEstudioEnum;
+
 final readonly class RegistrarMatriculaData
 {
     public function __construct(
@@ -14,5 +16,6 @@ final readonly class RegistrarMatriculaData
         public ?int $registradoPor,
         public ?int $periodoId = null,
         public ?string $fechaMatricula = null,
+        public ?ModalidadEstudioEnum $modalidadEstudio = null,
     ) {}
 }

@@ -4,7 +4,6 @@ namespace Tests\Feature\Vacaciones;
 
 use App\Models\Carrera;
 use App\Models\User;
-use App\Modules\Academico\Enums\ModalidadCicloEnum;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
@@ -28,13 +27,11 @@ class VacacionesPermisosTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    private function estudianteAnualMatriculado(string $dni): Estudiante
+    private function estudianteMatriculado(string $dni): Estudiante
     {
         $ciclo = Ciclo::factory()->activo()->create([
-            'modalidad' => ModalidadCicloEnum::ANUAL,
-            'tipo' => null,
             'fecha_inicio' => now()->subDays(20),
-            'fecha_fin' => now()->addMonths(9),
+            'fecha_fin' => now()->addMonths(5),
         ]);
         $ciclo->periodosMatricula()->create([
             'fecha_inicio' => now()->subDays(10),
@@ -73,23 +70,27 @@ class VacacionesPermisosTest extends TestCase
         $this->actingAs($usuario)->get(route('vacaciones.index'))->assertForbidden();
     }
 
-    public function test_registrar_vacaciones_desde_la_ui_las_deja_visibles_en_vigentes(): void
+    /**
+     * Las vacaciones solo aplicaban a la modalidad SIAGIE anual, que ya no
+     * existe (ver VacacionService::activar()) -- el módulo quedó oculto del
+     * menú y cualquier intento de registrar vacaciones debe fallar.
+     */
+    public function test_registrar_vacaciones_desde_la_ui_siempre_falla(): void
     {
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
-        $estudiante = $this->estudianteAnualMatriculado('55667744');
+        $estudiante = $this->estudianteMatriculado('55667744');
 
         $this->actingAs($usuario);
 
         Volt::test('vacaciones.index')
             ->call('abrirModal')
-            ->set('terminoBusqueda', 'Quispe Paredes')
             ->call('seleccionarEstudiante', $estudiante->id, $estudiante->nombreCompleto())
             ->set('fechaInicio', now()->format('Y-m-d'))
             ->call('activar')
-            ->assertHasNoErrors()
-            ->assertSet('mostrarModal', false);
+            ->assertHasErrors('estudiante')
+            ->assertSet('mostrarModal', true);
 
-        $this->assertDatabaseHas('vacaciones', ['estudiante_id' => $estudiante->id]);
+        $this->assertDatabaseCount('vacaciones', 0);
     }
 }

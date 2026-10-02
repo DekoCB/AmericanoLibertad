@@ -7,6 +7,8 @@ use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Matricula\Services\DocumentoEstudianteService;
 use App\Modules\Matricula\Services\MatriculaService;
+use App\Modules\Migraciones\Enums\EstadoRefuerzoEnum;
+use App\Modules\Migraciones\Models\MatriculaRefuerzo;
 use App\Modules\Pagos\Models\PlanPago;
 use App\Modules\Pagos\Services\PlanPagoService;
 use Illuminate\Support\Collection;
@@ -231,6 +233,27 @@ new class extends Component
             ->values();
     }
 
+    /**
+     * Los cursos que el estudiante está repitiendo en esta matrícula por
+     * haberlos desaprobado antes -- cada uno con su propio ciclo_curricular,
+     * que puede ser menor al de la matrícula (ver MatriculaRefuerzo).
+     *
+     * @return Collection<int, array{curso: Curso, horario: ?Horario, estado: EstadoRefuerzoEnum}>
+     */
+    private function refuerzosConEstado(Matricula $matricula): Collection
+    {
+        return $matricula->refuerzos()
+            ->with(['curso', 'horario.docente'])
+            ->get()
+            ->map(fn (MatriculaRefuerzo $refuerzo) => [
+                'curso' => $refuerzo->curso,
+                'horario' => $refuerzo->horario,
+                'estado' => $refuerzo->estado,
+            ])
+            ->sortBy(fn (array $entrada) => $entrada['curso']->nombre)
+            ->values();
+    }
+
     public function with(PlanPagoService $planes): array
     {
         $estudiante = $this->estudianteId ? Estudiante::query()->with(['media', 'user.media', 'telefonos'])->find($this->estudianteId) : null;
@@ -243,6 +266,7 @@ new class extends Component
             'examenes' => $estudiante?->examenesUbicacion()->with('carreraAsignada')->latest('fecha')->get(),
             'matriculas' => $matriculas,
             'cursosConHorarios' => $matriculas?->mapWithKeys(fn (Matricula $matricula) => [$matricula->id => $this->cursosConHorarios($matricula)]) ?? collect(),
+            'refuerzosPorMatricula' => $matriculas?->mapWithKeys(fn (Matricula $matricula) => [$matricula->id => $this->refuerzosConEstado($matricula)]) ?? collect(),
             'planesPorMatricula' => $matriculas !== null && Auth::user()->hasPermissionTo('pagos.ver')
                 ? $matriculas->mapWithKeys(fn (Matricula $matricula) => [$matricula->id => $planes->planDe($matricula)])
                 : collect(),
@@ -272,6 +296,7 @@ new class extends Component
                     :examenes="$examenes"
                     :matriculas="$matriculas"
                     :cursos-con-horarios="$cursosConHorarios"
+                    :refuerzos-por-matricula="$refuerzosPorMatricula"
                     :editando-horario-matricula-id="$editandoHorarioMatriculaId"
                     :editando-horario-curso-id="$editandoHorarioCursoId"
                     :horario-seleccionado="$horarioSeleccionado"

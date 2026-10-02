@@ -47,20 +47,12 @@
             </a>
         @endcan
 
-        @can('vacaciones.ver')
-            <a
-                href="{{ route('vacaciones.index') }}"
-                wire:navigate
-                @class([
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition',
-                    'bg-accent text-white shadow-md shadow-accent/30' =>request()->routeIs('vacaciones.*'),
-                    'text-ink-dim hover:bg-surface-2 hover:text-ink' => ! request()->routeIs('vacaciones.*'),
-                ])
-            >
-                <x-heroicon-o-sun class="h-5 w-5 shrink-0" />
-                <span class="sidebar-label">Vacaciones</span>
-            </a>
-        @endcan
+        {{--
+            Vacaciones oculto del menú: solo aplicaba a matrículas SIAGIE
+            anual, una modalidad retirada del sistema (ver
+            VacacionService::activar()) -- queda sin forma de usarse hasta
+            que se decida una regla de negocio que lo reemplace.
+        --}}
     @endcan
 
     @canany(['aula_virtual.ver', 'aula_virtual.gestionar_propio', 'aula_virtual.ver_propio'])
