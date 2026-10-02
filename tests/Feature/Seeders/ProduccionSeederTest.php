@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Shared\Enums\RolEnum;
 use Database\Seeders\ProduccionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -30,18 +31,30 @@ class ProduccionSeederTest extends TestCase
         $this->assertGreaterThan(0, Carrera::query()->count());
     }
 
-    /**
-     * CUENTAS_GERENCIA está vacío a propósito en este seeder (ver su propio
-     * docblock): las cuentas reales de CEBA se quitaron al adaptar el
-     * proyecto para Americano Libertad, pendiente de completarse con datos
-     * reales antes del primer despliegue. Mientras siga vacío, sembrar no
-     * debe crear ninguna cuenta.
-     */
-    public function test_no_crea_ninguna_cuenta_mientras_la_lista_de_gerencia_este_vacia(): void
+    public function test_crea_la_cuenta_admin_con_sus_roles_y_contrasena_fija(): void
     {
         $this->seed(ProduccionSeeder::class);
 
-        $this->assertSame(0, User::query()->count());
+        $admin = User::query()->where('email', 'admin@gmail.com')->first();
+
+        $this->assertNotNull($admin);
+        $this->assertSame('71586559', $admin->dni);
+        $this->assertTrue($admin->hasRole(RolEnum::ADMINISTRATIVO->value));
+        $this->assertTrue($admin->hasRole(RolEnum::GERENCIA->value));
+        $this->assertTrue(Hash::check('admin123', $admin->password));
+    }
+
+    public function test_crea_la_cuenta_del_director_sin_dni_y_solo_con_rol_gerencia(): void
+    {
+        $this->seed(ProduccionSeeder::class);
+
+        $director = User::query()->where('email', 'donaldyovera@gmail.com')->first();
+
+        $this->assertNotNull($director);
+        $this->assertNull($director->dni);
+        $this->assertTrue($director->hasRole(RolEnum::GERENCIA->value));
+        $this->assertFalse($director->hasRole(RolEnum::ADMINISTRATIVO->value));
+        $this->assertTrue(Hash::check('AmericaLib123', $director->password));
     }
 
     public function test_correrlo_dos_veces_no_falla_ni_duplica_nada(): void
@@ -49,7 +62,7 @@ class ProduccionSeederTest extends TestCase
         $this->seed(ProduccionSeeder::class);
         $this->seed(ProduccionSeeder::class);
 
-        $this->assertSame(0, User::query()->count());
+        $this->assertSame(2, User::query()->count());
         $this->assertSame(count(RolEnum::cases()), Role::query()->count());
     }
 }
