@@ -9,6 +9,7 @@ use App\Modules\Academico\Models\Aula;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Academico\Models\Periodo;
 use App\Modules\Academico\Services\HorarioService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Shared\Enums\RolEnum;
@@ -284,6 +285,69 @@ class HorarioFormTest extends TestCase
             ->assertSet('mostrarModal', true)
             ->assertSet('editandoId', $horario->id)
             ->assertSet('cursoId', (string) $horario->curso_id);
+    }
+
+    /**
+     * Desde que Periodo reemplazó al Ciclo rotativo de 4 ventanas, el
+     * selector de Ciclo ya no debería ofrecer esos 4 heredados como opción
+     * -- solo los que nacen de un Periodo.
+     */
+    public function test_el_selector_de_ciclo_prioriza_periodos_sobre_ciclos_rotativos_heredados(): void
+    {
+        $this->actingAs($this->actorCoordinador());
+
+        $cicloHeredado = Ciclo::factory()->create(['estado' => 'cerrado']);
+        $periodo = Periodo::factory()->create(['anio' => 2027]);
+        $cicloDePeriodo = Ciclo::factory()->conPeriodo()->create(['anio' => 2027, 'siagie_id' => $periodo->id]);
+
+        Volt::test('academico.horarios.index')
+            ->assertSee($cicloDePeriodo->nombre)
+            ->assertDontSee($cicloHeredado->nombre);
+    }
+
+    /**
+     * Si el ciclo rotativo heredado es justo el que está filtrado o el que
+     * se está editando ahora mismo, sigue apareciendo -- para no cortarle a
+     * nadie, a mitad de sesión, la vista o edición de un horario que ya
+     * tenía ahí (los 4 ciclos heredados de 2026 siguen con horarios
+     * reales).
+     */
+    public function test_el_ciclo_heredado_sigue_disponible_si_es_el_filtro_o_el_que_se_esta_editando(): void
+    {
+        $this->actingAs($this->actorCoordinador());
+
+        $cicloHeredado = Ciclo::factory()->create();
+        $horario = $this->app->make(HorarioService::class)->crear([
+            'curso_id' => Curso::factory()->create()->id,
+            'docente_id' => User::factory()->create()->id,
+            'aula_id' => Aula::factory()->create()->id,
+            'ciclo_id' => $cicloHeredado->id,
+            'dias' => [
+                ['dia_semana' => DiaSemanaEnum::LUNES, 'hora_inicio' => '18:00:00', 'hora_fin' => '20:00:00'],
+            ],
+        ]);
+
+        Volt::test('academico.horarios.index')
+            ->set('cicloFiltro', (string) $cicloHeredado->id)
+            ->assertSee($cicloHeredado->nombre)
+            ->call('abrirModalEditar', $horario->id)
+            ->assertSee($cicloHeredado->nombre);
+    }
+
+    /**
+     * Pero al crear uno NUEVO no se hereda ese filtro activo como ciclo ya
+     * precargado -- obliga a elegir a mano (lo normal ahora es un Periodo).
+     */
+    public function test_nuevo_horario_no_preselecciona_el_ciclo_heredado_que_esta_filtrado(): void
+    {
+        $this->actingAs($this->actorCoordinador());
+
+        $cicloHeredado = Ciclo::factory()->create();
+
+        Volt::test('academico.horarios.index')
+            ->set('cicloFiltro', (string) $cicloHeredado->id)
+            ->call('abrirModal')
+            ->assertSet('cicloId', '');
     }
 
     public function test_el_listado_agrupa_los_horarios_por_carrera(): void

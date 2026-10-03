@@ -90,7 +90,11 @@ new #[Layout('layouts.app')] class extends Component
             'editandoId', 'cursoId', 'docenteId', 'aulaId', 'diasSeleccionados',
             'horaInicioHoraPorDia', 'horaInicioMinutoPorDia', 'horaFinHoraPorDia', 'horaFinMinutoPorDia',
         ]);
-        $this->cicloId = $this->cicloFiltro;
+        // Un horario nuevo solo debería nacer en un Ciclo que venga de un
+        // Periodo (ver PeriodoService): si el filtro de arriba está parado
+        // en uno de los 4 Ciclos rotativos heredados, no lo arrastramos acá
+        // -- obliga a elegir un Periodo a mano en su lugar.
+        $this->cicloId = Ciclo::query()->whereKey($this->cicloFiltro)->whereNull('tipo')->exists() ? $this->cicloFiltro : '';
         $this->mostrarModal = true;
     }
 
@@ -191,6 +195,34 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
+     * Desde que Periodo reemplazó al Ciclo rotativo de 4 ventanas, este
+     * selector ya solo ofrece Ciclos nacidos de un Periodo (`tipo` nulo) --
+     * salvo que el filtro de arriba o el horario que se está editando ya
+     * apunten a uno de los 4 Ciclos rotativos heredados (todavía existen,
+     * con horarios reales): ese caso se agrega aparte para no hacer
+     * desaparecer de golpe lo que ya estaba seleccionado o en edición.
+     *
+     * @return Collection<int, Ciclo>
+     */
+    private function ciclosDisponibles(): Collection
+    {
+        $ciclos = Ciclo::query()->whereNull('tipo')->orderByDesc('fecha_inicio')->get();
+
+        $idsHeredados = array_unique(array_filter([
+            $this->cicloFiltro !== '' ? (int) $this->cicloFiltro : null,
+            $this->editandoId !== null && $this->cicloId !== '' ? (int) $this->cicloId : null,
+        ]));
+
+        foreach ($idsHeredados as $id) {
+            if (! $ciclos->contains('id', $id) && $heredado = Ciclo::query()->find($id)) {
+                $ciclos->push($heredado);
+            }
+        }
+
+        return $ciclos->sortByDesc('fecha_inicio')->values();
+    }
+
+    /**
      * Arrastrar-y-soltar en la pestaña "Editar": mueve un solo día
      * (HorarioDia) al día donde se soltó, conservando su hora. Si choca
      * con otro horario en la misma aula/docente, HorarioService::moverDia()
@@ -221,7 +253,7 @@ new #[Layout('layouts.app')] class extends Component
         $horarios = $this->cicloFiltro ? $service->delCiclo((int) $this->cicloFiltro) : collect();
 
         return [
-            'ciclos' => Ciclo::query()->orderByDesc('fecha_inicio')->get(),
+            'ciclos' => $this->ciclosDisponibles(),
             'horariosPorCarrera' => $this->agruparPorCarrera($horarios),
             'horarioDiasPorDia' => $this->agruparDiasParaLaGrilla($horarios),
             'cursos' => Curso::query()->where('activo', true)->orderBy('nombre')->get(),

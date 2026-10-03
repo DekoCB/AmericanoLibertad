@@ -68,7 +68,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Periodos</h1>
-        <p class="mt-1 text-sm text-ink-dim">Los periodos de matrícula del año (1.er periodo, 2.° periodo) — cada uno crea su propio Ciclo, con horarios reales.</p>
+        <p class="mt-1 text-sm text-ink-dim">Los periodos de matrícula del año (1.er periodo, 2.° periodo) — cada uno crea su propio Ciclo, con horarios reales. Crear un periodo no abre matrícula por sí solo: entra a "Ver" y declara su ventana de matrícula antes de que aparezca como opción al matricular estudiantes.</p>
     </x-slot>
 
     @can('academico.gestionar')
@@ -92,6 +92,7 @@ new #[Layout('layouts.app')] class extends Component
                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Tipo</th>
                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Fechas</th>
                     <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Estado</th>
+                    <th class="px-4 py-3"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-border">
@@ -107,13 +108,23 @@ new #[Layout('layouts.app')] class extends Component
                                 {{ $periodo->estado->label() }}
                             </x-badge>
                         </td>
+                        <td class="px-4 py-3 text-right">
+                            <button
+                                type="button"
+                                x-data
+                                x-on:click="$dispatch('ver-periodo', { periodoId: {{ $periodo->id }} }); $dispatch('open-modal', 'ver-periodo')"
+                                class="text-sm font-medium text-accent hover:underline"
+                            >Ver</button>
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-4 py-8 text-center text-sm text-ink-faint">No hay periodos registrados.</td></tr>
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-ink-faint">No hay periodos registrados.</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
+
+    <livewire:academico.periodos.ficha-modal wire:key="ficha-periodo-modal" />
 
     <div
         x-show="$wire.mostrarModal"
