@@ -55,6 +55,23 @@ class ConstanciasPermisosTest extends TestCase
             ->assertOk();
     }
 
+    /**
+     * Regresión: certificados.solicitar también lo tiene Gerencia vía el
+     * comodín '*' del seeder -- el hasRole(ESTUDIANTE) explícito en
+     * sidebar-nav.blade.php y mis-constancias.blade.php::mount() bloquea a
+     * cualquier cuenta Gerencia con una ficha de Estudiante vinculada.
+     */
+    public function test_gerencia_con_ficha_de_estudiante_no_puede_ver_mis_constancias(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::GERENCIA->value);
+        Estudiante::factory()->create(['user_id' => $usuario->id]);
+
+        $this->actingAs($usuario)
+            ->get(route('constancias.mis-constancias'))
+            ->assertForbidden();
+    }
+
     public function test_un_estudiante_no_puede_ver_la_gestion_de_constancias_del_staff(): void
     {
         $usuario = User::factory()->create();

@@ -79,6 +79,28 @@ class PagosPermisosTest extends TestCase
             ->assertOk();
     }
 
+    /**
+     * Regresión: pagos.ver_propio también lo tiene Gerencia vía el comodín
+     * '*' del seeder -- antes, cualquier cuenta Gerencia con una ficha de
+     * Estudiante vinculada (como la cuenta real de producción) veía y podía
+     * abrir "Mi estado de cuenta". El hasRole(ESTUDIANTE) explícito en
+     * sidebar-nav.blade.php y mi-cuenta.blade.php::mount() lo bloquea.
+     */
+    public function test_gerencia_con_ficha_de_estudiante_no_puede_ver_mi_estado_de_cuenta(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::GERENCIA->value);
+        Estudiante::factory()->create(['user_id' => $usuario->id]);
+
+        $this->actingAs($usuario)
+            ->get(route('pagos.mi-cuenta'))
+            ->assertForbidden();
+
+        $this->actingAs($usuario)
+            ->get(route('dashboard'))
+            ->assertDontSee('Mi estado de cuenta');
+    }
+
     public function test_un_estudiante_no_puede_ver_la_gestion_de_pagos_del_staff(): void
     {
         $usuario = User::factory()->create();

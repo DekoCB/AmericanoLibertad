@@ -5,6 +5,7 @@ use App\Modules\Certificados\Services\CertificadoService;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Services\BloqueoAccesoService;
 use App\Shared\Enums\MetodoEntregaEnum;
+use App\Shared\Enums\RolEnum;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -32,7 +33,10 @@ new #[Layout('layouts.app')] class extends Component
     {
         $user = Auth::user();
 
-        abort_unless($user->hasPermissionTo('certificados.solicitar') && $user->estudiante, 403);
+        abort_unless(
+            $user->hasRole(RolEnum::ESTUDIANTE->value) && $user->hasPermissionTo('certificados.solicitar') && $user->estudiante,
+            403,
+        );
 
         $this->tipoDocumento = TipoDocumentoEnum::CONSTANCIA_ESTUDIOS->value;
     }

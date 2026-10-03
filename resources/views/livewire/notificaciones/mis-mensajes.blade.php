@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Notificaciones\Services\MensajeWhatsappService;
+use App\Shared\Enums\RolEnum;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -14,7 +15,10 @@ new #[Layout('layouts.app')] class extends Component
     {
         $user = Auth::user();
 
-        abort_unless($user->hasPermissionTo('notificaciones.ver_propio') && $user->estudiante, 403);
+        abort_unless(
+            $user->hasRole(RolEnum::ESTUDIANTE->value) && $user->hasPermissionTo('notificaciones.ver_propio') && $user->estudiante,
+            403,
+        );
     }
 
     public function with(MensajeWhatsappService $service): array

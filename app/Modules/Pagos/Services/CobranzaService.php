@@ -11,6 +11,7 @@ use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Pagos\Enums\EstadoCuotaEnum;
 use App\Modules\Pagos\Enums\EstadoPagoEnum;
 use App\Modules\Pagos\Enums\TipoConceptoEnum;
+use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\ConceptoPago;
 use App\Modules\Pagos\Models\Cuota;
 use App\Modules\Pagos\Models\Pago;
@@ -35,7 +36,7 @@ use Illuminate\Support\Collection;
 class CobranzaService
 {
     /**
-     * @return array{cuotasPendientes: Collection<int, Cuota>, pagosPendientes: Collection<int, Pago>, pagosAprobados: Collection<int, Pago>}
+     * @return array{cuotasPendientes: Collection<int, Cuota>, cargosAdicionalesPendientes: Collection<int, CargoAdicional>, pagosPendientes: Collection<int, Pago>, pagosAprobados: Collection<int, Pago>}
      */
     public function deudaDeEstudiante(Estudiante $estudiante): array
     {
@@ -46,10 +47,16 @@ class CobranzaService
             ->orderBy('fecha_vencimiento')
             ->get();
 
+        $cargosAdicionalesPendientes = CargoAdicional::query()
+            ->where('estudiante_id', $estudiante->id)
+            ->where('estado', EstadoCuotaEnum::PENDIENTE)
+            ->latest()
+            ->get();
+
         $pagosPendientes = Pago::query()
             ->where('estudiante_id', $estudiante->id)
             ->whereIn('estado', [EstadoPagoEnum::PENDIENTE, EstadoPagoEnum::RECHAZADO])
-            ->with('concepto')
+            ->with(['concepto', 'cargoAdicional'])
             ->latest('fecha_pago')
             ->get();
 
@@ -58,12 +65,13 @@ class CobranzaService
         $pagosAprobados = Pago::query()
             ->where('estudiante_id', $estudiante->id)
             ->where('estado', EstadoPagoEnum::APROBADO)
-            ->with(['concepto', 'recibo', 'partes'])
+            ->with(['concepto', 'cargoAdicional', 'recibo', 'partes'])
             ->latest('fecha_pago')
             ->get();
 
         return [
             'cuotasPendientes' => $cuotasPendientes,
+            'cargosAdicionalesPendientes' => $cargosAdicionalesPendientes,
             'pagosPendientes' => $pagosPendientes,
             'pagosAprobados' => $pagosAprobados,
         ];

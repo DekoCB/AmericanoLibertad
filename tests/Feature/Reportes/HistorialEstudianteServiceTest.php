@@ -13,6 +13,7 @@ use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Enums\EstadoCuotaEnum;
 use App\Modules\Pagos\Enums\EstadoPagoEnum;
+use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\Cuota;
 use App\Modules\Pagos\Models\Pago;
 use App\Modules\Pagos\Models\PlanPago;
@@ -54,13 +55,15 @@ class HistorialEstudianteServiceTest extends TestCase
 
         $matriculaUno = Matricula::factory()->create(['estudiante_id' => $estudiante->id]);
         $planUno = PlanPago::factory()->create(['matricula_id' => $matriculaUno->id]);
-        Cuota::factory()->pagada()->create(['plan_pago_id' => $planUno->id, 'numero' => 1, 'monto' => 100]);
+        $cuotaPagadaUno = Cuota::factory()->pagada()->create(['plan_pago_id' => $planUno->id, 'numero' => 1, 'monto' => 100]);
         Cuota::factory()->vencida()->create(['plan_pago_id' => $planUno->id, 'numero' => 2, 'monto' => 150]);
+        Pago::factory()->aprobado()->create(['estudiante_id' => $estudiante->id, 'cuota_id' => $cuotaPagadaUno->id, 'monto' => 100]);
 
         $matriculaDos = Matricula::factory()->create(['estudiante_id' => $estudiante->id]);
         $planDos = PlanPago::factory()->create(['matricula_id' => $matriculaDos->id]);
-        Cuota::factory()->pagada()->create(['plan_pago_id' => $planDos->id, 'numero' => 1, 'monto' => 200]);
+        $cuotaPagadaDos = Cuota::factory()->pagada()->create(['plan_pago_id' => $planDos->id, 'numero' => 1, 'monto' => 200]);
         Cuota::factory()->create(['plan_pago_id' => $planDos->id, 'numero' => 2, 'monto' => 50, 'estado' => EstadoCuotaEnum::EXONERADO]);
+        Pago::factory()->aprobado()->create(['estudiante_id' => $estudiante->id, 'cuota_id' => $cuotaPagadaDos->id, 'monto' => 200]);
 
         $historial = $this->service()->porDni('22222222');
 
@@ -68,6 +71,64 @@ class HistorialEstudianteServiceTest extends TestCase
         $this->assertSame(50.0, $historial['resumenPagos']['totalExonerado']);
         $this->assertCount(1, $historial['resumenPagos']['cuotasVencidas']);
         $this->assertSame(150.0, (float) $historial['resumenPagos']['cuotasVencidas']->first()->monto);
+    }
+
+    /**
+     * Regresión: antes, una cuota pendiente con un pago parcial aprobado
+     * seguía contando el monto completo como pendiente y nada como pagado
+     * -- el dinero cobrado quedaba invisible en el resumen.
+     */
+    public function test_una_cuota_con_pago_parcial_aprobado_se_refleja_en_pagado_y_en_pendiente(): void
+    {
+        $estudiante = Estudiante::factory()->create(['dni' => '44444444']);
+        $matricula = Matricula::factory()->create(['estudiante_id' => $estudiante->id]);
+        $plan = PlanPago::factory()->create(['matricula_id' => $matricula->id]);
+        $cuota = Cuota::factory()->create(['plan_pago_id' => $plan->id, 'numero' => 1, 'monto' => 80]);
+        Pago::factory()->aprobado()->create(['estudiante_id' => $estudiante->id, 'cuota_id' => $cuota->id, 'monto' => 40]);
+
+        $historial = $this->service()->porDni('44444444');
+
+        $this->assertSame(40.0, $historial['resumenPagos']['totalPagado']);
+        $this->assertSame(40.0, $historial['resumenPagos']['totalPendiente']);
+    }
+
+    /**
+     * Mismo requisito que la regresión de cuotas de arriba, ahora para
+     * cargos adicionales (Convalidación, Exoneración...): un pago parcial
+     * aprobado contra un cargo debe sumar/restar igual de bien.
+     */
+    public function test_un_cargo_adicional_con_pago_parcial_aprobado_se_refleja_en_pagado_y_en_pendiente(): void
+    {
+        $estudiante = Estudiante::factory()->create(['dni' => '77778888']);
+        $cargo = CargoAdicional::factory()->create(['estudiante_id' => $estudiante->id, 'concepto' => 'Convalidación', 'monto' => 80]);
+        Pago::factory()->aprobado()->create(['estudiante_id' => $estudiante->id, 'cargo_adicional_id' => $cargo->id, 'monto' => 40]);
+
+        $historial = $this->service()->porDni('77778888');
+
+        $this->assertSame(40.0, $historial['resumenPagos']['totalPagado']);
+        $this->assertSame(40.0, $historial['resumenPagos']['totalPendiente']);
+        $this->assertCount(1, $historial['resumenPagos']['cargosAdicionalesPendientes']);
+        $this->assertSame(40.0, $historial['resumenPagos']['cargosAdicionalesPendientes']->first()->saldoPendiente());
+    }
+
+    /**
+     * cuotasPendientes (por vencer) y cuotasVencidas no deben solaparse: una
+     * cuota vencida aparece solo en "vencidas", nunca también en
+     * "pendientes".
+     */
+    public function test_cuotas_pendientes_no_duplica_las_ya_vencidas(): void
+    {
+        $estudiante = Estudiante::factory()->create(['dni' => '99990000']);
+        $matricula = Matricula::factory()->create(['estudiante_id' => $estudiante->id]);
+        $plan = PlanPago::factory()->create(['matricula_id' => $matricula->id]);
+        Cuota::factory()->vencida()->create(['plan_pago_id' => $plan->id, 'numero' => 1, 'monto' => 100]);
+        Cuota::factory()->create(['plan_pago_id' => $plan->id, 'numero' => 2, 'monto' => 100]);
+
+        $historial = $this->service()->porDni('99990000');
+
+        $this->assertCount(1, $historial['resumenPagos']['cuotasVencidas']);
+        $this->assertCount(1, $historial['resumenPagos']['cuotasPendientes']);
+        $this->assertSame(2, $historial['resumenPagos']['cuotasPendientes']->first()->numero);
     }
 
     public function test_pagos_trae_el_detalle_de_cada_pago_sin_importar_su_estado(): void

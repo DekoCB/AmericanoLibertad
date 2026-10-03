@@ -6,6 +6,7 @@ use App\Modules\Evaluaciones\Services\LibretaService;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Services\BloqueoAccesoService;
+use App\Shared\Enums\RolEnum;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -23,7 +24,10 @@ new #[Layout('layouts.app')] class extends Component
     {
         $user = Auth::user();
 
-        abort_unless($user->hasPermissionTo('evaluaciones.ver_propio') && $user->estudiante, 403);
+        abort_unless(
+            $user->hasRole(RolEnum::ESTUDIANTE->value) && $user->hasPermissionTo('evaluaciones.ver_propio') && $user->estudiante,
+            403,
+        );
 
         $this->estudiante = $user->estudiante;
 

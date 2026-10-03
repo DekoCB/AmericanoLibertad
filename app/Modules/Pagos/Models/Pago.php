@@ -27,6 +27,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string|null $detalle
  * @property string|null $observacion
  * @property int|null $cuota_id
+ * @property int|null $cargo_adicional_id
  * @property float $monto
  * @property MetodoPagoEnum $metodo
  * @property EstadoPagoEnum $estado
@@ -36,6 +37,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read Estudiante|null $estudiante
  * @property-read ConceptoPago $concepto
  * @property-read Cuota|null $cuota
+ * @property-read CargoAdicional|null $cargoAdicional
  * @property-read Collection<int, PagoParte> $partes
  */
 class Pago extends Model implements HasMedia
@@ -51,6 +53,7 @@ class Pago extends Model implements HasMedia
         'detalle',
         'observacion',
         'cuota_id',
+        'cargo_adicional_id',
         'monto',
         'metodo',
         'estado',
@@ -97,6 +100,11 @@ class Pago extends Model implements HasMedia
         return $this->belongsTo(Cuota::class);
     }
 
+    public function cargoAdicional(): BelongsTo
+    {
+        return $this->belongsTo(CargoAdicional::class);
+    }
+
     public function registradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'registrado_por');
@@ -126,5 +134,21 @@ class Pago extends Model implements HasMedia
     public function partes(): HasMany
     {
         return $this->hasMany(PagoParte::class);
+    }
+
+    /**
+     * El nombre visible del concepto de este pago -- si está vinculado a un
+     * cargo adicional, el nombre real es el de ese cargo, no el del
+     * ConceptoPago "ancla" (ver PagoService::registrar()/CargoAdicional).
+     * concepto_id siempre apunta a algo porque la columna es NOT NULL, pero
+     * cuando cargo_adicional_id no es null, ese FK es solo un ancla técnica.
+     */
+    public function nombreConcepto(): string
+    {
+        if ($this->cargoAdicional !== null) {
+            return $this->cargoAdicional->concepto;
+        }
+
+        return $this->concepto->nombre;
     }
 }

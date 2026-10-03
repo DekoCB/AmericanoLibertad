@@ -14,6 +14,7 @@ use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\ExamenUbicacion;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Enums\EstadoCuotaEnum;
+use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\Cuota;
 use App\Modules\Pagos\Models\Pago;
 use App\Modules\Pagos\Services\PagoService;
@@ -47,7 +48,7 @@ class HistorialEstudianteService
      * @return array{
      *     estudiante: Estudiante,
      *     matriculas: Collection<int, Matricula>,
-     *     resumenPagos: array{totalPagado: float, totalPendiente: float, totalExonerado: float, cuotasVencidas: Collection<int, Cuota>},
+     *     resumenPagos: array{totalPagado: float, totalPendiente: float, totalExonerado: float, cuotasVencidas: Collection<int, Cuota>, cuotasPendientes: Collection<int, Cuota>, cargosAdicionalesPendientes: Collection<int, CargoAdicional>},
      *     pagos: Collection<int, Pago>,
      *     documentosSubidos: Collection<int, DocumentoEstudiante>,
      *     documentosEmitidos: Collection<int, Certificado>,
@@ -81,14 +82,23 @@ class HistorialEstudianteService
     }
 
     /**
-     * Pagado/pendiente/exonerado sumados a través de TODAS las matrículas
-     * del estudiante (no solo la más reciente), más el detalle de cuotas
-     * vencidas -- mismo criterio que
-     * BloqueoAccesoService::cuotasVencidasDe(), pero sin acotar a "las que
-     * bloquean acceso": aquí interesa el cuadro completo, no la regla de
-     * bloqueo.
+     * Pagado/pendiente/exonerado sumados a través de TODAS las matrículas y
+     * cargos adicionales del estudiante (no solo la más reciente), más el
+     * detalle de cuotas vencidas, cuotas pendientes por vencer y cargos
+     * adicionales pendientes.
      *
-     * @return array{totalPagado: float, totalPendiente: float, totalExonerado: float, cuotasVencidas: Collection<int, Cuota>}
+     * Pagado/pendiente se calculan desde montoPagado()/saldoPendiente() de
+     * cada fila -- nunca desde el monto nominal filtrado por estado -- así
+     * un pago parcial aprobado (ej. 40 de una cuota de 80) se refleja en
+     * ambos lados sin huecos, en vez de quedar invisible hasta que se
+     * complete. Un Pago pertenece a exactamente una Cuota XOR un
+     * CargoAdicional (PagoService::registrar() solo fija uno de los dos
+     * FKs), así que sumar ambas colecciones nunca duplica ni se superpone.
+     * Mismo criterio que BloqueoAccesoService::cuotasVencidasDe() para
+     * vencidas, pero sin acotar a "las que bloquean acceso": aquí interesa
+     * el cuadro completo, no la regla de bloqueo.
+     *
+     * @return array{totalPagado: float, totalPendiente: float, totalExonerado: float, cuotasVencidas: Collection<int, Cuota>, cuotasPendientes: Collection<int, Cuota>, cargosAdicionalesPendientes: Collection<int, CargoAdicional>}
      */
     private function resumenPagos(Estudiante $estudiante): array
     {
@@ -97,11 +107,21 @@ class HistorialEstudianteService
             ->with('planPago.matricula.carrera', 'planPago.matricula.ciclo')
             ->get();
 
+        $cargos = CargoAdicional::query()->where('estudiante_id', $estudiante->id)->get();
+
         return [
-            'totalPagado' => (float) $cuotas->where('estado', EstadoCuotaEnum::PAGADO)->sum('monto'),
-            'totalPendiente' => (float) $cuotas->where('estado', EstadoCuotaEnum::PENDIENTE)->sum('monto'),
-            'totalExonerado' => (float) $cuotas->where('estado', EstadoCuotaEnum::EXONERADO)->sum('monto'),
+            'totalPagado' => (float) $cuotas->sum(fn (Cuota $cuota) => $cuota->montoPagado())
+                + (float) $cargos->sum(fn (CargoAdicional $cargo) => $cargo->montoPagado()),
+            'totalPendiente' => (float) $cuotas->where('estado', EstadoCuotaEnum::PENDIENTE)->sum(fn (Cuota $cuota) => $cuota->saldoPendiente())
+                + (float) $cargos->where('estado', EstadoCuotaEnum::PENDIENTE)->sum(fn (CargoAdicional $cargo) => $cargo->saldoPendiente()),
+            'totalExonerado' => (float) $cuotas->where('estado', EstadoCuotaEnum::EXONERADO)->sum('monto')
+                + (float) $cargos->where('estado', EstadoCuotaEnum::EXONERADO)->sum('monto'),
             'cuotasVencidas' => $cuotas->filter(fn (Cuota $cuota) => $cuota->estaVencida())->sortBy('fecha_vencimiento')->values(),
+            // Pedido del cliente: además de las ya vencidas, ver las que
+            // están por vencer -- sin duplicar: estaVencida() ya implica
+            // estado PENDIENTE, así que se descartan aquí.
+            'cuotasPendientes' => $cuotas->where('estado', EstadoCuotaEnum::PENDIENTE)->reject(fn (Cuota $cuota) => $cuota->estaVencida())->sortBy('fecha_vencimiento')->values(),
+            'cargosAdicionalesPendientes' => $cargos->where('estado', EstadoCuotaEnum::PENDIENTE)->values(),
         ];
     }
 

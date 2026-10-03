@@ -72,6 +72,34 @@
             </tbody>
         </table>
     @endif
+    @if ($resumenPagos['cuotasPendientes']->isNotEmpty())
+        <div class="subseccion">Cuotas pendientes</div>
+        <table>
+            <thead><tr><th>Cuota</th><th>Carrera</th><th>Ciclo</th><th>Saldo</th><th>Vence</th></tr></thead>
+            <tbody>
+                @foreach ($resumenPagos['cuotasPendientes'] as $cuota)
+                    <tr>
+                        <td>{{ $cuota->numero }}</td>
+                        <td>{{ $cuota->planPago->matricula?->carrera->name }}</td>
+                        <td>{{ $cuota->planPago->matricula?->ciclo->nombre }}</td>
+                        <td>S/ {{ number_format($cuota->saldoPendiente(), 2) }}</td>
+                        <td>{{ $cuota->fecha_vencimiento->format('d/m/Y') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+    @if ($resumenPagos['cargosAdicionalesPendientes']->isNotEmpty())
+        <div class="subseccion">Cargos adicionales pendientes</div>
+        <table>
+            <thead><tr><th>Concepto</th><th>Saldo</th></tr></thead>
+            <tbody>
+                @foreach ($resumenPagos['cargosAdicionalesPendientes'] as $cargo)
+                    <tr><td>{{ $cargo->concepto }}</td><td>S/ {{ number_format($cargo->saldoPendiente(), 2) }}</td></tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 
     <div class="subseccion">Detalle de pagos</div>
     <table>
@@ -82,7 +110,7 @@
             @forelse ($pagos as $pago)
                 <tr>
                     <td>{{ $pago->fecha_pago->format('d/m/Y') }}</td>
-                    <td>{{ $pago->concepto->nombre }}{{ $pago->detalle ? " — {$pago->detalle}" : '' }}</td>
+                    <td>{{ $pago->nombreConcepto() }}{{ $pago->detalle ? " — {$pago->detalle}" : '' }}</td>
                     <td>{{ $pago->metodo->label() }}</td>
                     <td>{{ $pago->estado->label() }}{{ $pago->estado->value === 'rechazado' && $pago->motivo_rechazo ? " — {$pago->motivo_rechazo}" : '' }}</td>
                     <td>S/ {{ number_format((float) $pago->monto, 2) }}</td>

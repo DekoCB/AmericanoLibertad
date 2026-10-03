@@ -64,6 +64,23 @@ class MiLibretaTest extends TestCase
             ->assertSee('17.00');
     }
 
+    /**
+     * Regresión: evaluaciones.ver_propio también lo tiene Gerencia vía el
+     * comodín '*' del seeder -- el hasRole(ESTUDIANTE) explícito en
+     * sidebar-nav.blade.php y mi-libreta.blade.php::mount() bloquea a
+     * cualquier cuenta Gerencia con una ficha de Estudiante vinculada.
+     */
+    public function test_gerencia_con_ficha_de_estudiante_no_puede_ver_mi_libreta(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::GERENCIA->value);
+        Estudiante::factory()->create(['user_id' => $usuario->id]);
+
+        $this->actingAs($usuario)
+            ->get(route('evaluaciones.mi-libreta'))
+            ->assertForbidden();
+    }
+
     public function test_un_estudiante_con_un_solo_ciclo_no_ve_el_selector(): void
     {
         $usuario = User::factory()->create();

@@ -9,7 +9,9 @@ use App\Modules\Matricula\Services\DocumentoEstudianteService;
 use App\Modules\Matricula\Services\MatriculaService;
 use App\Modules\Migraciones\Enums\EstadoRefuerzoEnum;
 use App\Modules\Migraciones\Models\MatriculaRefuerzo;
+use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\PlanPago;
+use App\Modules\Pagos\Services\CargoAdicionalService;
 use App\Modules\Pagos\Services\PlanPagoService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -43,6 +45,16 @@ new class extends Component
 
     public string $montoTotalNuevo = '';
 
+    public ?int $editandoMontoCargoId = null;
+
+    public string $montoCargoNuevo = '';
+
+    public bool $agregandoCargo = false;
+
+    public string $cargoConceptoNuevo = '';
+
+    public string $cargoMontoNuevo = '';
+
     #[On('ver-estudiante')]
     public function abrir(int $estudianteId): void
     {
@@ -57,6 +69,11 @@ new class extends Component
         $this->horarioSeleccionado = '';
         $this->editandoMontoPlanId = null;
         $this->montoTotalNuevo = '';
+        $this->editandoMontoCargoId = null;
+        $this->montoCargoNuevo = '';
+        $this->agregandoCargo = false;
+        $this->cargoConceptoNuevo = '';
+        $this->cargoMontoNuevo = '';
     }
 
     public function verificarDocumento(int $documentoId, DocumentoEstudianteService $service): void
@@ -201,6 +218,79 @@ new class extends Component
         $this->montoTotalNuevo = '';
     }
 
+    public function editarMontoCargo(int $cargoId): void
+    {
+        Gate::authorize('pagos.gestionar');
+
+        $cargo = CargoAdicional::query()->findOrFail($cargoId);
+
+        $this->editandoMontoCargoId = $cargoId;
+        $this->montoCargoNuevo = (string) $cargo->monto;
+    }
+
+    public function cancelarEdicionMontoCargo(): void
+    {
+        $this->editandoMontoCargoId = null;
+        $this->montoCargoNuevo = '';
+    }
+
+    public function guardarMontoCargo(CargoAdicionalService $service): void
+    {
+        Gate::authorize('pagos.gestionar');
+
+        if ($this->editandoMontoCargoId === null) {
+            return;
+        }
+
+        $this->validate(['montoCargoNuevo' => 'required|numeric|min:0.01']);
+
+        $cargo = CargoAdicional::query()->findOrFail($this->editandoMontoCargoId);
+
+        $service->editarMonto($cargo, (float) $this->montoCargoNuevo);
+
+        $this->editandoMontoCargoId = null;
+        $this->montoCargoNuevo = '';
+    }
+
+    public function mostrarFormularioCargo(): void
+    {
+        Gate::authorize('pagos.gestionar');
+
+        $this->agregandoCargo = true;
+    }
+
+    public function cancelarNuevoCargo(): void
+    {
+        $this->agregandoCargo = false;
+        $this->cargoConceptoNuevo = '';
+        $this->cargoMontoNuevo = '';
+    }
+
+    public function guardarNuevoCargo(CargoAdicionalService $service): void
+    {
+        Gate::authorize('pagos.gestionar');
+
+        if ($this->estudianteId === null) {
+            return;
+        }
+
+        $this->validate([
+            'cargoConceptoNuevo' => 'required|string|max:100',
+            'cargoMontoNuevo' => 'required|numeric|min:0.01',
+        ]);
+
+        $service->crear(
+            Estudiante::query()->findOrFail($this->estudianteId),
+            $this->cargoConceptoNuevo,
+            (float) $this->cargoMontoNuevo,
+            Auth::id(),
+        );
+
+        $this->agregandoCargo = false;
+        $this->cargoConceptoNuevo = '';
+        $this->cargoMontoNuevo = '';
+    }
+
     /**
      * Los cursos de la carrera y ciclo curricular de esta matrícula, cada
      * uno con sus horarios disponibles (por si tiene varias secciones),
@@ -270,6 +360,9 @@ new class extends Component
             'planesPorMatricula' => $matriculas !== null && Auth::user()->hasPermissionTo('pagos.ver')
                 ? $matriculas->mapWithKeys(fn (Matricula $matricula) => [$matricula->id => $planes->planDe($matricula)])
                 : collect(),
+            'cargosAdicionales' => $estudiante !== null && Auth::user()->hasPermissionTo('pagos.ver')
+                ? CargoAdicional::query()->where('estudiante_id', $estudiante->id)->get()
+                : collect(),
         ];
     }
 }; ?>
@@ -305,6 +398,12 @@ new class extends Component
                     :planes-por-matricula="$planesPorMatricula"
                     :editando-monto-plan-id="$editandoMontoPlanId"
                     :monto-total-nuevo="$montoTotalNuevo"
+                    :cargos-adicionales="$cargosAdicionales"
+                    :editando-monto-cargo-id="$editandoMontoCargoId"
+                    :monto-cargo-nuevo="$montoCargoNuevo"
+                    :agregando-cargo="$agregandoCargo"
+                    :cargo-concepto-nuevo="$cargoConceptoNuevo"
+                    :cargo-monto-nuevo="$cargoMontoNuevo"
                 />
             @else
                 <p class="py-8 text-center text-sm text-ink-faint">Cargando…</p>

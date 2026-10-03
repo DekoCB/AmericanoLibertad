@@ -24,6 +24,7 @@ class PagoFactory extends Factory
             'estudiante_id' => Estudiante::factory(),
             'concepto_id' => ConceptoPago::factory(),
             'cuota_id' => null,
+            'cargo_adicional_id' => null,
             'monto' => $this->faker->randomFloat(2, 50, 300),
             'metodo' => MetodoPagoEnum::YAPE,
             'estado' => EstadoPagoEnum::PENDIENTE,

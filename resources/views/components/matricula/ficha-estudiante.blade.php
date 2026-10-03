@@ -13,6 +13,12 @@
     'planesPorMatricula' => [],
     'editandoMontoPlanId' => null,
     'montoTotalNuevo' => '',
+    'cargosAdicionales' => [],
+    'editandoMontoCargoId' => null,
+    'montoCargoNuevo' => '',
+    'agregandoCargo' => false,
+    'cargoConceptoNuevo' => '',
+    'cargoMontoNuevo' => '',
 ])
 
 {{--
@@ -325,4 +331,77 @@
             @endforelse
         </div>
     </div>
+
+    @can('pagos.ver')
+        <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
+            <h2 class="text-sm font-semibold text-ink">Cargos adicionales</h2>
+            <p class="mt-1 text-xs text-ink-faint">Otros cobros puntuales del estudiante — Convalidación, Exoneración, Recuperación, Visación, etc.</p>
+
+            <div class="mt-4 divide-y divide-border">
+                @forelse ($cargosAdicionales as $cargo)
+                    <div class="py-3 text-sm">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-ink">{{ $cargo->concepto }}</p>
+                            <span @class([
+                                'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
+                                'bg-ok/10 text-ok' => $cargo->estado->value === 'pagado',
+                                'bg-warn/10 text-warn' => $cargo->estado->value === 'pendiente',
+                                'bg-surface-2 text-ink-faint' => $cargo->estado->value === 'exonerado',
+                            ])>{{ $cargo->estado->label() }}</span>
+                        </div>
+                        <div class="mt-1 flex items-center justify-between gap-2">
+                            <p class="text-ink-faint">
+                                @if ($cargo->montoPagado() > 0 && $cargo->saldoPendiente() > 0)
+                                    Monto: S/ {{ number_format((float) $cargo->monto, 2) }} · pagado S/ {{ number_format($cargo->montoPagado(), 2) }} · saldo S/ {{ number_format($cargo->saldoPendiente(), 2) }}
+                                @else
+                                    Monto: S/ {{ number_format((float) $cargo->monto, 2) }}
+                                @endif
+                            </p>
+                            @can('pagos.gestionar')
+                                @if ($editandoMontoCargoId !== $cargo->id)
+                                    <button type="button" wire:click="editarMontoCargo({{ $cargo->id }})" class="shrink-0 text-xs font-medium text-accent hover:underline">Editar monto</button>
+                                @endif
+                            @endcan
+                        </div>
+                        @can('pagos.gestionar')
+                            @if ($editandoMontoCargoId === $cargo->id)
+                                <form wire:submit="guardarMontoCargo" class="mt-2 flex flex-wrap items-center gap-2">
+                                    <span class="text-xs text-ink-faint">Monto (S/)</span>
+                                    <input type="number" step="0.01" min="0.01" wire:model="montoCargoNuevo" class="w-28 rounded-md border-border bg-surface text-xs text-ink focus:border-accent focus:ring-accent">
+                                    <x-secondary-button type="submit">Guardar</x-secondary-button>
+                                    <button type="button" wire:click="cancelarEdicionMontoCargo" class="text-xs text-ink-faint hover:text-ink">Cancelar</button>
+                                </form>
+                                <x-input-error :messages="$errors->get('montoCargoNuevo')" class="mt-1" />
+                            @endif
+                        @endcan
+                    </div>
+                @empty
+                    <p class="py-4 text-sm text-ink-faint">Sin cargos adicionales registrados.</p>
+                @endforelse
+            </div>
+
+            @can('pagos.gestionar')
+                <div class="mt-4 border-t border-border pt-4">
+                    @if (! $agregandoCargo)
+                        <button type="button" wire:click="mostrarFormularioCargo" class="text-xs font-medium text-accent hover:underline">+ Agregar cargo</button>
+                    @else
+                        <form wire:submit="guardarNuevoCargo" class="flex flex-wrap items-end gap-2">
+                            <div>
+                                <label class="block text-xs text-ink-faint">Concepto</label>
+                                <input type="text" wire:model="cargoConceptoNuevo" placeholder="Ej. Convalidación" class="mt-1 w-48 rounded-md border-border bg-surface text-xs text-ink focus:border-accent focus:ring-accent">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-ink-faint">Monto (S/)</label>
+                                <input type="number" step="0.01" min="0.01" wire:model="cargoMontoNuevo" class="mt-1 w-24 rounded-md border-border bg-surface text-xs text-ink focus:border-accent focus:ring-accent">
+                            </div>
+                            <x-secondary-button type="submit">Guardar</x-secondary-button>
+                            <button type="button" wire:click="cancelarNuevoCargo" class="text-xs text-ink-faint hover:text-ink">Cancelar</button>
+                        </form>
+                        <x-input-error :messages="$errors->get('cargoConceptoNuevo')" class="mt-1" />
+                        <x-input-error :messages="$errors->get('cargoMontoNuevo')" class="mt-1" />
+                    @endif
+                </div>
+            @endcan
+        </div>
+    @endcan
 </div>

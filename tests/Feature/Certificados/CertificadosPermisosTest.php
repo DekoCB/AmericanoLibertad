@@ -60,6 +60,23 @@ class CertificadosPermisosTest extends TestCase
             ->assertOk();
     }
 
+    /**
+     * Regresión: certificados.solicitar también lo tiene Gerencia vía el
+     * comodín '*' del seeder -- el hasRole(ESTUDIANTE) explícito en
+     * sidebar-nav.blade.php y mis-certificados.blade.php::mount() bloquea a
+     * cualquier cuenta Gerencia con una ficha de Estudiante vinculada.
+     */
+    public function test_gerencia_con_ficha_de_estudiante_no_puede_ver_mis_certificados(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::GERENCIA->value);
+        Estudiante::factory()->create(['user_id' => $usuario->id]);
+
+        $this->actingAs($usuario)
+            ->get(route('certificados.mis-certificados'))
+            ->assertForbidden();
+    }
+
     public function test_un_estudiante_no_puede_ver_la_gestion_de_certificados_del_staff(): void
     {
         $usuario = User::factory()->create();

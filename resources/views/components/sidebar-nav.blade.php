@@ -105,7 +105,11 @@
             <span class="sidebar-label">Evaluaciones</span>
         </a>
 
-        @if (auth()->user()->can('evaluaciones.ver_propio') && auth()->user()->estudiante)
+        {{-- evaluaciones.ver_propio también lo tiene Gerencia vía '*', pero
+             "Mi libreta" es exclusivo de Estudiante -- un hasRole explícito
+             evita que Gerencia la vea aunque tenga una ficha de Estudiante
+             vinculada. --}}
+        @if (auth()->user()->hasRole(\App\Shared\Enums\RolEnum::ESTUDIANTE->value) && auth()->user()->can('evaluaciones.ver_propio') && auth()->user()->estudiante)
             <a
                 href="{{ route('evaluaciones.mi-libreta') }}"
                 wire:navigate
@@ -158,9 +162,11 @@
             </a>
         @endcanany
 
-        {{-- pagos.ver_propio también lo tiene Gerencia vía '*', pero mi-cuenta
-             exige además una ficha de Estudiante: sin ella el enlace 403ea. --}}
-        @if (auth()->user()->can('pagos.ver_propio') && auth()->user()->estudiante)
+        {{-- pagos.ver_propio también lo tiene Gerencia vía '*', pero
+             "Mi estado de cuenta" es exclusivo de Estudiante -- un hasRole
+             explícito evita que Gerencia la vea aunque tenga una ficha de
+             Estudiante vinculada. --}}
+        @if (auth()->user()->hasRole(\App\Shared\Enums\RolEnum::ESTUDIANTE->value) && auth()->user()->can('pagos.ver_propio') && auth()->user()->estudiante)
             <a
                 href="{{ route('pagos.mi-cuenta') }}"
                 wire:navigate
@@ -257,9 +263,10 @@
         @endcanany
 
         {{-- certificados.solicitar también lo tiene Gerencia vía '*', pero
-             mis-certificados/mis-constancias exigen además una ficha de
-             Estudiante. --}}
-        @if (auth()->user()->can('certificados.solicitar') && auth()->user()->estudiante)
+             mis-certificados/mis-constancias son exclusivos de Estudiante --
+             un hasRole explícito evita que Gerencia los vea aunque tenga una
+             ficha de Estudiante vinculada. --}}
+        @if (auth()->user()->hasRole(\App\Shared\Enums\RolEnum::ESTUDIANTE->value) && auth()->user()->can('certificados.solicitar') && auth()->user()->estudiante)
             <a
                 href="{{ route('certificados.mis-certificados') }}"
                 wire:navigate
@@ -367,7 +374,11 @@
         </div>
     @endcanany
 
-    @if (auth()->user()->can('notificaciones.ver_propio') && auth()->user()->estudiante)
+    {{-- notificaciones.ver_propio también lo tiene Gerencia vía '*', pero
+         "Mis mensajes" es exclusivo de Estudiante -- un hasRole explícito
+         evita que Gerencia lo vea aunque tenga una ficha de Estudiante
+         vinculada. --}}
+    @if (auth()->user()->hasRole(\App\Shared\Enums\RolEnum::ESTUDIANTE->value) && auth()->user()->can('notificaciones.ver_propio') && auth()->user()->estudiante)
         <div class="mt-4 border-t border-border pt-4">
             <a
                 href="{{ route('notificaciones.mis-mensajes') }}"

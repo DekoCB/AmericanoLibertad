@@ -2,12 +2,14 @@
 
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Enums\MetodoPagoEnum;
+use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\ConceptoPago;
 use App\Modules\Pagos\Models\Cuota;
 use App\Modules\Pagos\Services\BloqueoAccesoService;
 use App\Modules\Pagos\Services\CuentaBancariaService;
 use App\Modules\Pagos\Services\PagoService;
 use App\Modules\Pagos\Services\PlanPagoService;
+use App\Shared\Enums\RolEnum;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -26,11 +28,23 @@ new #[Layout('layouts.app')] class extends Component
     /** @var array<int, string> */
     public array $montoPorCuota = [];
 
+    /** @var array<int, string> */
+    public array $metodoPorCargo = [];
+
+    /** @var array<int, mixed> */
+    public array $comprobantePorCargo = [];
+
+    /** @var array<int, string> */
+    public array $montoPorCargo = [];
+
     public function mount(): void
     {
         $user = Auth::user();
 
-        abort_unless($user->hasPermissionTo('pagos.ver_propio') && $user->estudiante, 403);
+        abort_unless(
+            $user->hasRole(RolEnum::ESTUDIANTE->value) && $user->hasPermissionTo('pagos.ver_propio') && $user->estudiante,
+            403,
+        );
     }
 
     public function subirComprobante(int $cuotaId, PagoService $service): void
@@ -67,6 +81,37 @@ new #[Layout('layouts.app')] class extends Component
         session()->flash('status', 'Comprobante enviado. Quedará pendiente de aprobación de Tesorería.');
     }
 
+    public function subirComprobanteCargo(int $cargoAdicionalId, PagoService $service): void
+    {
+        $estudiante = Auth::user()->estudiante;
+        abort_unless($estudiante !== null, 403);
+
+        $cargo = CargoAdicional::query()->findOrFail($cargoAdicionalId);
+        abort_unless($cargo->estudiante_id === $estudiante->id, 403);
+
+        $this->validate([
+            "metodoPorCargo.{$cargoAdicionalId}" => 'required|string|in:'.implode(',', array_column(MetodoPagoEnum::seleccionables(), 'value')),
+            "comprobantePorCargo.{$cargoAdicionalId}" => 'required|file|max:5120',
+            "montoPorCargo.{$cargoAdicionalId}" => "required|numeric|min:0.01|max:{$cargo->saldoPendiente()}",
+        ]);
+
+        $concepto = ConceptoPago::query()->where('tipo', 'otro')->first()
+            ?? ConceptoPago::query()->firstOrFail();
+
+        $service->registrar(
+            $estudiante,
+            $concepto,
+            [['monto' => (float) $this->montoPorCargo[$cargoAdicionalId], 'metodo' => $this->metodoPorCargo[$cargoAdicionalId]]],
+            null,
+            $this->comprobantePorCargo[$cargoAdicionalId],
+            null,
+            cargoAdicional: $cargo,
+        );
+
+        unset($this->metodoPorCargo[$cargoAdicionalId], $this->comprobantePorCargo[$cargoAdicionalId], $this->montoPorCargo[$cargoAdicionalId]);
+        session()->flash('status', 'Comprobante enviado. Quedará pendiente de aprobación de Tesorería.');
+    }
+
     public function with(PagoService $pagos, PlanPagoService $planes, CuentaBancariaService $cuentas, BloqueoAccesoService $bloqueos): array
     {
         $estudiante = Auth::user()->estudiante;
@@ -99,8 +144,18 @@ new #[Layout('layouts.app')] class extends Component
             }
         }
 
+        $cargosAdicionalesPendientes = CargoAdicional::query()
+            ->where('estudiante_id', $estudiante->id)
+            ->where('estado', 'pendiente')
+            ->get();
+
+        foreach ($cargosAdicionalesPendientes as $cargo) {
+            $this->montoPorCargo[$cargo->id] ??= (string) $cargo->saldoPendiente();
+        }
+
         return [
             'matriculas' => $matriculas,
+            'cargosAdicionalesPendientes' => $cargosAdicionalesPendientes,
             'misPagos' => $pagos->misPagos($estudiante),
             'cuentasBancarias' => $cuentas->activas(),
             'estaBloqueado' => $bloqueos->estaBloqueado($estudiante),
@@ -188,13 +243,57 @@ new #[Layout('layouts.app')] class extends Component
         </div>
     @endforeach
 
+    @if ($cargosAdicionalesPendientes->isNotEmpty())
+        <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
+            <h2 class="text-sm font-semibold text-ink">Cargos pendientes</h2>
+            <p class="mt-1 text-xs text-ink-faint">Otros cobros puntuales — Convalidación, Exoneración, Recuperación, Visación, etc.</p>
+
+            <div class="mt-4 divide-y divide-border">
+                @foreach ($cargosAdicionalesPendientes as $cargo)
+                    <div class="py-3 text-sm">
+                        <div class="flex items-center justify-between gap-4">
+                            <p class="text-ink">{{ $cargo->concepto }}</p>
+                            <p class="font-display text-ink">S/ {{ number_format($cargo->saldoPendiente(), 2) }}</p>
+                        </div>
+
+                        <form wire:submit="subirComprobanteCargo({{ $cargo->id }})" class="mt-2 flex flex-wrap items-center gap-2">
+                            <div class="flex items-center gap-1">
+                                <span class="text-xs text-ink-faint">S/</span>
+                                <input
+                                    wire:model="montoPorCargo.{{ $cargo->id }}"
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    class="w-20 rounded-md border-border text-xs"
+                                    placeholder="Monto"
+                                >
+                            </div>
+                            <x-select-input
+                                wire:model="metodoPorCargo.{{ $cargo->id }}"
+                                placeholder="Método…"
+                                class="text-xs"
+                                :options="collect(\App\Modules\Pagos\Enums\MetodoPagoEnum::seleccionables())->mapWithKeys(fn ($metodoOpcion) => [$metodoOpcion->value => $metodoOpcion->label()])"
+                            />
+                            <input wire:model="comprobantePorCargo.{{ $cargo->id }}" type="file" class="text-xs text-ink-dim file:mr-2 file:rounded-md file:border-0 file:bg-surface-2 file:px-2 file:py-1 file:text-xs file:text-ink">
+                            <button type="submit" class="text-xs font-medium text-accent hover:underline">Enviar comprobante</button>
+                        </form>
+                        <p class="mt-1 text-xs text-ink-faint">Si pagaste menos del monto completo, cambia el monto por lo que realmente pagaste.</p>
+                        <x-input-error :messages="$errors->get('montoPorCargo.'.$cargo->id)" class="mt-1" />
+                        <x-input-error :messages="$errors->get('metodoPorCargo.'.$cargo->id)" class="mt-1" />
+                        <x-input-error :messages="$errors->get('comprobantePorCargo.'.$cargo->id)" class="mt-1" />
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
         <h2 class="text-sm font-semibold text-ink">Historial de pagos</h2>
         <div class="mt-4 divide-y divide-border">
             @forelse ($misPagos as $pago)
                 <div class="flex items-center justify-between py-3 text-sm">
                     <div>
-                        <p class="text-ink">{{ $pago->concepto->nombre }}</p>
+                        <p class="text-ink">{{ $pago->nombreConcepto() }}</p>
                         <p class="text-xs text-ink-faint">{{ $pago->fecha_pago->format('d/m/Y') }} · {{ $pago->metodo->label() }}</p>
                     </div>
                     <div class="text-right">

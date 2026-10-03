@@ -11,6 +11,7 @@ use App\Modules\Academico\Models\Periodo;
 use App\Modules\Evaluaciones\Models\Calificacion;
 use App\Modules\Evaluaciones\Models\Evaluacion;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
+use App\Modules\Matricula\Enums\ModalidadEstudioEnum;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Models\Pago;
@@ -143,7 +144,7 @@ class HistorialEstudiantePermisosTest extends TestCase
         Matricula::factory()->create([
             'estudiante_id' => $estudiante->id,
             'ciclo_id' => $ciclo->id,
-            'modalidad_estudio' => \App\Modules\Matricula\Enums\ModalidadEstudioEnum::VIRTUAL,
+            'modalidad_estudio' => ModalidadEstudioEnum::VIRTUAL,
         ]);
 
         $this->actingAs($coordinador);

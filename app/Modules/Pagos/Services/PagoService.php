@@ -9,6 +9,7 @@ use App\Modules\Pagos\Enums\EstadoCuotaEnum;
 use App\Modules\Pagos\Enums\EstadoPagoEnum;
 use App\Modules\Pagos\Enums\MetodoPagoEnum;
 use App\Modules\Pagos\Enums\SerieReciboEnum;
+use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\ConceptoPago;
 use App\Modules\Pagos\Models\Cuota;
 use App\Modules\Pagos\Models\Pago;
@@ -44,6 +45,7 @@ class PagoService
         ?int $registradoPor,
         ?string $detalle = null,
         ?string $observacion = null,
+        ?CargoAdicional $cargoAdicional = null,
     ): Pago {
         if ($partes === []) {
             throw new InvalidArgumentException('Un pago necesita al menos una parte (monto y método).');
@@ -55,11 +57,17 @@ class PagoService
             ]);
         }
 
+        if ($cargoAdicional && Pago::query()->where('cargo_adicional_id', $cargoAdicional->id)->where('estado', EstadoPagoEnum::PENDIENTE)->exists()) {
+            throw ValidationException::withMessages([
+                'cargoAdicional' => 'Ya existe un pago pendiente de aprobación para este cargo.',
+            ]);
+        }
+
         $montoTotal = array_sum(array_column($partes, 'monto'));
         $metodosUnicos = collect($partes)->pluck('metodo')->unique();
         $metodo = $metodosUnicos->count() === 1 ? $metodosUnicos->first() : MetodoPagoEnum::MIXTO->value;
 
-        return DB::transaction(function () use ($estudiante, $concepto, $detalle, $observacion, $cuota, $montoTotal, $metodo, $registradoPor, $comprobante, $partes) {
+        return DB::transaction(function () use ($estudiante, $concepto, $detalle, $observacion, $cuota, $cargoAdicional, $montoTotal, $metodo, $registradoPor, $comprobante, $partes) {
             /** @var Pago $pago */
             $pago = Pago::query()->create([
                 'estudiante_id' => $estudiante->id,
@@ -67,6 +75,7 @@ class PagoService
                 'detalle' => $detalle,
                 'observacion' => $observacion,
                 'cuota_id' => $cuota?->id,
+                'cargo_adicional_id' => $cargoAdicional?->id,
                 'monto' => $montoTotal,
                 'metodo' => $metodo,
                 'estado' => EstadoPagoEnum::PENDIENTE,
@@ -110,6 +119,13 @@ class PagoService
                 ]);
             }
 
+            if ($pago->cargoAdicional) {
+                // Mismo criterio que las cuotas: puede ser un pago parcial.
+                $pago->cargoAdicional->update([
+                    'estado' => $pago->cargoAdicional->saldoPendiente() <= 0.0 ? EstadoCuotaEnum::PAGADO : EstadoCuotaEnum::PENDIENTE,
+                ]);
+            }
+
             $this->recibos->emitir($pago, $serie);
             $this->bloqueos->evaluarYDesbloquear($pago->estudiante);
         });
@@ -138,7 +154,7 @@ class PagoService
     {
         return Pago::query()
             ->where('estudiante_id', $estudiante->id)
-            ->with(['concepto', 'cuota', 'recibo', 'partes'])
+            ->with(['concepto', 'cuota', 'cargoAdicional', 'recibo', 'partes'])
             ->latest('fecha_pago')
             ->get();
     }
@@ -150,7 +166,7 @@ class PagoService
     {
         return Pago::query()
             ->where('estado', EstadoPagoEnum::PENDIENTE)
-            ->with(['estudiante', 'concepto', 'cuota', 'partes'])
+            ->with(['estudiante', 'concepto', 'cuota', 'cargoAdicional', 'partes'])
             ->oldest('fecha_pago')
             ->get();
     }
@@ -161,7 +177,7 @@ class PagoService
     public function todos(): Collection
     {
         return Pago::query()
-            ->with(['estudiante', 'concepto', 'cuota', 'recibo', 'partes'])
+            ->with(['estudiante', 'concepto', 'cuota', 'cargoAdicional', 'recibo', 'partes'])
             ->latest('fecha_pago')
             ->get();
     }

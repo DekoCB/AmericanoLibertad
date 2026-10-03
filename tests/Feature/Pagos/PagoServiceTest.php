@@ -7,6 +7,7 @@ use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Pagos\Enums\EstadoPagoEnum;
 use App\Modules\Pagos\Enums\MetodoPagoEnum;
 use App\Modules\Pagos\Enums\SerieReciboEnum;
+use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\ConceptoPago;
 use App\Modules\Pagos\Models\Cuota;
 use App\Modules\Pagos\Services\PagoService;
@@ -52,6 +53,57 @@ class PagoServiceTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $this->service()->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'transferencia']], $cuota, null, null);
+    }
+
+    public function test_registrar_un_pago_contra_un_cargo_adicional_lo_vincula_correctamente(): void
+    {
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+        $cargo = CargoAdicional::factory()->create(['estudiante_id' => $estudiante->id, 'monto' => 100]);
+
+        $pago = $this->service()->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'yape']], null, null, null, null, null, $cargo);
+
+        $this->assertSame($cargo->id, $pago->cargo_adicional_id);
+        $this->assertNull($pago->cuota_id);
+    }
+
+    public function test_no_permite_dos_pagos_pendientes_para_el_mismo_cargo_adicional(): void
+    {
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+        $cargo = CargoAdicional::factory()->create(['estudiante_id' => $estudiante->id]);
+
+        $this->service()->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'yape']], null, null, null, null, null, $cargo);
+
+        $this->expectException(ValidationException::class);
+
+        $this->service()->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'transferencia']], null, null, null, null, null, $cargo);
+    }
+
+    public function test_aprobar_un_pago_de_cargo_adicional_marca_el_cargo_como_pagado_cuando_cubre_el_saldo(): void
+    {
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+        $cargo = CargoAdicional::factory()->create(['estudiante_id' => $estudiante->id, 'monto' => 100]);
+
+        $pago = $this->service()->registrar($estudiante, $concepto, [['monto' => 100.0, 'metodo' => 'yape']], null, null, null, null, null, $cargo);
+        $this->service()->aprobar($pago, $this->aprobador(), SerieReciboEnum::ORIGINAL);
+
+        $this->assertSame('pagado', $cargo->fresh()->estado->value);
+    }
+
+    public function test_aprobar_un_pago_parcial_de_cargo_adicional_lo_deja_pendiente(): void
+    {
+        $estudiante = Estudiante::factory()->create();
+        $concepto = ConceptoPago::factory()->create();
+        $cargo = CargoAdicional::factory()->create(['estudiante_id' => $estudiante->id, 'monto' => 100]);
+
+        $pago = $this->service()->registrar($estudiante, $concepto, [['monto' => 40.0, 'metodo' => 'yape']], null, null, null, null, null, $cargo);
+        $this->service()->aprobar($pago, $this->aprobador(), SerieReciboEnum::ORIGINAL);
+
+        $cargo->refresh();
+        $this->assertSame('pendiente', $cargo->estado->value);
+        $this->assertSame(60.0, $cargo->saldoPendiente());
     }
 
     public function test_no_permite_registrar_un_pago_sin_ninguna_parte(): void
