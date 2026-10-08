@@ -2,6 +2,7 @@
 
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Matricula\Enums\TipoDocumentoEnum;
 use App\Modules\Matricula\Models\DocumentoEstudiante;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
@@ -18,9 +19,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    use WithFileUploads;
+
     public Estudiante $estudiante;
 
     public string $observacionesTexto = '';
@@ -48,6 +52,12 @@ new #[Layout('layouts.app')] class extends Component
     public string $cargoConceptoNuevo = '';
 
     public string $cargoMontoNuevo = '';
+
+    public ?string $subiendoDocumentoTipo = null;
+
+    public $documentoCaraArchivo = null;
+
+    public $documentoReversoArchivo = null;
 
     public function mount(Estudiante $estudiante): void
     {
@@ -277,6 +287,50 @@ new #[Layout('layouts.app')] class extends Component
         session()->flash('status', 'Cargo adicional registrado.');
     }
 
+    public function mostrarFormularioDocumento(string $tipo): void
+    {
+        Gate::authorize('matricula.editar');
+
+        $this->subiendoDocumentoTipo = $tipo;
+        $this->documentoCaraArchivo = null;
+        $this->documentoReversoArchivo = null;
+    }
+
+    public function cancelarDocumento(): void
+    {
+        $this->subiendoDocumentoTipo = null;
+        $this->documentoCaraArchivo = null;
+        $this->documentoReversoArchivo = null;
+    }
+
+    public function guardarDocumento(DocumentoEstudianteService $service): void
+    {
+        Gate::authorize('matricula.editar');
+
+        if ($this->subiendoDocumentoTipo === null) {
+            return;
+        }
+
+        $this->validate([
+            'documentoCaraArchivo' => 'required|file|mimes:pdf,jpg,jpeg,png|max:4096',
+            'documentoReversoArchivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
+        ]);
+
+        $service->subir(
+            $this->estudiante,
+            TipoDocumentoEnum::from($this->subiendoDocumentoTipo),
+            $this->documentoCaraArchivo,
+            Auth::id(),
+            $this->documentoReversoArchivo,
+        );
+
+        $this->subiendoDocumentoTipo = null;
+        $this->documentoCaraArchivo = null;
+        $this->documentoReversoArchivo = null;
+
+        session()->flash('status', 'Documento guardado.');
+    }
+
     /**
      * Los cursos de la carrera y ciclo curricular de esta matrícula, cada
      * uno con sus horarios disponibles (por si tiene varias secciones),
@@ -348,7 +402,26 @@ new #[Layout('layouts.app')] class extends Component
             'cargosAdicionales' => Auth::user()->hasPermissionTo('pagos.ver')
                 ? CargoAdicional::query()->where('estudiante_id', $this->estudiante->id)->get()
                 : collect(),
+            'tiposDocumento' => $this->tiposDocumento(),
         ];
+    }
+
+    /**
+     * Los tipos de documento relevantes para este estudiante -- DNI del
+     * apoderado solo si es menor de edad. Se listan todos (suba o no cada
+     * uno) para que "Documentos" ofrezca subir los que falten, no solo
+     * mostrar los que ya existen.
+     *
+     * @return list<TipoDocumentoEnum>
+     */
+    private function tiposDocumento(): array
+    {
+        return array_filter([
+            TipoDocumentoEnum::DNI_ESTUDIANTE,
+            $this->estudiante->es_menor_edad ? TipoDocumentoEnum::DNI_APODERADO : null,
+            TipoDocumentoEnum::CERTIFICADO_ESTUDIOS,
+            TipoDocumentoEnum::CONSTANCIA,
+        ]);
     }
 }; ?>
 
@@ -393,5 +466,7 @@ new #[Layout('layouts.app')] class extends Component
         :agregando-cargo="$agregandoCargo"
         :cargo-concepto-nuevo="$cargoConceptoNuevo"
         :cargo-monto-nuevo="$cargoMontoNuevo"
+        :tipos-documento="$tiposDocumento"
+        :subiendo-documento-tipo="$subiendoDocumentoTipo"
     />
 </div>

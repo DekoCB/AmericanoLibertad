@@ -102,11 +102,11 @@ class MatriculaServiceTest extends TestCase
     {
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
 
-        $this->assertSame('12345678@ceba.test', $estudiante->email);
+        $this->assertSame('12345678@iesamericalibertad.com', $estudiante->email);
         $this->assertNotNull($estudiante->user_id);
 
         $usuario = $estudiante->user;
-        $this->assertSame('12345678@ceba.test', $usuario->email);
+        $this->assertSame('12345678@iesamericalibertad.com', $usuario->email);
         $this->assertSame('12345678', $usuario->dni);
         $this->assertTrue($usuario->hasRole(RolEnum::ESTUDIANTE->value));
         $this->assertTrue(Hash::check('12345678', $usuario->password));

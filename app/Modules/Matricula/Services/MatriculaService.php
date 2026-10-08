@@ -66,7 +66,7 @@ class MatriculaService
     /**
      * Además de la ficha del estudiante, esto le crea (o reutiliza, si ya
      * existe una con el mismo DNI) su cuenta de acceso al sistema: correo
-     * {dni}@ceba.test y contraseña inicial igual a su DNI -- el estudiante
+     * {dni}@iesamericalibertad.com y contraseña inicial igual a su DNI -- el estudiante
      * puede cambiarla después desde su perfil. No hay ningún paso de
      * formulario para esto: se calcula siempre a partir del DNI.
      */

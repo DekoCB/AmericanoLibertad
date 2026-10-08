@@ -244,9 +244,12 @@ new class extends Component
 
         if ($this->paso === 3) {
             $this->validate([
-                'dniEstudianteCaraArchivo' => 'required|file|mimes:pdf,jpg,jpeg,png|max:4096',
+                // Todo este paso es opcional: a veces el documento no se
+                // tiene a la mano al matricular -- se puede subir después
+                // desde la ficha del estudiante (ver ficha-estudiante.blade.php).
+                'dniEstudianteCaraArchivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
                 'dniEstudianteReversoArchivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
-                'dniApoderadoCaraArchivo' => $this->esMenorDeEdad ? 'required|file|mimes:pdf,jpg,jpeg,png|max:4096' : 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
+                'dniApoderadoCaraArchivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
                 'dniApoderadoReversoArchivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
                 'certificadoArchivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
                 'constanciaArchivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
@@ -689,7 +692,7 @@ new class extends Component
                 <div class="sm:col-span-2">
                     <x-input-label value="Correo" />
                     <div class="mt-1 rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-sm text-ink-dim">
-                        {{ trim($dni) !== '' ? strtolower(trim($dni)).'@ceba.test' : '—' }}
+                        {{ trim($dni) !== '' ? strtolower(trim($dni)).'@iesamericalibertad.com' : '—' }}
                     </div>
                     <p class="mt-1 text-xs text-ink-faint">Se asigna automáticamente a partir del DNI, junto con su cuenta de acceso al sistema.</p>
                 </div>
@@ -748,9 +751,10 @@ new class extends Component
         {{-- Paso 3: Documentos e institución de procedencia --}}
         @if ($paso === 3)
             <h2 class="font-display text-lg text-ink">Documentos e institución de procedencia</h2>
+            <p class="mt-1 text-sm text-ink-dim">Todo este paso es opcional — si no tienes los documentos a la mano ahora, puedes subirlos después desde la ficha del estudiante.</p>
             <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                    <x-input-label for="dniEstudianteCaraArchivo" value="DNI del estudiante — cara" />
+                    <x-input-label for="dniEstudianteCaraArchivo" value="DNI del estudiante — cara (opcional)" />
                     <input wire:model="dniEstudianteCaraArchivo" id="dniEstudianteCaraArchivo" type="file" accept=".pdf,image/*" class="mt-1 block w-full text-sm text-ink-dim file:mr-3 file:rounded-md file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-sm file:text-ink">
                     <x-input-error :messages="$errors->get('dniEstudianteCaraArchivo')" class="mt-1" />
                 </div>
@@ -761,7 +765,7 @@ new class extends Component
                 </div>
                 @if ($this->esMenorDeEdad)
                     <div>
-                        <x-input-label for="dniApoderadoCaraArchivo" value="DNI del apoderado — cara" />
+                        <x-input-label for="dniApoderadoCaraArchivo" value="DNI del apoderado — cara (opcional)" />
                         <input wire:model="dniApoderadoCaraArchivo" id="dniApoderadoCaraArchivo" type="file" accept=".pdf,image/*" class="mt-1 block w-full text-sm text-ink-dim file:mr-3 file:rounded-md file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-sm file:text-ink">
                         <x-input-error :messages="$errors->get('dniApoderadoCaraArchivo')" class="mt-1" />
                     </div>

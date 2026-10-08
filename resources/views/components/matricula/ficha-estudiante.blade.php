@@ -19,6 +19,8 @@
     'agregandoCargo' => false,
     'cargoConceptoNuevo' => '',
     'cargoMontoNuevo' => '',
+    'tiposDocumento' => [],
+    'subiendoDocumentoTipo' => null,
 ])
 
 {{--
@@ -103,32 +105,62 @@
 
     <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
         <h2 class="text-sm font-semibold text-ink">Documentos</h2>
+        <p class="mt-1 text-xs text-ink-faint">Si no se subieron al matricular, se pueden agregar aquí cuando lleguen — y reemplazar el archivo si hace falta corregirlo.</p>
         <div class="mt-4 divide-y divide-border">
-            @forelse ($documentos as $documento)
-                <div class="flex items-center justify-between py-3 text-sm">
-                    <div>
-                        <p class="text-ink">{{ $documento->tipo->label() }}</p>
-                        @if ($documento->getFirstMedia('archivo'))
-                            <a href="{{ $documento->getFirstMediaUrl('archivo') }}" target="_blank" class="text-xs text-accent hover:underline">Ver archivo</a>
-                        @endif
-                        @if ($documento->getFirstMedia('archivo') && $documento->getFirstMedia('reverso'))
-                            <button wire:click="descargarDniPdf({{ $documento->id }})" class="ml-2 text-xs text-accent hover:underline">Descargar PDF (cara y sello)</button>
-                        @endif
+            @foreach ($tiposDocumento as $tipo)
+                @php $documento = $documentos->firstWhere('tipo', $tipo); @endphp
+                <div class="py-3 text-sm">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <p class="text-ink">{{ $tipo->label() }}</p>
+                            @if ($documento?->getFirstMedia('archivo'))
+                                <a href="{{ $documento->getFirstMediaUrl('archivo') }}" target="_blank" class="text-xs text-accent hover:underline">Ver archivo</a>
+                                @if ($documento->getFirstMedia('reverso'))
+                                    <button wire:click="descargarDniPdf({{ $documento->id }})" class="ml-2 text-xs text-accent hover:underline">Descargar PDF (cara y sello)</button>
+                                @endif
+                            @else
+                                <p class="text-xs text-ink-faint">Sin subir todavía.</p>
+                            @endif
+                        </div>
+                        <div class="flex shrink-0 items-center gap-3">
+                            @if ($documento)
+                                <span @class(['rounded-full px-2 py-0.5 text-xs font-medium', 'bg-ok/10 text-ok' => $documento->verificado, 'bg-warn/10 text-warn' => ! $documento->verificado])>
+                                    {{ $documento->verificado ? 'Verificado' : 'Pendiente' }}
+                                </span>
+                            @endif
+                            @can('matricula.editar')
+                                @if ($documento && ! $documento->verificado)
+                                    <button wire:click="verificarDocumento({{ $documento->id }})" class="text-xs font-medium text-accent hover:underline">Verificar</button>
+                                @endif
+                                @if ($subiendoDocumentoTipo !== $tipo->value)
+                                    <button type="button" wire:click="mostrarFormularioDocumento('{{ $tipo->value }}')" class="text-xs font-medium text-accent hover:underline">
+                                        {{ $documento ? 'Reemplazar archivo' : '+ Subir archivo' }}
+                                    </button>
+                                @endif
+                            @endcan
+                        </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span @class(['rounded-full px-2 py-0.5 text-xs font-medium', 'bg-ok/10 text-ok' => $documento->verificado, 'bg-warn/10 text-warn' => ! $documento->verificado])>
-                            {{ $documento->verificado ? 'Verificado' : 'Pendiente' }}
-                        </span>
-                        @can('matricula.editar')
-                            @unless ($documento->verificado)
-                                <button wire:click="verificarDocumento({{ $documento->id }})" class="text-xs font-medium text-accent hover:underline">Verificar</button>
-                            @endunless
-                        @endcan
-                    </div>
+
+                    @can('matricula.editar')
+                        @if ($subiendoDocumentoTipo === $tipo->value)
+                            <form wire:submit="guardarDocumento" class="mt-2 flex flex-wrap items-end gap-2">
+                                <div>
+                                    <label class="block text-xs text-ink-faint">Cara</label>
+                                    <input wire:model="documentoCaraArchivo" type="file" accept=".pdf,image/*" class="mt-1 block text-xs text-ink-dim file:mr-2 file:rounded-md file:border-0 file:bg-surface-2 file:px-2 file:py-1 file:text-xs file:text-ink">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-ink-faint">Reverso (opcional)</label>
+                                    <input wire:model="documentoReversoArchivo" type="file" accept=".pdf,image/*" class="mt-1 block text-xs text-ink-dim file:mr-2 file:rounded-md file:border-0 file:bg-surface-2 file:px-2 file:py-1 file:text-xs file:text-ink">
+                                </div>
+                                <x-secondary-button type="submit">Guardar</x-secondary-button>
+                                <button type="button" wire:click="cancelarDocumento" class="text-xs text-ink-faint hover:text-ink">Cancelar</button>
+                            </form>
+                            <x-input-error :messages="$errors->get('documentoCaraArchivo')" class="mt-1" />
+                            <x-input-error :messages="$errors->get('documentoReversoArchivo')" class="mt-1" />
+                        @endif
+                    @endcan
                 </div>
-            @empty
-                <p class="py-4 text-sm text-ink-faint">No se han subido documentos.</p>
-            @endforelse
+            @endforeach
         </div>
     </div>
 

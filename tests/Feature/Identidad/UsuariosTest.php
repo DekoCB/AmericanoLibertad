@@ -58,7 +58,7 @@ class UsuariosTest extends TestCase
             ->call('crear')
             ->assertHasNoErrors();
 
-        $creado = User::query()->where('email', '87654321@ceba.test')->first();
+        $creado = User::query()->where('email', '87654321@iesamericalibertad.com')->first();
 
         $this->assertNotNull($creado);
         $this->assertTrue($creado->hasRole(RolEnum::DOCENTE->value));

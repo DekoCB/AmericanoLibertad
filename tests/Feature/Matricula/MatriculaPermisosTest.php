@@ -890,4 +890,69 @@ class MatriculaPermisosTest extends TestCase
 
         $this->assertSame('600.00', $plan->fresh()->monto_total);
     }
+
+    public function test_subir_un_documento_que_nunca_se_cargo_desde_la_pagina_completa_de_la_ficha(): void
+    {
+        Storage::fake('public');
+
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create();
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('mostrarFormularioDocumento', TipoDocumentoEnum::CERTIFICADO_ESTUDIOS->value)
+            ->set('documentoCaraArchivo', UploadedFile::fake()->create('certificado.pdf', 100, 'application/pdf'))
+            ->call('guardarDocumento')
+            ->assertHasNoErrors();
+
+        $documento = $estudiante->documentos()->where('tipo', TipoDocumentoEnum::CERTIFICADO_ESTUDIOS->value)->firstOrFail();
+        $this->assertNotNull($documento->getFirstMedia('archivo'));
+        $this->assertFalse($documento->verificado);
+    }
+
+    public function test_reemplazar_un_documento_ya_subido_desde_el_modal_de_ficha_resetea_la_verificacion(): void
+    {
+        Storage::fake('public');
+
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create();
+
+        $documentoService = $this->app->make(DocumentoEstudianteService::class);
+        $documento = $documentoService->subir(
+            $estudiante,
+            TipoDocumentoEnum::DNI_ESTUDIANTE,
+            UploadedFile::fake()->image('cara-original.jpg'),
+            $usuario->id,
+        );
+        $documento->update(['verificado' => true]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.ficha-modal')
+            ->call('abrir', $estudiante->id)
+            ->call('mostrarFormularioDocumento', TipoDocumentoEnum::DNI_ESTUDIANTE->value)
+            ->set('documentoCaraArchivo', UploadedFile::fake()->image('cara-nueva.jpg'))
+            ->call('guardarDocumento')
+            ->assertHasNoErrors();
+
+        $this->assertSame(1, $estudiante->documentos()->where('tipo', TipoDocumentoEnum::DNI_ESTUDIANTE->value)->count());
+        $documento->refresh();
+        $this->assertFalse($documento->verificado);
+    }
+
+    public function test_no_se_puede_subir_un_documento_desde_la_ficha_sin_el_permiso_de_editar_matricula(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
+        $estudiante = Estudiante::factory()->create();
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('mostrarFormularioDocumento', TipoDocumentoEnum::CERTIFICADO_ESTUDIOS->value)
+            ->assertForbidden();
+    }
 }

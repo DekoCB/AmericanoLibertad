@@ -2,6 +2,7 @@
 
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Matricula\Enums\TipoDocumentoEnum;
 use App\Modules\Matricula\Models\DocumentoEstudiante;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
 
 /**
  * Modal "Ver" de matricula/index.blade.php, aislado en su propio componente
@@ -27,6 +29,8 @@ use Livewire\Volt\Component;
  */
 new class extends Component
 {
+    use WithFileUploads;
+
     public ?int $estudianteId = null;
 
     public string $observacionesTexto = '';
@@ -55,6 +59,12 @@ new class extends Component
 
     public string $cargoMontoNuevo = '';
 
+    public ?string $subiendoDocumentoTipo = null;
+
+    public $documentoCaraArchivo = null;
+
+    public $documentoReversoArchivo = null;
+
     #[On('ver-estudiante')]
     public function abrir(int $estudianteId): void
     {
@@ -74,6 +84,9 @@ new class extends Component
         $this->agregandoCargo = false;
         $this->cargoConceptoNuevo = '';
         $this->cargoMontoNuevo = '';
+        $this->subiendoDocumentoTipo = null;
+        $this->documentoCaraArchivo = null;
+        $this->documentoReversoArchivo = null;
     }
 
     public function verificarDocumento(int $documentoId, DocumentoEstudianteService $service): void
@@ -291,6 +304,48 @@ new class extends Component
         $this->cargoMontoNuevo = '';
     }
 
+    public function mostrarFormularioDocumento(string $tipo): void
+    {
+        Gate::authorize('matricula.editar');
+
+        $this->subiendoDocumentoTipo = $tipo;
+        $this->documentoCaraArchivo = null;
+        $this->documentoReversoArchivo = null;
+    }
+
+    public function cancelarDocumento(): void
+    {
+        $this->subiendoDocumentoTipo = null;
+        $this->documentoCaraArchivo = null;
+        $this->documentoReversoArchivo = null;
+    }
+
+    public function guardarDocumento(DocumentoEstudianteService $service): void
+    {
+        Gate::authorize('matricula.editar');
+
+        if ($this->subiendoDocumentoTipo === null || $this->estudianteId === null) {
+            return;
+        }
+
+        $this->validate([
+            'documentoCaraArchivo' => 'required|file|mimes:pdf,jpg,jpeg,png|max:4096',
+            'documentoReversoArchivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
+        ]);
+
+        $service->subir(
+            Estudiante::query()->findOrFail($this->estudianteId),
+            TipoDocumentoEnum::from($this->subiendoDocumentoTipo),
+            $this->documentoCaraArchivo,
+            Auth::id(),
+            $this->documentoReversoArchivo,
+        );
+
+        $this->subiendoDocumentoTipo = null;
+        $this->documentoCaraArchivo = null;
+        $this->documentoReversoArchivo = null;
+    }
+
     /**
      * Los cursos de la carrera y ciclo curricular de esta matrícula, cada
      * uno con sus horarios disponibles (por si tiene varias secciones),
@@ -363,7 +418,26 @@ new class extends Component
             'cargosAdicionales' => $estudiante !== null && Auth::user()->hasPermissionTo('pagos.ver')
                 ? CargoAdicional::query()->where('estudiante_id', $estudiante->id)->get()
                 : collect(),
+            'tiposDocumento' => $this->tiposDocumento($estudiante),
         ];
+    }
+
+    /**
+     * Los tipos de documento relevantes para este estudiante -- DNI del
+     * apoderado solo si es menor de edad. Se listan todos (suba o no cada
+     * uno) para que "Documentos" ofrezca subir los que falten, no solo
+     * mostrar los que ya existen.
+     *
+     * @return list<TipoDocumentoEnum>
+     */
+    private function tiposDocumento(?Estudiante $estudiante): array
+    {
+        return array_filter([
+            TipoDocumentoEnum::DNI_ESTUDIANTE,
+            $estudiante?->es_menor_edad ? TipoDocumentoEnum::DNI_APODERADO : null,
+            TipoDocumentoEnum::CERTIFICADO_ESTUDIOS,
+            TipoDocumentoEnum::CONSTANCIA,
+        ]);
     }
 }; ?>
 
@@ -404,6 +478,8 @@ new class extends Component
                     :agregando-cargo="$agregandoCargo"
                     :cargo-concepto-nuevo="$cargoConceptoNuevo"
                     :cargo-monto-nuevo="$cargoMontoNuevo"
+                    :tipos-documento="$tiposDocumento"
+                    :subiendo-documento-tipo="$subiendoDocumentoTipo"
                 />
             @else
                 <p class="py-8 text-center text-sm text-ink-faint">Cargando…</p>
