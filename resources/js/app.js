@@ -1,6 +1,12 @@
 import './bootstrap';
 import Chart from 'chart.js/auto';
+import QrScanner from 'qr-scanner';
 import { VortexScene, VORTEX_LOGIN_CONFIG } from './vortex-dust';
+
+// qr-scanner >=1.3 resuelve su propio worker vía import() dinámico (Vite lo
+// empaqueta solo, confirmado en public/build/manifest.json) -- asignar
+// QrScanner.WORKER_PATH ya no hace nada en esta versión (el setter solo
+// imprime una advertencia), así que no hace falta wiring manual aquí.
 
 /**
  * Los tokens de color de la app viven como custom properties "R G B"
@@ -107,6 +113,77 @@ document.addEventListener('alpine:init', () => {
         destroy() {
             this.ro?.disconnect();
             this.scene?.dispose();
+        },
+    }));
+
+    /**
+     * Escaneo de QR para asistencia (aula o ingreso al instituto). La
+     * cámara solo se enciende al llamar iniciar() -- nunca en init() --
+     * para no pedir permiso de cámara antes de que el usuario decida marcar
+     * su asistencia. destroy() siempre detiene y libera el stream: x-data
+     * se destruye en cada morph/navegación de Livewire, y dejar la cámara
+     * abierta sería una fuga real.
+     */
+    Alpine.data('qrScanner', () => ({
+        scanning: false,
+        error: null,
+        scanner: null,
+
+        async iniciar() {
+            this.error = null;
+            this.scanning = true;
+            await this.$nextTick();
+
+            if (!this.$refs.video) {
+                this.scanning = false;
+                this.error = 'No se pudo abrir la cámara (video no disponible). Recarga la página e intenta de nuevo.';
+                return;
+            }
+
+            try {
+                this.scanner = new QrScanner(
+                    this.$refs.video,
+                    (resultado) => this.onDecodificado(resultado.data ?? resultado),
+                    { highlightScanRegion: true, highlightCodeOutline: true, preferredCamera: 'environment' },
+                );
+                await this.scanner.start();
+            } catch (e) {
+                console.error('[qrScanner] no se pudo iniciar la cámara:', e);
+                this.scanning = false;
+                this.error = this.mensajeDeError(e);
+            }
+        },
+
+        mensajeDeError(e) {
+            switch (e?.name) {
+                case 'NotAllowedError':
+                    return 'Bloqueaste el acceso a la cámara. Permítelo desde el ícono de la barra de direcciones y vuelve a intentar.';
+                case 'NotFoundError':
+                case 'OverconstrainedError':
+                    return 'No se encontró ninguna cámara en este dispositivo.';
+                case 'NotReadableError':
+                    return 'La cámara está siendo usada por otra aplicación. Ciérrala e intenta de nuevo.';
+                default:
+                    return `No se pudo acceder a la cámara (${e?.name || e?.message || e}). Contacta a tu docente.`;
+            }
+        },
+
+        onDecodificado(texto) {
+            this.detener();
+            this.$wire.call('confirmarPorQr', texto).catch(() => {
+                this.error = 'Ocurrió un problema al registrar tu asistencia. Intenta de nuevo.';
+            });
+        },
+
+        detener() {
+            this.scanner?.stop();
+            this.scanner?.destroy();
+            this.scanner = null;
+            this.scanning = false;
+        },
+
+        destroy() {
+            this.detener();
         },
     }));
 

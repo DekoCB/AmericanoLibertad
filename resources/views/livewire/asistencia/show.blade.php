@@ -5,6 +5,7 @@ use App\Modules\Asistencia\Enums\EstadoAsistenciaEnum;
 use App\Modules\Asistencia\Enums\EstadoSolicitudJustificacionEnum;
 use App\Modules\Asistencia\Models\Asistencia;
 use App\Modules\Asistencia\Models\SolicitudJustificacion;
+use App\Modules\Asistencia\Services\AsistenciaQrService;
 use App\Modules\Asistencia\Services\AsistenciaService;
 use App\Modules\Asistencia\Services\JustificacionService;
 use Illuminate\Support\Facades\Auth;
@@ -178,7 +179,7 @@ new #[Layout('layouts.app')] class extends Component
         $service->rechazar($solicitud, Auth::user(), null);
     }
 
-    public function with(AsistenciaService $service): array
+    public function with(AsistenciaService $service, AsistenciaQrService $qrService): array
     {
         $user = Auth::user();
         $puedeRegistrar = Gate::allows('asistencia.registrar-horario', $this->horario);
@@ -208,6 +209,7 @@ new #[Layout('layouts.app')] class extends Component
             'estadosDisponibles' => EstadoAsistenciaEnum::cases(),
             'miResumen' => $miResumen,
             'solicitudesPendientes' => $solicitudesPendientes,
+            'qrHorario' => $puedeRegistrar ? $qrService->dataUrlDelHorario($this->horario) : null,
         ];
     }
 }; ?>
@@ -278,6 +280,15 @@ new #[Layout('layouts.app')] class extends Component
                             {{ \Illuminate\Support\Carbon::parse($fechaClase)->format('d/m') }}
                         </button>
                     @endforeach
+                </div>
+            @endif
+
+            @if ($puedeRegistrar)
+                <div class="pt-5">
+                    <x-secondary-button type="button" x-data x-on:click="$dispatch('open-modal', 'qr-horario')" class="gap-2">
+                        <x-heroicon-o-qr-code class="h-4 w-4" />
+                        Mostrar código QR
+                    </x-secondary-button>
                 </div>
             @endif
         </div>
@@ -436,5 +447,19 @@ new #[Layout('layouts.app')] class extends Component
                 @endforeach
             </div>
         @endif
+    @endif
+
+    @if ($puedeRegistrar)
+        <x-modal name="qr-horario" max-width="sm">
+            <div class="p-6 text-center">
+                <h2 class="font-display text-lg text-ink">Código QR de la clase</h2>
+                <p class="mt-1 text-sm text-ink-dim">
+                    Los estudiantes lo escanean desde "Marcar mi asistencia" para registrarse en {{ $horario->curso->nombre }}.
+                </p>
+                <img src="{{ $qrHorario }}" alt="Código QR de asistencia" class="mx-auto mt-4 h-64 w-64 rounded-lg border border-border bg-white p-3">
+                <p class="mt-3 text-xs text-ink-faint">Este código no cambia: puedes dejarlo proyectado toda la sesión.</p>
+                <x-secondary-button type="button" class="mt-4" x-on:click="$dispatch('close-modal', 'qr-horario')">Cerrar</x-secondary-button>
+            </div>
+        </x-modal>
     @endif
 </div>

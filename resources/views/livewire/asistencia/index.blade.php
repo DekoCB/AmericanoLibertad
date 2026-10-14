@@ -137,13 +137,24 @@ new #[Layout('layouts.app')] class extends Component
                     <x-heroicon-o-qr-code class="h-6 w-6 shrink-0 text-accent" />
                     <span>
                         <span class="block text-sm font-semibold text-accent">Marcar mi asistencia</span>
-                        <span class="block text-xs text-ink-dim">Confirma tu DNI si tienes clase ahora mismo.</span>
+                        <span class="block text-xs text-ink-dim">Escanea el código QR de tu clase o del instituto.</span>
                     </span>
                 </span>
                 <x-heroicon-o-chevron-right class="h-5 w-5 shrink-0 text-accent" />
             </a>
         </div>
     @endif
+
+    @can('asistencia.ingreso_ver')
+        <div class="mb-4 flex flex-wrap gap-3">
+            <a href="{{ route('asistencia.instituto.reporte') }}" wire:navigate class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:border-accent">
+                Ver ingreso al instituto
+            </a>
+            <a href="{{ route('asistencia.instituto.qr') }}" wire:navigate class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:border-accent">
+                Proyectar código de ingreso
+            </a>
+        </div>
+    @endcan
 
     @if (! $cicloId)
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

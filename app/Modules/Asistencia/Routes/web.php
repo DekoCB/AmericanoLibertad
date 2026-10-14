@@ -10,5 +10,8 @@ Route::middleware(['auth'])->prefix('asistencia')->name('asistencia.')->group(fu
 
     Volt::route('marcar', 'asistencia.marcar')->name('marcar');
 
+    Volt::route('instituto/qr', 'asistencia.instituto.qr')->name('instituto.qr');
+    Volt::route('instituto/reporte', 'asistencia.instituto.reporte')->name('instituto.reporte');
+
     Volt::route('{horario}', 'asistencia.show')->name('show');
 });
