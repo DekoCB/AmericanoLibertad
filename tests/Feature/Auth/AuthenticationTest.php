@@ -128,6 +128,46 @@ class AuthenticationTest extends TestCase
         ]);
     }
 
+    public function test_elegir_estudiante_no_exige_nombre_y_usa_el_nombre_de_la_cuenta(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $estudiante = User::factory()->create(['name' => 'Ana Paola Alarcon']);
+        $estudiante->assignRole(RolEnum::ESTUDIANTE->value);
+
+        Volt::test('pages.auth.login')
+            ->call('elegirCategoria', 'estudiante')
+            ->set('form.email', $estudiante->email)
+            ->set('form.password', 'password')
+            ->call('login')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticatedAs($estudiante);
+        $this->assertDatabaseHas('registros_ingreso', [
+            'user_id' => $estudiante->id,
+            'nombre' => 'Ana Paola Alarcon',
+        ]);
+    }
+
+    public function test_elegir_personal_sin_escribir_un_nombre_sigue_siendo_rechazado(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
+
+        Volt::test('pages.auth.login')
+            ->call('elegirCategoria', 'personal')
+            ->set('form.email', $docente->email)
+            ->set('form.password', 'password')
+            ->call('login')
+            ->assertHasErrors('form.nombre')
+            ->assertNoRedirect();
+
+        $this->assertGuest();
+    }
+
     public function test_elegir_estudiante_pero_autenticarse_con_credenciales_de_personal_es_rechazado(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);

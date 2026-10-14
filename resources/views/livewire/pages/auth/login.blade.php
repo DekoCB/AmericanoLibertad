@@ -36,6 +36,16 @@ new #[Layout('layouts.login')] class extends Component
 
         $categoria = $this->categoria ? CategoriaAccesoEnum::from($this->categoria) : null;
 
+        // El campo "nombre" no se muestra para Estudiante (cada uno tiene su
+        // propia cuenta, a diferencia de las cuentas de Personal que a veces
+        // comparte más de una persona) -- para las demás categorías sigue
+        // siendo obligatorio.
+        if ($categoria !== CategoriaAccesoEnum::ESTUDIANTE && trim($this->form->nombre) === '') {
+            $this->addError('form.nombre', 'Este campo es obligatorio.');
+
+            return;
+        }
+
         if ($this->form->authenticate($categoria)) {
             $this->redirect(route('two-factor.challenge'), navigate: true);
 
@@ -44,7 +54,9 @@ new #[Layout('layouts.login')] class extends Component
 
         Session::regenerate();
 
-        $sesiones->registrarIngreso(Auth::user(), $this->form->nombre, session()->getId(), Request::ip());
+        $nombre = $this->form->nombre !== '' ? $this->form->nombre : Auth::user()->name;
+
+        $sesiones->registrarIngreso(Auth::user(), $nombre, session()->getId(), Request::ip());
 
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
@@ -96,17 +108,23 @@ new #[Layout('layouts.login')] class extends Component
         <x-auth-session-status class="mb-4" :status="session('status')" />
 
         <form wire:submit="login">
-            <!-- Nombre de quien ingresa -->
-            <div>
-                <x-input-label for="nombre" value="¿Con qué nombre ingresas?" />
-                <x-text-input wire:model="form.nombre" id="nombre" class="block mt-1 w-full" type="text" name="nombre" required autofocus autocomplete="off" placeholder="Tu nombre y apellido" />
-                <x-input-error :messages="$errors->get('form.nombre')" class="mt-2" />
-            </div>
+            @if ($categoria !== CategoriaAccesoEnum::ESTUDIANTE->value)
+                <!-- Nombre de quien ingresa -->
+                <div>
+                    <x-input-label for="nombre" value="¿Con qué nombre ingresas?" />
+                    <x-text-input wire:model="form.nombre" id="nombre" class="block mt-1 w-full" type="text" name="nombre" required autofocus autocomplete="off" placeholder="Tu nombre y apellido" />
+                    <x-input-error :messages="$errors->get('form.nombre')" class="mt-2" />
+                </div>
+            @endif
 
             <!-- Usuario -->
             <div class="mt-4">
                 <x-input-label for="email" :value="__('Usuario')" />
-                <x-text-input wire:model="form.email" id="email" class="block mt-1 w-full" type="text" name="email" required autocomplete="username" />
+                @if ($categoria === CategoriaAccesoEnum::ESTUDIANTE->value)
+                    <x-text-input wire:model="form.email" id="email" class="block mt-1 w-full" type="text" name="email" required autocomplete="username" autofocus />
+                @else
+                    <x-text-input wire:model="form.email" id="email" class="block mt-1 w-full" type="text" name="email" required autocomplete="username" />
+                @endif
                 <x-input-error :messages="$errors->get('form.email')" class="mt-2" />
             </div>
 

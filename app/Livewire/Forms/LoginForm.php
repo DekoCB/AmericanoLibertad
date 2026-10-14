@@ -25,7 +25,10 @@ class LoginForm extends Form
     // Varias cuentas institucionales (p. ej. Dirección) las usa más de una
     // persona -- este nombre es lo que después identifica quién estuvo
     // detrás de cada sesión en "Sesiones activas", ver SessionControlService.
-    #[Validate('required|string|max:150')]
+    // Solo se exige para la categoria Personal (cuentas compartidas); para
+    // Estudiante el campo ni se muestra -- cada estudiante tiene su propia
+    // cuenta, así que el login.blade.php usa el nombre real de la cuenta.
+    #[Validate('nullable|string|max:150')]
     public string $nombre = '';
 
     /**

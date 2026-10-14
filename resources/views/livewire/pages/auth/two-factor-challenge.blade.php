@@ -74,7 +74,8 @@ new #[Layout('layouts.guest')] class extends Component
 
         RateLimiter::clear($throttleKey);
 
-        $nombre = (string) session('login.nombre', $user->name);
+        $nombreSesion = session('login.nombre');
+        $nombre = is_string($nombreSesion) && $nombreSesion !== '' ? $nombreSesion : $user->name;
 
         Auth::login($user, (bool) session('login.remember', false));
 
