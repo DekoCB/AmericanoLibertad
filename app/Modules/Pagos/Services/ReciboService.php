@@ -40,6 +40,27 @@ class ReciboService
     }
 
     /**
+     * Renderiza el recibo en formato ticket (80mm o 58mm) a partir de los
+     * mismos datos ya guardados en $recibo->pago -- sin crear ni modificar
+     * ningún registro ni adjunto. A diferencia de emitir(), se llama en
+     * cada request (ver ReciboTicketController) y nunca se persiste: así
+     * funciona retroactivamente para cualquier recibo ya emitido, y si se
+     * ajusta la plantilla de ticket más adelante, todos los recibos
+     * reflejan el cambio sin regenerar nada.
+     */
+    public function renderizarTicket(Recibo $recibo, int $anchoMm): string
+    {
+        $pdf = Pdf::loadView('pdf.recibo-ticket', [
+            'pago' => $recibo->pago,
+            'recibo' => $recibo,
+            'serie' => $recibo->serie,
+            'anchoMm' => $anchoMm,
+        ]);
+
+        return $pdf->output();
+    }
+
+    /**
      * Correlativo continuo por serie (nunca se reinicia por año): si se
      * reiniciara cada año se repetiría el número y rompería el unique()
      * de (serie, numero_recibo).

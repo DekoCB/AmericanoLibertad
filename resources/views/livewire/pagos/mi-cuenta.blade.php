@@ -305,7 +305,9 @@ new #[Layout('layouts.app')] class extends Component
                             'bg-danger/10 text-danger' => $pago->estado->value === 'rechazado',
                         ])>{{ $pago->estado->label() }}</span>
                         @if ($pago->recibo && $pago->recibo->getFirstMedia('pdf'))
-                            <a href="{{ $pago->recibo->getFirstMediaUrl('pdf') }}" target="_blank" class="block text-xs font-medium text-accent hover:underline">Recibo</a>
+                            <a href="{{ $pago->recibo->getFirstMediaUrl('pdf') }}" target="_blank" class="block text-xs font-medium text-accent hover:underline">Recibo (A4)</a>
+                            <a href="{{ route('pagos.recibos.ticket', [$pago->recibo, 80]) }}" target="_blank" class="block text-xs font-medium text-accent hover:underline">Ticket 80mm</a>
+                            <a href="{{ route('pagos.recibos.ticket', [$pago->recibo, 58]) }}" target="_blank" class="block text-xs font-medium text-accent hover:underline">Ticket 58mm</a>
                         @endif
                     </div>
                 </div>
