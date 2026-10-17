@@ -34,7 +34,7 @@ class ReciboTicketTest extends TestCase
         $recibo = $this->service()->emitir($pago, SerieReciboEnum::ORIGINAL);
 
         $html = view('pdf.recibo-ticket', [
-            'pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL, 'anchoMm' => 80,
+            'pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL, 'anchoMm' => 80, 'altoMm' => 150,
         ])->render();
 
         $this->assertStringContainsString($pago->estudiante->nombreCompleto(), $html);
@@ -51,7 +51,7 @@ class ReciboTicketTest extends TestCase
         $recibo = $this->service()->emitir($pago, SerieReciboEnum::ORIGINAL);
 
         $html = view('pdf.recibo-ticket', [
-            'pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL, 'anchoMm' => 58,
+            'pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL, 'anchoMm' => 58, 'altoMm' => 150,
         ])->render();
 
         $this->assertStringContainsString($pago->estudiante->nombreCompleto(), $html);
@@ -68,6 +68,30 @@ class ReciboTicketTest extends TestCase
 
         $this->assertNotEmpty($pdfBytes);
         $this->assertCount(1, $recibo->fresh()->getMedia('pdf'));
+    }
+
+    public function test_la_altura_estimada_crece_con_una_observacion_larga(): void
+    {
+        $pagoCorto = Pago::factory()->create(['observacion' => null]);
+        $pagoLargo = Pago::factory()->create([
+            'observacion' => 'Pago correspondiente a la mensualidad de octubre, incluye recargo por mora de los días 1 al 5 según política institucional vigente.',
+        ]);
+
+        $altoCorto = $this->service()->alturaTicketMm($pagoCorto, 58);
+        $altoLargo = $this->service()->alturaTicketMm($pagoLargo, 58);
+
+        $this->assertGreaterThan($altoCorto, $altoLargo);
+    }
+
+    public function test_la_altura_estimada_de_un_pago_simple_no_deja_un_margen_excesivo(): void
+    {
+        $pago = Pago::factory()->create(['observacion' => null]);
+
+        $alto = $this->service()->alturaTicketMm($pago, 80);
+
+        // Antes de este fix se usaba un alto fijo de 400mm sin importar el
+        // contenido -- esto confirma que un recibo simple ya no se acerca a eso.
+        $this->assertLessThan(150, $alto);
     }
 
     public function test_la_ruta_de_ticket_devuelve_un_pdf_para_un_administrativo(): void

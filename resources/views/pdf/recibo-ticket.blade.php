@@ -7,13 +7,11 @@
             dompdf no soporta "auto" como alto de página junto a un ancho
             explícito (ver Css/Style.php::_compute_size() -- solo reconoce la
             propiedad "size" completa siendo literalmente "auto", no como
-            segundo token). Se usa un alto fijo generoso en su lugar: el
-            contenido real de un recibo nunca se acerca a esto, el resto
-            queda en blanco (limitación conocida de dompdf para "tickets de
-            largo infinito", no hay forma de que la página se ajuste al
-            contenido real sin post-procesar el PDF).
+            segundo token), así que $altoMm viene ya calculado desde
+            ReciboService::alturaTicketMm() a partir del contenido real del
+            pago -- no es un valor fijo arbitrario.
         --}}
-        @page { size: {{ $anchoMm }}mm 400mm; margin: 4mm 3mm; }
+        @page { size: {{ $anchoMm }}mm {{ $altoMm }}mm; margin: 4mm 3mm; }
 
         body { font-family: 'Helvetica', sans-serif; font-size: {{ $anchoMm <= 58 ? '8.5px' : '9.5px' }}; color: #1B1F27; width: 100%; }
 
