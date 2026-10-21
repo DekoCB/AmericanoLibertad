@@ -189,6 +189,37 @@ class MatriculaService
     }
 
     /**
+     * Corrige el DNI de un estudiante -- para cuando se detectó que se
+     * tipeó mal al matricular. El correo institucional se deriva siempre
+     * del DNI (ver Dni::correoInstitucional()), así que se recalcula y se
+     * aplica tanto a la ficha del estudiante como a la cuenta de acceso
+     * vinculada (si tiene una), para que ambos sigan siendo consistentes
+     * entre sí. No toca la contraseña: quien ya la cambió no se queda
+     * fuera de su cuenta por esto.
+     *
+     * La unicidad del nuevo DNI (contra otros estudiantes y contra otras
+     * cuentas de acceso) se valida antes de llamar a este método, con las
+     * reglas del propio formulario -- aquí solo se asume ya validado.
+     */
+    public function corregirDni(Estudiante $estudiante, string $nuevoDni): string
+    {
+        $dni = new Dni($nuevoDni);
+
+        if ($dni->valor() === $estudiante->dni) {
+            return $estudiante->email ?? $dni->correoInstitucional();
+        }
+
+        $correoNuevo = $dni->correoInstitucional();
+
+        DB::transaction(function () use ($estudiante, $dni, $correoNuevo) {
+            $estudiante->update(['dni' => $dni->valor(), 'email' => $correoNuevo]);
+            $estudiante->user?->update(['dni' => $dni->valor(), 'email' => $correoNuevo]);
+        });
+
+        return $correoNuevo;
+    }
+
+    /**
      * Asigna a la matrícula el horario específico de UN curso -- por
      * ejemplo cuando ese curso tiene varias secciones/paralelos y hace
      * falta decidir a cuál pertenece el estudiante (ver

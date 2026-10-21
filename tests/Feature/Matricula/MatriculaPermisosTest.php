@@ -9,6 +9,7 @@ use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Periodo;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
+use App\Modules\Matricula\Enums\EstadoCivilEnum;
 use App\Modules\Matricula\Enums\TipoDocumentoEnum;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
@@ -663,6 +664,219 @@ class MatriculaPermisosTest extends TestCase
             'Rindió examen de ubicación, resultado pendiente.',
             $estudiante->fresh()->observaciones
         );
+    }
+
+    public function test_guardar_datos_personales_desde_la_pagina_completa_de_la_ficha(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create([
+            'nombres' => 'Ana',
+            'apellidos' => 'Quispe Mamani',
+            'celular' => '900000000',
+            'email' => null,
+            'direccion' => null,
+            'estado_civil' => null,
+        ]);
+        $nuevaFechaNacimiento = now()->subYears(22)->format('Y-m-d');
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->assertSet('nombresNuevo', 'Ana')
+            ->assertSet('apellidosNuevo', 'Quispe Mamani')
+            ->set('nombresNuevo', 'Ana Lucía')
+            ->set('fechaNacimientoNueva', $nuevaFechaNacimiento)
+            ->set('estadoCivilNuevo', EstadoCivilEnum::CASADO->value)
+            ->set('celularNuevo', '911111111')
+            ->set('emailNuevo', 'ana.quispe@example.com')
+            ->set('direccionNueva', 'Av. Siempre Viva 123')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $estudiante->refresh();
+        $this->assertSame('Ana Lucía', $estudiante->nombres);
+        $this->assertSame($nuevaFechaNacimiento, $estudiante->fecha_nacimiento->format('Y-m-d'));
+        $this->assertSame(EstadoCivilEnum::CASADO, $estudiante->estado_civil);
+        $this->assertSame('911111111', $estudiante->celular);
+        $this->assertSame('ana.quispe@example.com', $estudiante->email);
+        $this->assertSame('Av. Siempre Viva 123', $estudiante->direccion);
+    }
+
+    public function test_guardar_datos_personales_desde_el_modal_de_ficha(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create(['celular' => '900000000']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.ficha-modal')
+            ->call('abrir', $estudiante->id)
+            ->call('editarDatosPersonales')
+            ->set('celularNuevo', '922222222')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $this->assertSame('922222222', $estudiante->fresh()->celular);
+    }
+
+    public function test_guardar_datos_personales_sin_estado_civil_lo_deja_nulo(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create(['estado_civil' => EstadoCivilEnum::SOLTERO]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->set('estadoCivilNuevo', '')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $this->assertNull($estudiante->fresh()->estado_civil);
+    }
+
+    public function test_no_se_puede_editar_datos_personales_sin_el_permiso_de_editar_matricula(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
+        $estudiante = Estudiante::factory()->create();
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->assertForbidden();
+    }
+
+    public function test_corregir_un_dni_mal_tipeado_actualiza_tambien_el_correo_institucional(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create([
+            'dni' => '55667711',
+            'email' => '55667711@iesamericalibertad.com',
+        ]);
+        $estudiante = Estudiante::factory()->create([
+            'user_id' => $cuentaEstudiante->id,
+            'dni' => '55667711',
+            'email' => '55667711@iesamericalibertad.com',
+        ]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->set('dniNuevo', '55667712')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $estudiante->refresh();
+        $cuentaEstudiante->refresh();
+        $this->assertSame('55667712', $estudiante->dni);
+        $this->assertSame('55667712@iesamericalibertad.com', $estudiante->email);
+        $this->assertSame('55667712', $cuentaEstudiante->dni);
+        $this->assertSame('55667712@iesamericalibertad.com', $cuentaEstudiante->email);
+    }
+
+    public function test_dejar_el_dni_igual_respeta_un_correo_de_contacto_editado_a_mano(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create(['dni' => '55667713']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->set('emailNuevo', 'contacto.personal@example.com')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $this->assertSame('contacto.personal@example.com', $estudiante->fresh()->email);
+    }
+
+    public function test_no_se_puede_corregir_el_dni_a_uno_ya_usado_por_otro_estudiante(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        Estudiante::factory()->create(['dni' => '55667714']);
+        $estudiante = Estudiante::factory()->create(['dni' => '55667715']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->set('dniNuevo', '55667714')
+            ->call('guardarDatosPersonales')
+            ->assertHasErrors(['dniNuevo']);
+
+        $this->assertSame('55667715', $estudiante->fresh()->dni);
+    }
+
+    public function test_no_se_puede_corregir_el_dni_a_uno_ya_usado_por_otra_cuenta_de_acceso(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        User::factory()->create(['dni' => '55667716']);
+        $estudiante = Estudiante::factory()->create(['dni' => '55667717']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->set('dniNuevo', '55667716')
+            ->call('guardarDatosPersonales')
+            ->assertHasErrors(['dniNuevo']);
+
+        $this->assertSame('55667717', $estudiante->fresh()->dni);
+    }
+
+    public function test_un_dni_con_formato_invalido_muestra_error_de_validacion(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create();
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->set('dniNuevo', '123')
+            ->call('guardarDatosPersonales')
+            ->assertHasErrors(['dniNuevo']);
+    }
+
+    public function test_corregir_dni_desde_el_modal_de_ficha_tambien_actualiza_el_correo(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create([
+            'dni' => '55667718',
+            'email' => '55667718@iesamericalibertad.com',
+        ]);
+        $estudiante = Estudiante::factory()->create([
+            'user_id' => $cuentaEstudiante->id,
+            'dni' => '55667718',
+            'email' => '55667718@iesamericalibertad.com',
+        ]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.ficha-modal')
+            ->call('abrir', $estudiante->id)
+            ->call('editarDatosPersonales')
+            ->set('dniNuevo', '55667719')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $this->assertSame('55667719', $estudiante->fresh()->dni);
+        $this->assertSame('55667719@iesamericalibertad.com', $cuentaEstudiante->fresh()->email);
     }
 
     public function test_editar_fecha_fin_estudio_desde_la_pagina_completa_de_la_ficha(): void

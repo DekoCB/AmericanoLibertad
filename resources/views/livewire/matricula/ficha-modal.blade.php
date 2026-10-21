@@ -2,6 +2,7 @@
 
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Matricula\Enums\EstadoCivilEnum;
 use App\Modules\Matricula\Enums\TipoDocumentoEnum;
 use App\Modules\Matricula\Models\DocumentoEstudiante;
 use App\Modules\Matricula\Models\Estudiante;
@@ -17,6 +18,7 @@ use App\Modules\Pagos\Services\PlanPagoService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -34,6 +36,24 @@ new class extends Component
     public ?int $estudianteId = null;
 
     public string $observacionesTexto = '';
+
+    public bool $editandoDatosPersonales = false;
+
+    public string $dniNuevo = '';
+
+    public string $nombresNuevo = '';
+
+    public string $apellidosNuevo = '';
+
+    public string $fechaNacimientoNueva = '';
+
+    public string $estadoCivilNuevo = '';
+
+    public string $celularNuevo = '';
+
+    public string $emailNuevo = '';
+
+    public string $direccionNueva = '';
 
     public ?int $editandoFechaFinMatriculaId = null;
 
@@ -72,6 +92,15 @@ new class extends Component
 
         $this->estudianteId = $estudianteId;
         $this->observacionesTexto = Estudiante::query()->find($estudianteId)?->observaciones ?? '';
+        $this->editandoDatosPersonales = false;
+        $this->dniNuevo = '';
+        $this->nombresNuevo = '';
+        $this->apellidosNuevo = '';
+        $this->fechaNacimientoNueva = '';
+        $this->estadoCivilNuevo = '';
+        $this->celularNuevo = '';
+        $this->emailNuevo = '';
+        $this->direccionNueva = '';
         $this->editandoFechaFinMatriculaId = null;
         $this->fechaFinEstudioNueva = '';
         $this->editandoHorarioMatriculaId = null;
@@ -121,6 +150,74 @@ new class extends Component
         Gate::authorize('matricula.editar');
 
         Estudiante::query()->findOrFail($this->estudianteId)->update(['observaciones' => $this->observacionesTexto ?: null]);
+    }
+
+    public function editarDatosPersonales(): void
+    {
+        Gate::authorize('matricula.editar');
+
+        $estudiante = Estudiante::query()->findOrFail($this->estudianteId);
+
+        $this->dniNuevo = $estudiante->dni;
+        $this->nombresNuevo = $estudiante->nombres;
+        $this->apellidosNuevo = $estudiante->apellidos;
+        $this->fechaNacimientoNueva = $estudiante->fecha_nacimiento->format('Y-m-d');
+        $this->estadoCivilNuevo = $estudiante->estado_civil?->value ?? '';
+        $this->celularNuevo = $estudiante->celular ?? '';
+        $this->emailNuevo = $estudiante->email ?? '';
+        $this->direccionNueva = $estudiante->direccion ?? '';
+        $this->editandoDatosPersonales = true;
+    }
+
+    public function cancelarEdicionDatosPersonales(): void
+    {
+        $this->editandoDatosPersonales = false;
+    }
+
+    public function guardarDatosPersonales(MatriculaService $service): void
+    {
+        Gate::authorize('matricula.editar');
+
+        if ($this->estudianteId === null) {
+            return;
+        }
+
+        $estudiante = Estudiante::query()->findOrFail($this->estudianteId);
+
+        $this->validate([
+            'dniNuevo' => [
+                'required',
+                'string',
+                'regex:/^[0-9A-Za-z]{8,12}$/',
+                Rule::unique('estudiantes', 'dni')->ignore($estudiante->id),
+                Rule::unique('users', 'dni')->ignore($estudiante->user_id),
+            ],
+            'nombresNuevo' => 'required|string|max:100',
+            'apellidosNuevo' => 'required|string|max:100',
+            'fechaNacimientoNueva' => 'required|date|before:today',
+            'estadoCivilNuevo' => 'nullable|string|in:'.implode(',', array_column(EstadoCivilEnum::cases(), 'value')),
+            'celularNuevo' => 'nullable|string|max:20',
+            'emailNuevo' => 'nullable|email|max:150',
+            'direccionNueva' => 'nullable|string|max:255',
+        ]);
+
+        // corregirDni() recalcula el correo institucional ({dni}@...) si el
+        // DNI cambió, y lo aplica a la ficha y a la cuenta de acceso -- por
+        // eso $emailNuevo solo se usa cuando el DNI se queda igual.
+        $dniCambio = strtoupper(trim($this->dniNuevo)) !== $estudiante->dni;
+        $correoInstitucionalNuevo = $service->corregirDni($estudiante, $this->dniNuevo);
+
+        $estudiante->update([
+            'nombres' => $this->nombresNuevo,
+            'apellidos' => $this->apellidosNuevo,
+            'fecha_nacimiento' => $this->fechaNacimientoNueva,
+            'estado_civil' => $this->estadoCivilNuevo !== '' ? EstadoCivilEnum::from($this->estadoCivilNuevo) : null,
+            'celular' => $this->celularNuevo !== '' ? $this->celularNuevo : null,
+            'email' => $dniCambio ? $correoInstitucionalNuevo : ($this->emailNuevo !== '' ? $this->emailNuevo : null),
+            'direccion' => $this->direccionNueva !== '' ? $this->direccionNueva : null,
+        ]);
+
+        $this->editandoDatosPersonales = false;
     }
 
     public function editarFechaFinEstudio(int $matriculaId): void
@@ -459,6 +556,15 @@ new class extends Component
             @if ($estudiante)
                 <x-matricula.ficha-estudiante
                     :estudiante="$estudiante"
+                    :editando-datos-personales="$editandoDatosPersonales"
+                    :dni-nuevo="$dniNuevo"
+                    :nombres-nuevo="$nombresNuevo"
+                    :apellidos-nuevo="$apellidosNuevo"
+                    :fecha-nacimiento-nueva="$fechaNacimientoNueva"
+                    :estado-civil-nuevo="$estadoCivilNuevo"
+                    :celular-nuevo="$celularNuevo"
+                    :email-nuevo="$emailNuevo"
+                    :direccion-nueva="$direccionNueva"
                     :documentos="$documentos"
                     :examenes="$examenes"
                     :matriculas="$matriculas"
