@@ -533,17 +533,11 @@ new class extends Component
     {
         $carreras = Carrera::query()->orderBy('name')->get();
 
-        // Solo periodos cuyo Ciclo espejo ya tiene una ventana de
-        // matrícula abierta hoy (ver CicloService::crearPeriodoMatricula(),
-        // Académico → Ciclos → Ver) -- MatriculaService::matricular()
-        // exige esto para cualquier Ciclo, igual que antes exigía para los
-        // de 6 meses.
+        // Cualquier periodo registrado es elegible, tenga o no una ventana
+        // de matrícula abierta hoy (ver CicloService::crearPeriodoMatricula(),
+        // Académico → Periodos → Ver) -- a pedido del cliente, esa ventana
+        // ya no bloquea matricular: solo queda como registro informativo.
         $periodosDisponibles = Periodo::query()
-            ->whereHas('ciclo.periodosMatricula', function ($query) {
-                $query->where('estado', 'abierto')
-                    ->where('fecha_inicio', '<=', now())
-                    ->where('fecha_fin', '>=', now());
-            })
             ->orderByDesc('anio')
             ->orderBy('tipo')
             ->get();
@@ -877,7 +871,7 @@ new class extends Component
                         :options="collect($periodosDisponibles)->mapWithKeys(fn ($periodo) => [$periodo->id => $periodo->nombreCompleto()])"
                     />
                     @if ($periodosDisponibles->isEmpty())
-                        <p class="mt-1 text-xs text-danger">No hay periodos con matrícula abierta hoy.</p>
+                        <p class="mt-1 text-xs text-danger">No hay periodos registrados todavía.</p>
                     @endif
                     <x-input-error :messages="$errors->get('periodoId')" class="mt-1" />
                 </div>

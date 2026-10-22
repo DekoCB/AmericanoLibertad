@@ -138,21 +138,24 @@ class MatriculaServiceTest extends TestCase
         ));
     }
 
-    public function test_no_permite_matricular_sin_periodo_de_matricula_abierto(): void
+    public function test_permite_matricular_sin_ninguna_ventana_de_matricula_abierta(): void
     {
+        // A pedido del cliente: la ventana de matrícula (periodos_matricula)
+        // ya no bloquea matricular -- queda solo como registro informativo
+        // de cuándo estuvo abierta oficialmente la campaña.
         $estudiante = $this->service()->registrarEstudiante($this->datosEstudianteMayor());
         $ciclo = Ciclo::factory()->activo()->create();
         $carrera = Carrera::factory()->create();
 
-        $this->expectException(ValidationException::class);
-
-        $this->service()->matricular($estudiante, new RegistrarMatriculaData(
+        $matricula = $this->service()->matricular($estudiante, new RegistrarMatriculaData(
             cicloId: $ciclo->id,
             carreraId: $carrera->id,
             cicloCurricular: 1,
             observaciones: null,
             registradoPor: null,
         ));
+
+        $this->assertDatabaseHas('matriculas', ['id' => $matricula->id, 'ciclo_id' => $ciclo->id]);
     }
 
     public function test_no_permite_matricula_duplicada_para_el_mismo_estudiante_y_ciclo(): void

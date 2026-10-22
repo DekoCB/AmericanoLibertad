@@ -8,7 +8,6 @@ use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Horario;
-use App\Modules\Academico\Models\PeriodoMatricula;
 use App\Modules\Identidad\DTOs\CrearUsuarioData;
 use App\Modules\Identidad\Services\UserManagementService;
 use App\Modules\Matricula\DTOs\RegistrarApoderadoData;
@@ -140,8 +139,6 @@ class MatriculaService
         $ciclo = Ciclo::query()->findOrFail($data->cicloId);
         $carrera = Carrera::query()->findOrFail($data->carreraId);
 
-        $this->validarPeriodoDeMatriculaAbierto($ciclo);
-
         if ($this->matriculas->existeParaEstudianteYCiclo($estudiante->id, $ciclo->id)) {
             throw ValidationException::withMessages([
                 'ciclo' => 'Este estudiante ya tiene una matrícula registrada para este ciclo.',
@@ -257,31 +254,6 @@ class MatriculaService
         $matricula->horarios()->attach($horario->id);
 
         return $matricula->fresh();
-    }
-
-    /**
-     * Solo aplica a los 4 Ciclos rotativos de 6 meses, cada uno con sus
-     * propias ventanas de admisión que un coordinador abre y cierra a
-     * mano. SIAGIE anual no tiene este concepto -- se identifica solo por
-     * año y su matrícula está disponible mientras el ciclo esté vigente
-     * (ver el llamado condicional en matricular()).
-     */
-    private function validarPeriodoDeMatriculaAbierto(Ciclo $ciclo): void
-    {
-        $hoy = Carbon::today();
-
-        $periodoAbierto = PeriodoMatricula::query()
-            ->where('ciclo_id', $ciclo->id)
-            ->where('estado', 'abierto')
-            ->where('fecha_inicio', '<=', $hoy)
-            ->where('fecha_fin', '>=', $hoy)
-            ->exists();
-
-        if (! $periodoAbierto) {
-            throw ValidationException::withMessages([
-                'ciclo' => "No hay un periodo de matrícula abierto hoy para el ciclo «{$ciclo->nombre}».",
-            ]);
-        }
     }
 
     /**

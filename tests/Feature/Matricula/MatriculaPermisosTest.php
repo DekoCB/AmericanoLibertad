@@ -535,15 +535,15 @@ class MatriculaPermisosTest extends TestCase
             ->assertSet('paso', 5);
     }
 
-    public function test_reintentar_confirmar_tras_error_de_matricula_no_duplica_al_estudiante(): void
+    public function test_matricular_sin_ninguna_ventana_de_matricula_abierta_no_bloquea_el_wizard(): void
     {
+        // A pedido del cliente: la ventana de matrícula (periodos_matricula)
+        // ya no bloquea matricular -- queda solo como registro informativo.
         Storage::fake('public');
 
         $usuario = User::factory()->create();
         $usuario->assignRole(RolEnum::COORDINADOR->value);
 
-        // Periodo con su Ciclo espejo, pero sin periodo de matrícula
-        // abierto todavía: matricular() falla.
         $periodo = Periodo::factory()->create();
         $ciclo = Ciclo::factory()->conPeriodo()->activo()->create([
             'anio' => $periodo->anio,
@@ -553,25 +553,10 @@ class MatriculaPermisosTest extends TestCase
 
         $this->actingAs($usuario);
 
-        $component = $this->wizardEnPasoDeMatricula('55667802')
+        $this->wizardEnPasoDeMatricula('55667802')
             ->set('periodoId', (string) $periodo->id)
             ->set('carreraId', (string) $carrera->id)
             ->set('cicloCurricular', '1')
-            ->call('confirmar')
-            ->assertHasErrors();
-
-        $this->assertDatabaseCount('estudiantes', 0);
-
-        // El coordinador abre el periodo de matrícula y reintenta en el
-        // mismo componente sin volver al paso 1: antes de la corrección de
-        // este bug, esto duplicaba al estudiante (mismo DNI) y rompía con
-        // un error sin manejar.
-        $ciclo->periodosMatricula()->create([
-            'fecha_inicio' => now()->subDays(10),
-            'fecha_fin' => now()->addDays(10),
-        ]);
-
-        $component
             ->call('confirmar')
             ->assertHasNoErrors();
 

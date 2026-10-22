@@ -68,7 +68,7 @@ new #[Layout('layouts.app')] class extends Component
 <div>
     <x-slot name="header">
         <h1 class="font-display text-2xl text-ink">Periodos</h1>
-        <p class="mt-1 text-sm text-ink-dim">Los periodos de matrícula del año (1.er periodo, 2.° periodo) — cada uno crea su propio Ciclo, con horarios reales. Crear un periodo no abre matrícula por sí solo: entra a "Ver" y declara su ventana de matrícula antes de que aparezca como opción al matricular estudiantes.</p>
+        <p class="mt-1 text-sm text-ink-dim">Los periodos de matrícula del año (1.er periodo, 2.° periodo) — cada uno crea su propio Ciclo, con horarios reales. Cualquier periodo registrado ya se puede elegir al matricular, sin importar su estado. La "ventana de matrícula" que se declara en "Ver" queda solo como registro informativo de cuándo estuvo abierta oficialmente la campaña.</p>
     </x-slot>
 
     @can('academico.gestionar')
