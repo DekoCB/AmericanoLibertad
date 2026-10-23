@@ -565,6 +565,49 @@ class MatriculaPermisosTest extends TestCase
         $this->assertDatabaseHas('matriculas', ['estudiante_id' => $estudiante->id, 'ciclo_id' => $ciclo->id]);
     }
 
+    public function test_un_periodo_sin_ciclo_espejo_no_aparece_como_opcion_en_el_wizard(): void
+    {
+        // Regresión real de producción: al quitar la exigencia de ventana de
+        // matrícula abierta, el selector de periodos dejó de garantizar
+        // implícitamente que el periodo elegido tuviera un Ciclo espejo --
+        // un Periodo huérfano (sin Ciclo) quedó seleccionable y confirmar()
+        // reventaba con un error fatal (null->id) en vez de un error de
+        // validación. PeriodoService::crear() siempre crea ambos juntos, así
+        // que esto no debería pasar en uso normal, pero el selector igual
+        // debe protegerse de un registro inconsistente.
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $periodoHuerfano = Periodo::factory()->create();
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.wizard')
+            ->assertDontSee($periodoHuerfano->nombreCompleto());
+    }
+
+    public function test_confirmar_con_un_periodo_sin_ciclo_espejo_da_un_error_de_validacion_no_un_500(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $periodoHuerfano = Periodo::factory()->create();
+        $carrera = Carrera::factory()->create();
+
+        $this->actingAs($usuario);
+
+        // periodoId se fuerza a mano (bypass del selector, que ya lo
+        // excluye) para simular el registro inconsistente directamente.
+        $this->wizardEnPasoDeMatricula('55667803')
+            ->set('periodoId', (string) $periodoHuerfano->id)
+            ->set('carreraId', (string) $carrera->id)
+            ->set('cicloCurricular', '1')
+            ->call('confirmar')
+            ->assertHasErrors(['periodoId']);
+
+        $this->assertDatabaseCount('estudiantes', 0);
+    }
+
     public function test_cancelar_el_wizard_dispara_el_evento_que_cierra_el_modal(): void
     {
         $usuario = User::factory()->create();

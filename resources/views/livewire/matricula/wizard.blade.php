@@ -20,6 +20,7 @@ use App\Shared\ValueObjects\Telefono;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -498,13 +499,24 @@ new class extends Component
     /**
      * El Ciclo real donde queda la matrícula: desde que Periodo reemplazó
      * al Ciclo rotativo de 4 ventanas, el usuario solo elige un Periodo
-     * (ver with()) y este resuelve su Ciclo espejo (ver
-     * PeriodoService::crear()). $periodoId ya se validó en el paso 5, así
-     * que su Ciclo siempre existe.
+     * (ver with(), que ya filtra por whereHas('ciclo')) y este resuelve su
+     * Ciclo espejo (ver PeriodoService::crear()). Se revalida aquí de
+     * todos modos -- nunca con un acceso directo a ->ciclo->id que
+     * rompería con un error fatal si por algún motivo faltara -- porque
+     * esta misma suposición ya falló una vez en producción cuando with()
+     * dejó de filtrar por ella.
      */
     private function cicloIdDelPeriodo(): int
     {
-        return Periodo::query()->findOrFail($this->periodoId)->ciclo->id;
+        $periodo = Periodo::query()->with('ciclo')->findOrFail($this->periodoId);
+
+        if ($periodo->ciclo === null) {
+            throw ValidationException::withMessages([
+                'periodoId' => 'Este periodo no tiene un ciclo válido para matricular. Contacta a soporte.',
+            ]);
+        }
+
+        return $periodo->ciclo->id;
     }
 
     private function crearCronogramaSiCorresponde(Matricula $matricula, PlanPagoService $planPagoService): void
@@ -537,7 +549,13 @@ new class extends Component
         // de matrícula abierta hoy (ver CicloService::crearPeriodoMatricula(),
         // Académico → Periodos → Ver) -- a pedido del cliente, esa ventana
         // ya no bloquea matricular: solo queda como registro informativo.
+        // El whereHas('ciclo') sí se mantiene: no es la política de negocio
+        // que se quitó, es la garantía real de la que depende
+        // cicloIdDelPeriodo() (todo Periodo normal tiene su Ciclo espejo,
+        // creado por PeriodoService::crear(), pero sin este filtro un
+        // registro huérfano rompería esa suposición con un error fatal).
         $periodosDisponibles = Periodo::query()
+            ->whereHas('ciclo')
             ->orderByDesc('anio')
             ->orderBy('tipo')
             ->get();
