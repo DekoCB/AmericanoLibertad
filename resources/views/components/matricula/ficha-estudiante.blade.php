@@ -140,6 +140,25 @@
     </div>
 
     <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
+        <h2 class="text-sm font-semibold text-ink">Acceso al sistema</h2>
+        @if ($estudiante->user)
+            <p class="mt-1 text-xs text-ink-faint">Correo de inicio de sesión: <span class="text-ink">{{ $estudiante->user->email }}</span></p>
+            <p class="mt-1 text-xs text-ink-faint">La contraseña nunca se muestra aquí ni en ningún otro lugar del sistema (queda cifrada). Solo se puede restablecer.</p>
+            @can('matricula.editar')
+                <div class="mt-4">
+                    <button
+                        type="button"
+                        x-on:click="$store.confirm.preguntar('¿Restablecer la contraseña de {{ $estudiante->nombreCompleto() }} a su DNI ({{ $estudiante->dni }})? Esto cerrará cualquier sesión que tenga abierta.', () => $wire.restablecerContrasena(), { peligro: true, etiquetaConfirmar: 'Restablecer' })"
+                        class="text-xs font-medium text-accent hover:underline"
+                    >Restablecer contraseña al DNI</button>
+                </div>
+            @endcan
+        @else
+            <p class="mt-1 text-xs text-ink-faint">Este estudiante no tiene una cuenta de acceso vinculada.</p>
+        @endif
+    </div>
+
+    <div class="rounded-2xl border border-border bg-surface shadow-sm p-6">
         <h2 class="text-sm font-semibold text-ink">Observaciones</h2>
         <p class="mt-1 text-xs text-ink-faint">Acuerdos especiales, documentos pendientes de entregar, casos particulares (ej. examen de ubicación).</p>
         @can('matricula.editar')

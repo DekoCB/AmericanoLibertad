@@ -2,6 +2,7 @@
 
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Identidad\Services\UserManagementService;
 use App\Modules\Matricula\Enums\EstadoCivilEnum;
 use App\Modules\Matricula\Enums\TipoDocumentoEnum;
 use App\Modules\Matricula\Models\DocumentoEstudiante;
@@ -185,6 +186,19 @@ new #[Layout('layouts.app')] class extends Component
         $this->editandoDatosPersonales = false;
 
         session()->flash('status', 'Datos personales actualizados.');
+    }
+
+    public function restablecerContrasena(UserManagementService $service): void
+    {
+        Gate::authorize('matricula.editar');
+
+        if ($this->estudiante->user === null) {
+            return;
+        }
+
+        $service->restablecerContrasenaAlDni($this->estudiante->user);
+
+        session()->flash('status', 'Contraseña restablecida al DNI del estudiante.');
     }
 
     public function editarFechaFinEstudio(int $matriculaId): void

@@ -73,6 +73,23 @@ class UserManagementService
         $usuario->syncRoles([$rol]);
     }
 
+    /**
+     * Restablece la contraseña de una cuenta a su propio DNI -- la misma
+     * convención que la contraseña inicial que ya se asigna al registrar
+     * (ver MatriculaService::registrarEstudiante(), DocenteService), para
+     * no introducir una segunda forma de generar contraseñas. Cierra todas
+     * las sesiones activas de la cuenta: quien tenía la sesión abierta con
+     * la contraseña anterior queda fuera y debe volver a entrar con la
+     * nueva. El cambio queda registrado en Historial de Contraseñas como
+     * cualquier otro (ver Auditable en el modelo User).
+     */
+    public function restablecerContrasenaAlDni(User $usuario): void
+    {
+        $usuario->update(['password' => Hash::make($usuario->dni)]);
+
+        $this->sesiones->revocarTodas($usuario);
+    }
+
     public function emailDisponible(string $email, ?int $exceptoId = null): bool
     {
         return ! $this->usuarios->existeEmail($email, $exceptoId);

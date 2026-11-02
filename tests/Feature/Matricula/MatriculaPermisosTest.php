@@ -20,6 +20,8 @@ use App\Modules\Pagos\Models\PlanPago;
 use App\Shared\Enums\RolEnum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Volt\Volt;
@@ -905,6 +907,81 @@ class MatriculaPermisosTest extends TestCase
 
         $this->assertSame('55667719', $estudiante->fresh()->dni);
         $this->assertSame('55667719@iesamericalibertad.com', $cuentaEstudiante->fresh()->email);
+    }
+
+    public function test_restablecer_contrasena_la_deja_igual_al_dni_y_cierra_las_sesiones_activas(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => '55667720', 'password' => Hash::make('otra-contrasena')]);
+        $estudiante = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => '55667720']);
+
+        DB::table('sessions')->insert([
+            'id' => 'sesion-del-estudiante',
+            'user_id' => $cuentaEstudiante->id,
+            'payload' => base64_encode('datos'),
+            'last_activity' => now()->timestamp,
+        ]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('restablecerContrasena')
+            ->assertHasNoErrors();
+
+        $this->assertTrue(Hash::check('55667720', $cuentaEstudiante->fresh()->password));
+        $this->assertDatabaseMissing('sessions', ['id' => 'sesion-del-estudiante']);
+    }
+
+    public function test_restablecer_contrasena_desde_el_modal_de_ficha(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => '55667721', 'password' => Hash::make('otra-contrasena')]);
+        $estudiante = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => '55667721']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.ficha-modal')
+            ->call('abrir', $estudiante->id)
+            ->call('restablecerContrasena')
+            ->assertHasNoErrors();
+
+        $this->assertTrue(Hash::check('55667721', $cuentaEstudiante->fresh()->password));
+    }
+
+    public function test_restablecer_contrasena_sin_cuenta_de_acceso_vinculada_no_hace_nada(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $estudiante = Estudiante::factory()->create(['user_id' => null]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('restablecerContrasena')
+            ->assertHasNoErrors();
+    }
+
+    public function test_no_se_puede_restablecer_contrasena_sin_el_permiso_de_editar_matricula(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => '55667723']);
+        $estudiante = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => '55667723']);
+        $contrasenaOriginal = $cuentaEstudiante->password;
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('restablecerContrasena')
+            ->assertForbidden();
+
+        $this->assertSame($contrasenaOriginal, $cuentaEstudiante->fresh()->password);
     }
 
     public function test_editar_fecha_fin_estudio_desde_la_pagina_completa_de_la_ficha(): void
