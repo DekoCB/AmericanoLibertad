@@ -18,6 +18,7 @@ use App\Modules\Notificaciones\Enums\TipoMensajeWhatsappEnum;
 use App\Modules\Notificaciones\Jobs\EnviarMensajeWhatsappJob;
 use App\Modules\Notificaciones\Models\MensajeWhatsapp;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\ValidationException;
 
 class IncidenciaService
 {
@@ -31,6 +32,16 @@ class IncidenciaService
         ?Tarea $tarea = null,
         ?Evaluacion $evaluacion = null,
     ): Incidencia {
+        // $tarea/$evaluacion llegan de ids de cliente (ver incidencias/index.blade.php)
+        // resueltos con findOrFail, sin chequeo propio de pertenencia: sin esto, se
+        // podría reportar "tarea no realizada" adjuntando la tarea de un curso en el
+        // que el estudiante nunca estuvo matriculado.
+        if ($horario !== null && ! $this->horariosDelEstudiante($estudiante)->contains('id', $horario->id)) {
+            throw ValidationException::withMessages([
+                $tarea !== null ? 'tareaId' : 'evaluacionId' => 'La tarea o evaluación seleccionada no corresponde a un curso de este estudiante.',
+            ]);
+        }
+
         /** @var Incidencia $incidencia */
         $incidencia = Incidencia::query()->create([
             'estudiante_id' => $estudiante->id,

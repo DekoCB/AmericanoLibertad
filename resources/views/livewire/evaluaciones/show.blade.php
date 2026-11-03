@@ -89,6 +89,17 @@ new #[Layout('layouts.app')] class extends Component
 
     public function seleccionar(int $evaluacionId, EvaluacionService $service): void
     {
+        // Carga las notas de TODO el horario (no solo las del usuario
+        // actual) -- a diferencia de crear()/guardarNotas()/etc., este
+        // método no tenía ningún chequeo propio y solo quedaba "protegido"
+        // porque el botón que lo invoca no se renderiza para un estudiante;
+        // Livewire no impide llamarlo directamente igual. Mismo criterio
+        // que puedeRegistrar/puedeSupervisar en with().
+        abort_unless(
+            Gate::allows('evaluaciones.registrar-horario', $this->horario) || Auth::user()->hasPermissionTo('evaluaciones.ver'),
+            403,
+        );
+
         $this->evaluacionId = $evaluacionId;
         $this->guardado = false;
         $this->cargarNotas($service);

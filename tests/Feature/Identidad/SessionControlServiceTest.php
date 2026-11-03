@@ -86,10 +86,21 @@ class SessionControlServiceTest extends TestCase
         $this->crearFilaDeSesion('sesion-1', $usuario);
         $this->service()->registrarIngreso($usuario, 'Fiorella Vargas', 'sesion-1', '127.0.0.1');
 
-        $this->service()->revocar('sesion-1');
+        $this->service()->revocar($usuario, 'sesion-1');
 
         $this->assertNotNull(RegistroIngreso::query()->where('session_id', 'sesion-1')->first()->finalizado_en);
         $this->assertDatabaseMissing('sessions', ['id' => 'sesion-1']);
+    }
+
+    public function test_revocar_no_borra_la_sesion_de_otro_usuario(): void
+    {
+        $usuario = User::factory()->create();
+        $otroUsuario = User::factory()->create();
+        $this->crearFilaDeSesion('sesion-ajena', $otroUsuario);
+
+        $this->service()->revocar($usuario, 'sesion-ajena');
+
+        $this->assertDatabaseHas('sessions', ['id' => 'sesion-ajena']);
     }
 
     public function test_horas_por_nombre_solo_suma_ingresos_ya_cerrados(): void

@@ -50,11 +50,32 @@ class SessionControlService
         ));
     }
 
-    public function revocar(string $sesionId): void
+    /**
+     * Revoca una sesión puntual. Recibe el $usuario cuyas sesiones el
+     * llamador ya verificó que puede gestionar (Gate `manageSessions`) y
+     * exige que la sesión sea realmente suya: sin este filtro, cualquiera
+     * autorizado a gestionar SUS PROPIAS sesiones (incluido cualquier
+     * usuario normal en su propia pantalla de perfil) podría pasar el id
+     * de la sesión de OTRA persona -- visible solo como un string
+     * cualquiera en el DOM/devtools -- y cerrarla.
+     */
+    public function revocar(User $usuario, string $sesionId): void
     {
+        $esDeEsteUsuario = DB::table('sessions')
+            ->where('user_id', $usuario->id)
+            ->where('id', $sesionId)
+            ->exists();
+
+        if (! $esDeEsteUsuario) {
+            return;
+        }
+
         $this->finalizarIngreso($sesionId);
 
-        DB::table('sessions')->where('id', $sesionId)->delete();
+        DB::table('sessions')
+            ->where('user_id', $usuario->id)
+            ->where('id', $sesionId)
+            ->delete();
     }
 
     public function revocarTodasMenosActual(User $usuario, string $sesionActualId): void

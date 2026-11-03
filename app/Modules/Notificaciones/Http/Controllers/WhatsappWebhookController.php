@@ -11,6 +11,7 @@ use App\Modules\Notificaciones\Models\MensajeWhatsapp;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Webhook de la WhatsApp Cloud API. No lleva el middleware "web" (ver
@@ -41,6 +42,12 @@ class WhatsappWebhookController extends Controller
      */
     public function recibir(Request $request): Response
     {
+        if (! $this->firmaValida($request)) {
+            Log::warning('[WhatsApp:webhook] Firma inválida o ausente; payload descartado.');
+
+            return response('Firma inválida.', 403);
+        }
+
         $payload = $request->all();
 
         foreach ($payload['entry'] ?? [] as $entrada) {
@@ -58,6 +65,37 @@ class WhatsappWebhookController extends Controller
         }
 
         return response('EVENT_RECEIVED', 200);
+    }
+
+    /**
+     * Verifica la firma HMAC-SHA256 que Meta envía en la cabecera
+     * X-Hub-Signature-256 (firmada con el app secret de la app de
+     * WhatsApp), para que no cualquiera que encuentre esta URL pública
+     * pueda forjar mensajes entrantes o cambiar el estado de uno
+     * saliente. Si no hay app_secret configurado se rechaza todo (no
+     * hay forma de verificar nada), salvo en el entorno local, para
+     * pruebas sin credenciales reales -- a diferencia de "no producción",
+     * esto no deja staging/demo desprotegidos solo por tener APP_ENV
+     * distinto de "production".
+     */
+    private function firmaValida(Request $request): bool
+    {
+        $secreto = config('services.whatsapp.app_secret');
+
+        if (! $secreto) {
+            return app()->environment('local');
+        }
+
+        $cabecera = $request->header('X-Hub-Signature-256', '');
+
+        if (! Str::startsWith($cabecera, 'sha256=')) {
+            return false;
+        }
+
+        $firmaRecibida = Str::after($cabecera, 'sha256=');
+        $firmaEsperada = hash_hmac('sha256', $request->getContent(), $secreto);
+
+        return hash_equals($firmaEsperada, $firmaRecibida);
     }
 
     /**

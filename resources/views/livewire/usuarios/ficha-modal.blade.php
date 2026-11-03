@@ -105,7 +105,7 @@ new class extends Component
     {
         Gate::authorize('manageSessions', $this->usuario());
 
-        $service->revocar($sesionId);
+        $service->revocar($this->usuario(), $sesionId);
 
         session()->flash('status', 'Sesión cerrada.');
     }

@@ -7,7 +7,7 @@ new class extends Component
 {
     public function revocar(string $sesionId, SessionControlService $service): void
     {
-        $service->revocar($sesionId);
+        $service->revocar(auth()->user(), $sesionId);
     }
 
     public function revocarTodas(SessionControlService $service): void

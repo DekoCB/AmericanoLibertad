@@ -8,6 +8,7 @@ use App\Modules\Pagos\Enums\SerieReciboEnum;
 use App\Modules\Pagos\Models\Pago;
 use App\Modules\Pagos\Models\Recibo;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 class ReciboService
 {
@@ -20,20 +21,12 @@ class ReciboService
      */
     public function emitir(Pago $pago, SerieReciboEnum $serie): Recibo
     {
-        $numeroRecibo = $this->siguienteNumero($serie);
-
-        /** @var Recibo $recibo */
-        $recibo = Recibo::query()->create([
-            'pago_id' => $pago->id,
-            'serie' => $serie,
-            'numero_recibo' => $numeroRecibo,
-            'emitido_en' => now(),
-        ]);
+        $recibo = $this->crearConNumeroUnico($pago, $serie);
 
         $pdf = Pdf::loadView('pdf.recibo', ['pago' => $pago, 'recibo' => $recibo, 'serie' => $serie]);
 
         $recibo->addMediaFromString($pdf->output())
-            ->usingFileName("{$serie->value}-{$numeroRecibo}.pdf")
+            ->usingFileName("{$serie->value}-{$recibo->numero_recibo}.pdf")
             ->toMediaCollection('pdf');
 
         return $recibo;
@@ -128,12 +121,52 @@ class ReciboService
     }
 
     /**
+     * Crea el Recibo reintentando si choca con el índice único
+     * (serie, numero_recibo) -- dos aprobaciones de pago casi simultáneas
+     * pueden calcular el mismo "siguiente número" antes de que la primera
+     * llegue a insertarlo. Mismo patrón que
+     * CertificadoService::crearConNumeroUnico().
+     */
+    private function crearConNumeroUnico(Pago $pago, SerieReciboEnum $serie): Recibo
+    {
+        $intentosRestantes = 5;
+
+        while (true) {
+            try {
+                /** @var Recibo $recibo */
+                $recibo = Recibo::query()->create([
+                    'pago_id' => $pago->id,
+                    'serie' => $serie,
+                    'numero_recibo' => $this->siguienteNumero($serie),
+                    'emitido_en' => now(),
+                ]);
+
+                return $recibo;
+            } catch (UniqueConstraintViolationException $e) {
+                if (--$intentosRestantes <= 0) {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    /**
      * Correlativo continuo por serie (nunca se reinicia por año): si se
      * reiniciara cada año se repetiría el número y rompería el unique()
      * de (serie, numero_recibo).
+     *
+     * A partir del máximo ya emitido en esta serie, no de un conteo: un
+     * conteo recalcula el mismo número ya tomado si alguna vez queda un
+     * hueco en la secuencia, y crearConNumeroUnico() agotaría sus
+     * reintentos contra la misma colisión una y otra vez sin poder avanzar.
      */
     private function siguienteNumero(SerieReciboEnum $serie): string
     {
-        return sprintf('%06d', Recibo::query()->where('serie', $serie)->count() + 1);
+        $ultimoNumero = Recibo::query()
+            ->where('serie', $serie)
+            ->get(['numero_recibo'])
+            ->max(fn (Recibo $recibo) => (int) $recibo->numero_recibo);
+
+        return sprintf('%06d', ($ultimoNumero ?? 0) + 1);
     }
 }

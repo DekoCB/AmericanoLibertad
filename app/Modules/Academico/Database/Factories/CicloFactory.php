@@ -43,7 +43,12 @@ class CicloFactory extends Factory
 
     public function definition(): array
     {
-        $anio = (int) $this->faker->year();
+        // Tope en el pasado (no 'now', el default de Faker): activo() ahora marca
+        // "el ciclo actual" con fechas centradas en hoy (ver más abajo), así que un
+        // Ciclo "no activo" generado con un año aleatorio que por azar cayera en el
+        // actual podría, sin querer, solaparse con hoy y pasar la nueva condición
+        // por fecha de EloquentCicloRepository::activo().
+        $anio = (int) $this->faker->year(now()->subYears(2));
         $inicio = "{$anio}-01-01";
         $fin = "{$anio}-06-30";
 
@@ -71,9 +76,21 @@ class CicloFactory extends Factory
         });
     }
 
+    /**
+     * "Activo" ya no se decide por la columna `estado` (ver
+     * EloquentCicloRepository::activo()): sin fijar también las fechas
+     * para que incluyan hoy, un Ciclo con `estado = ACTIVO` pero con el
+     * rango de fechas aleatorio del año de definition() no sería detectado
+     * como el ciclo actual, y los tests que usan este estado para simular
+     * "el ciclo en curso" dejarían de representar lo que dicen representar.
+     */
     public function activo(): static
     {
-        return $this->state(['estado' => EstadoCicloEnum::ACTIVO]);
+        return $this->state([
+            'estado' => EstadoCicloEnum::ACTIVO,
+            'fecha_inicio' => now()->subMonth()->toDateString(),
+            'fecha_fin' => now()->addMonth()->toDateString(),
+        ]);
     }
 
     /**

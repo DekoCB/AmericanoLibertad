@@ -52,13 +52,15 @@ new #[Layout('layouts.app')] class extends Component
 
     public function with(): array
     {
+        // Cualquier ciclo registrado es elegible, tenga o no una ventana de
+        // matrícula abierta hoy -- la misma política ya aplicada en el wizard
+        // de matrícula individual (ver su with(): "esa ventana ya no bloquea
+        // matricular, solo queda como registro informativo"). Filtrar por
+        // periodosMatricula.estado=abierto aquí era un remanente de la regla
+        // vieja y dejaba este formulario sin ciclos elegibles aun cuando la
+        // matrícula uno-a-uno sí los aceptaba.
         return [
             'ciclosDisponibles' => Ciclo::query()
-                ->whereHas('periodosMatricula', function ($query) {
-                    $query->where('estado', 'abierto')
-                        ->where('fecha_inicio', '<=', now())
-                        ->where('fecha_fin', '>=', now());
-                })
                 ->orderByDesc('fecha_inicio')
                 ->get(),
         ];

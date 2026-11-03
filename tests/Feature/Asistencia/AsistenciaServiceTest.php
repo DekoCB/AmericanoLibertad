@@ -47,6 +47,27 @@ class AsistenciaServiceTest extends TestCase
         return $horario->fresh(['dias']);
     }
 
+    /**
+     * Un estudiante realmente matriculado en la carrera/ciclo/ciclo
+     * curricular del horario -- desde que registrar() solo guarda
+     * asistencia para quien estudiantesDelHorario() reconoce (ver esa
+     * misma regla probada arriba), un Estudiante suelto sin Matricula ya
+     * no basta para estos tests.
+     */
+    private function estudianteMatriculadoEn(Horario $horario): Estudiante
+    {
+        $estudiante = Estudiante::factory()->create();
+
+        Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
+            'ciclo_id' => $horario->ciclo_id,
+        ]);
+
+        return $estudiante;
+    }
+
     public function test_estudiantes_del_horario_solo_incluye_matriculados_aprobados(): void
     {
         $horario = Horario::factory()->create();
@@ -157,7 +178,7 @@ class AsistenciaServiceTest extends TestCase
     public function test_registrar_crea_un_registro_de_asistencia_por_estudiante(): void
     {
         $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
+        $estudiante = $this->estudianteMatriculadoEn($horario);
 
         $this->service()->registrar($horario, '2026-09-01', [
             $estudiante->id => EstadoAsistenciaEnum::PRESENTE->value,
@@ -174,7 +195,7 @@ class AsistenciaServiceTest extends TestCase
     public function test_registrar_dos_veces_la_misma_fecha_actualiza_en_vez_de_duplicar(): void
     {
         $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
+        $estudiante = $this->estudianteMatriculadoEn($horario);
 
         $this->service()->registrar($horario, '2026-09-01', [
             $estudiante->id => EstadoAsistenciaEnum::PRESENTE->value,
@@ -192,7 +213,7 @@ class AsistenciaServiceTest extends TestCase
         Storage::fake('public');
 
         $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
+        $estudiante = $this->estudianteMatriculadoEn($horario);
 
         $this->service()->registrar(
             $horario,
@@ -218,7 +239,7 @@ class AsistenciaServiceTest extends TestCase
         Storage::fake('public');
 
         $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
+        $estudiante = $this->estudianteMatriculadoEn($horario);
         $service = $this->service();
 
         $service->registrar(
@@ -244,7 +265,7 @@ class AsistenciaServiceTest extends TestCase
     public function test_resumen_estudiante_calcula_el_porcentaje_de_asistencia(): void
     {
         $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
+        $estudiante = $this->estudianteMatriculadoEn($horario);
         $service = $this->service();
 
         $service->registrar($horario, '2026-09-01', [$estudiante->id => EstadoAsistenciaEnum::PRESENTE->value]);
@@ -262,8 +283,8 @@ class AsistenciaServiceTest extends TestCase
     public function test_fechas_registradas_devuelve_las_fechas_unicas_ordenadas_descendente(): void
     {
         $horario = Horario::factory()->create();
-        $estudianteUno = Estudiante::factory()->create();
-        $estudianteDos = Estudiante::factory()->create();
+        $estudianteUno = $this->estudianteMatriculadoEn($horario);
+        $estudianteDos = $this->estudianteMatriculadoEn($horario);
         $service = $this->service();
 
         $service->registrar($horario, '2026-09-01', [

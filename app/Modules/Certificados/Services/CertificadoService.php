@@ -44,6 +44,18 @@ class CertificadoService
         ?MetodoEntregaEnum $metodoEntrega = null,
         ?string $correoEntrega = null,
     ): SolicitudCertificado {
+        // Las dos pantallas que llaman a este método ("Mis certificados" y
+        // "Mis constancias") resuelven $matricula a partir de un
+        // matriculaId de cliente validado solo con exists:matriculas,id --
+        // sin este chequeo, un estudiante podría apuntar la solicitud a la
+        // matrícula de otro y el documento emitido terminaría con la
+        // carrera/ciclo de otra persona (ver variablesDePlantilla()).
+        if ($matricula !== null && $matricula->estudiante_id !== $estudiante->id) {
+            throw ValidationException::withMessages([
+                'matriculaId' => 'La matrícula seleccionada no pertenece a este estudiante.',
+            ]);
+        }
+
         /** @var SolicitudCertificado $solicitud */
         $solicitud = SolicitudCertificado::query()->create([
             'estudiante_id' => $estudiante->id,
@@ -70,6 +82,17 @@ class CertificadoService
         User $emisor,
         TipoDocumentoEnum $tipo = TipoDocumentoEnum::CERTIFICADO_ESTUDIOS,
     ): Certificado {
+        // Mismo chequeo que solicitar(): "Emitir certificado" deja $matriculaId
+        // seleccionado en el formulario al cambiar de estudiante (ver
+        // seleccionarEstudiante() en certificados/index.blade.php), así que sin
+        // esto el certificado podría emitirse para un estudiante con la
+        // matrícula (carrera/ciclo) de otro.
+        if ($matricula !== null && $matricula->estudiante_id !== $estudiante->id) {
+            throw ValidationException::withMessages([
+                'matriculaId' => 'La matrícula seleccionada no pertenece a este estudiante.',
+            ]);
+        }
+
         $tipo = $solicitud !== null ? $solicitud->tipo : $tipo;
 
         return DB::transaction(function () use ($estudiante, $matricula, $solicitud, $observaciones, $emisor, $tipo) {
@@ -424,9 +447,18 @@ class CertificadoService
     private function siguienteNumero(): string
     {
         $anio = now()->format('Y');
-        $emitidosEsteAnio = Certificado::query()->where('numero', 'like', "%-{$anio}")->count();
 
-        return sprintf('%06d-%s', $emitidosEsteAnio + 1, $anio);
+        // A partir del máximo ya emitido este año, no de un conteo: un
+        // conteo recalcula el mismo número ya tomado si alguna vez queda un
+        // hueco en la secuencia (un certificado borrado/renumerado a mano),
+        // y entonces crearConNumeroUnico() agotaría sus reintentos contra
+        // la misma colisión una y otra vez sin poder avanzar.
+        $ultimoNumero = Certificado::query()
+            ->where('numero', 'like', "%-{$anio}")
+            ->get(['numero'])
+            ->max(fn (Certificado $certificado) => (int) Str::before($certificado->numero, '-'));
+
+        return sprintf('%06d-%s', ($ultimoNumero ?? 0) + 1, $anio);
     }
 
     private function generarCodigoVerificacion(): string

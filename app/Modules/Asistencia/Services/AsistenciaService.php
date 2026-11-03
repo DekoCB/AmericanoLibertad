@@ -150,8 +150,18 @@ class AsistenciaService
      */
     public function registrar(Horario $horario, string $fecha, array $registros, array $observaciones = [], array $justificantes = []): void
     {
-        DB::transaction(function () use ($horario, $fecha, $registros, $observaciones, $justificantes) {
+        // $registros llega tal cual desde el array público wire:model del
+        // componente Livewire -- sin este chequeo, cualquiera que pueda
+        // manipular ese payload (devtools) podría colar un estudiante_id
+        // que no está matriculado en este horario y crearle asistencia.
+        $idsValidos = $this->estudiantesDelHorario($horario)->pluck('id')->flip();
+
+        DB::transaction(function () use ($horario, $fecha, $registros, $observaciones, $justificantes, $idsValidos) {
             foreach ($registros as $estudianteId => $estado) {
+                if (! $idsValidos->has((int) $estudianteId)) {
+                    continue;
+                }
+
                 $asistencia = Asistencia::query()->updateOrCreate(
                     ['horario_id' => $horario->id, 'estudiante_id' => $estudianteId, 'fecha' => $fecha],
                     ['estado' => $estado, 'observacion' => $observaciones[$estudianteId] ?? null],

@@ -139,7 +139,14 @@ new #[Layout('layouts.app')] class extends Component
 
     private function exportar(ReporteService $reportes, string $formato)
     {
-        abort_unless(Auth::user()->hasPermissionTo('reportes.exportar'), 403);
+        $user = Auth::user();
+
+        abort_unless($user->hasPermissionTo('reportes.exportar'), 403);
+        // `reportes.exportar` solo habilita el botón de exportar en general: sin
+        // revalidar aquí el tipo concreto, un cliente podría poner $this->tipo en
+        // cualquier valor (p. ej. "financiero") vía el propio request de Livewire
+        // y descargar un reporte que la vista previa jamás le habría mostrado.
+        abort_unless($this->tipoDisponible($this->tipo, $user), 403);
 
         ['columnas' => $columnas, 'filas' => $filas] = $this->generarReporte($reportes);
         $nombreArchivo = "reporte-{$this->tipo}-".now()->format('Y-m-d');

@@ -146,6 +146,11 @@ new #[Layout('layouts.app')] class extends Component
         $this->estudianteSeleccionadoId = $estudianteId;
         $this->estudianteSeleccionadoNombre = $nombre;
         $this->terminoBusqueda = '';
+        // Sin este reset, la matrícula elegida para un estudiante anterior
+        // queda seleccionada en el <select> al cambiar de estudiante (el
+        // "Cambiar" no limpia el formulario): CertificadoService::emitir()
+        // la rechaza, pero es mejor que el propio formulario no la ofrezca.
+        $this->matriculaId = '';
     }
 
     public function emitir(CertificadoService $service): void
