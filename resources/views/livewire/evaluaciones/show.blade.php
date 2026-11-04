@@ -314,6 +314,10 @@ new #[Layout('layouts.app')] class extends Component
                 $estudiante->id => $service->promedioMitad($estudiante, $this->horario, $mitad),
             ]);
 
+            $promediosFinales = $estudiantes->mapWithKeys(fn (Estudiante $estudiante) => [
+                $estudiante->id => $service->promedioFinalDelEstudiante($estudiante, $this->horario),
+            ]);
+
             return [
                 'puedeRegistrar' => $puedeRegistrar,
                 'puedeSupervisar' => $puedeSupervisar,
@@ -323,6 +327,7 @@ new #[Layout('layouts.app')] class extends Component
                 'examen' => $examen,
                 'columnas' => $columnas,
                 'promedios' => $promedios,
+                'promediosFinales' => $promediosFinales,
                 'resumenMitades' => null,
                 'promedioFinal' => null,
                 'comportamientoPropio' => null,
@@ -359,6 +364,7 @@ new #[Layout('layouts.app')] class extends Component
             'examen' => null,
             'columnas' => collect(),
             'promedios' => collect(),
+            'promediosFinales' => collect(),
             'resumenMitades' => $resumenMitades,
             'promedioFinal' => $promedioFinal,
             'comportamientoPropio' => $comportamientoPropio,
@@ -499,6 +505,7 @@ new #[Layout('layouts.app')] class extends Component
                                 </th>
                             @endif
                             <th class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wide text-ink-faint">P{{ $mitadActual === 'primera' ? '1' : '2' }}</th>
+                            <th class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wide text-ink-faint">Promedio final</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
@@ -521,6 +528,9 @@ new #[Layout('layouts.app')] class extends Component
                                 @endforeach
                                 <td class="px-2 py-2 text-center font-display text-ink">
                                     {{ $promedios[$estudiante->id] !== null ? number_format($promedios[$estudiante->id], 2) : '—' }}
+                                </td>
+                                <td class="px-2 py-2 text-center font-display text-accent">
+                                    {{ $promediosFinales[$estudiante->id] !== null ? number_format($promediosFinales[$estudiante->id], 2) : '—' }}
                                 </td>
                             </tr>
                         @empty
