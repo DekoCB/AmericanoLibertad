@@ -19,6 +19,7 @@ use App\Modules\Migraciones\Enums\EstadoRefuerzoEnum;
 use App\Modules\Migraciones\Models\MatriculaRefuerzo;
 use App\Modules\Notificaciones\Models\Notificacion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 class EvaluacionServiceTest extends TestCase
@@ -348,6 +349,69 @@ class EvaluacionServiceTest extends TestCase
         $this->service()->actualizarFecha($continua, null);
 
         $this->assertNull($continua->fresh()->fecha);
+    }
+
+    public function test_actualizar_continua_cambia_nombre_fecha_y_enlace(): void
+    {
+        $horario = Horario::factory()->create();
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, 'C1', '2026-07-10');
+
+        $this->service()->actualizarContinua($continua, 'Trabajo corregido', '2026-07-20', 'https://forms.test/nuevo', null);
+
+        $continua->refresh();
+        $this->assertSame('Trabajo corregido', $continua->nombre());
+        $this->assertSame('2026-07-20', $continua->fecha->format('Y-m-d'));
+        $this->assertSame('https://forms.test/nuevo', $continua->enlace_externo);
+    }
+
+    public function test_actualizar_continua_sin_nombre_nuevo_conserva_el_nombre_actual(): void
+    {
+        $horario = Horario::factory()->create();
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, 'C1', '2026-07-10');
+
+        $this->service()->actualizarContinua($continua, null, '2026-07-20');
+
+        $this->assertSame('C1', $continua->fresh()->nombre());
+    }
+
+    public function test_eliminar_continua_la_borra_junto_con_sus_calificaciones(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $continua = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $service->calificar($continua, $estudiante, 15.0, null, null);
+
+        $service->eliminarContinua($continua);
+
+        $this->assertDatabaseMissing('evaluaciones', ['id' => $continua->id]);
+        $this->assertDatabaseMissing('calificaciones', ['evaluacion_id' => $continua->id]);
+    }
+
+    public function test_eliminar_continua_no_borra_otras_evaluaciones_del_horario(): void
+    {
+        $horario = Horario::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $continuaABorrar = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $continuaAConservar = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-16');
+
+        $service->eliminarContinua($continuaABorrar);
+
+        $this->assertDatabaseMissing('evaluaciones', ['id' => $continuaABorrar->id]);
+        $this->assertDatabaseHas('evaluaciones', ['id' => $continuaAConservar->id]);
+        $this->assertNotNull($service->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA));
+    }
+
+    public function test_eliminar_continua_rechaza_un_examen(): void
+    {
+        $horario = Horario::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $examen = $service->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+
+        $this->expectException(InvalidArgumentException::class);
+        $service->eliminarContinua($examen);
     }
 
     public function test_calificar_dos_veces_al_mismo_estudiante_actualiza_en_vez_de_duplicar(): void

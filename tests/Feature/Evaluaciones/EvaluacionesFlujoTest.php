@@ -61,7 +61,7 @@ class EvaluacionesFlujoTest extends TestCase
         Volt::test('evaluaciones.show', ['horario' => $horario])
             ->call('irACrear')
             ->set('nuevaFecha', '2026-07-15')
-            ->call('crearContinua')
+            ->call('guardarContinua')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('evaluaciones', [
@@ -84,13 +84,72 @@ class EvaluacionesFlujoTest extends TestCase
             ->call('irACrear')
             ->set('nuevoNombre', 'Trabajo en grupo')
             ->set('nuevaFecha', '2026-07-15')
-            ->call('crearContinua')
+            ->call('guardarContinua')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('evaluaciones', [
             'horario_id' => $horario->id,
             'nombre' => 'Trabajo en grupo',
         ]);
+    }
+
+    public function test_el_docente_edita_una_continua_existente(): void
+    {
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
+        $horario = Horario::factory()->create(['docente_id' => $docente->id]);
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, 'C1', '2026-07-15');
+
+        $this->actingAs($docente);
+
+        Volt::test('evaluaciones.show', ['horario' => $horario])
+            ->call('editarContinua', $continua->id)
+            ->assertSet('nuevoNombre', 'C1')
+            ->assertSet('continuaEditandoId', $continua->id)
+            ->set('nuevoNombre', 'C1 corregida')
+            ->set('nuevaFecha', '2026-07-20')
+            ->call('guardarContinua')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('evaluaciones', 3); // la continua editada + los 2 exámenes sembrados
+        $this->assertDatabaseHas('evaluaciones', [
+            'id' => $continua->id,
+            'nombre' => 'C1 corregida',
+            'fecha' => '2026-07-20 00:00:00',
+        ]);
+    }
+
+    public function test_el_docente_elimina_una_continua(): void
+    {
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
+        $horario = Horario::factory()->create(['docente_id' => $docente->id]);
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, 'C1', '2026-07-15');
+
+        $this->actingAs($docente);
+
+        Volt::test('evaluaciones.show', ['horario' => $horario])
+            ->call('eliminarContinua', $continua->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('evaluaciones', ['id' => $continua->id]);
+    }
+
+    public function test_un_docente_no_puede_eliminar_una_continua_de_otro_horario(): void
+    {
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
+        $horario = Horario::factory()->create(['docente_id' => $docente->id]);
+
+        $otroHorario = Horario::factory()->create();
+        $continuaAjena = $this->service()->crearContinua($otroHorario, MitadCicloEnum::PRIMERA, 'C1', '2026-07-15');
+
+        $this->actingAs($docente);
+
+        rescue(fn () => Volt::test('evaluaciones.show', ['horario' => $horario])
+            ->call('eliminarContinua', $continuaAjena->id), report: false);
+
+        $this->assertDatabaseHas('evaluaciones', ['id' => $continuaAjena->id]);
     }
 
     public function test_un_estudiante_no_puede_crear_una_continua(): void

@@ -3,6 +3,7 @@
 use App\Modules\Academico\Models\Horario;
 use App\Modules\AulaVirtual\Models\CursoVirtual;
 use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
+use App\Modules\Evaluaciones\Enums\TipoEvaluacionEnum;
 use App\Modules\Evaluaciones\Imports\HojaConEncabezadosImport;
 use App\Modules\Evaluaciones\Models\Evaluacion;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
@@ -47,7 +48,9 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $disponibleHastaExamen = '';
 
-    // --- "Crear evaluación": nueva Continua ---
+    // --- "Crear evaluación": nueva Continua (o edición de una existente) ---
+
+    public ?int $continuaEditandoId = null;
 
     public string $nuevoNombre = '';
 
@@ -89,12 +92,53 @@ new #[Layout('layouts.app')] class extends Component
     public function irACrear(): void
     {
         Gate::authorize('evaluaciones.registrar-horario', $this->horario);
+        $this->continuaEditandoId = null;
+        $this->reset(['nuevoNombre', 'nuevoEnlace', 'nuevoDisponibleHasta']);
+        $this->nuevaFecha = now()->format('Y-m-d');
         $this->modo = 'crear';
+    }
+
+    /**
+     * Abre el mismo formulario de "Crear evaluación" pero precargado con
+     * los datos de una Continua existente -- al guardar, actualiza en vez
+     * de crear una nueva (ver guardarContinua()).
+     */
+    public function editarContinua(int $evaluacionId): void
+    {
+        Gate::authorize('evaluaciones.registrar-horario', $this->horario);
+
+        $continua = Evaluacion::query()
+            ->where('horario_id', $this->horario->id)
+            ->where('tipo', TipoEvaluacionEnum::CONTINUA)
+            ->findOrFail($evaluacionId);
+
+        $this->continuaEditandoId = $continua->id;
+        $this->nuevoNombre = (string) $continua->nombre;
+        $this->nuevaFecha = $continua->fecha?->format('Y-m-d') ?? now()->format('Y-m-d');
+        $this->nuevoEnlace = (string) $continua->enlace_externo;
+        $this->nuevoDisponibleHasta = $continua->disponible_hasta?->format('Y-m-d\TH:i') ?? '';
+        $this->modo = 'crear';
+    }
+
+    public function eliminarContinua(int $evaluacionId, EvaluacionService $service): void
+    {
+        Gate::authorize('evaluaciones.registrar-horario', $this->horario);
+
+        $continua = Evaluacion::query()
+            ->where('horario_id', $this->horario->id)
+            ->where('tipo', TipoEvaluacionEnum::CONTINUA)
+            ->findOrFail($evaluacionId);
+
+        $service->eliminarContinua($continua);
+        $this->cargarMitad($service);
     }
 
     public function irAVer(EvaluacionService $service): void
     {
         $this->modo = 'ver';
+        $this->continuaEditandoId = null;
+        $this->reset(['nuevoNombre', 'nuevoEnlace', 'nuevoDisponibleHasta']);
+        $this->nuevaFecha = now()->format('Y-m-d');
         $this->cargarMitad($service);
     }
 
@@ -137,7 +181,7 @@ new #[Layout('layouts.app')] class extends Component
         }
     }
 
-    public function crearContinua(EvaluacionService $service): void
+    public function guardarContinua(EvaluacionService $service): void
     {
         Gate::authorize('evaluaciones.registrar-horario', $this->horario);
 
@@ -148,17 +192,30 @@ new #[Layout('layouts.app')] class extends Component
             'nuevoDisponibleHasta' => 'nullable|date',
         ]);
 
-        $service->crearContinua(
-            $this->horario,
-            MitadCicloEnum::from($this->mitadActual),
-            $this->nuevoNombre ?: null,
-            $this->nuevaFecha,
-            $this->nuevoEnlace ?: null,
-            $this->nuevoDisponibleHasta ?: null,
-        );
+        if ($this->continuaEditandoId) {
+            $continua = Evaluacion::query()
+                ->where('horario_id', $this->horario->id)
+                ->where('tipo', TipoEvaluacionEnum::CONTINUA)
+                ->findOrFail($this->continuaEditandoId);
 
-        $this->reset(['nuevoNombre', 'nuevoEnlace', 'nuevoDisponibleHasta']);
-        $this->nuevaFecha = now()->format('Y-m-d');
+            $service->actualizarContinua(
+                $continua,
+                $this->nuevoNombre ?: null,
+                $this->nuevaFecha,
+                $this->nuevoEnlace ?: null,
+                $this->nuevoDisponibleHasta ?: null,
+            );
+        } else {
+            $service->crearContinua(
+                $this->horario,
+                MitadCicloEnum::from($this->mitadActual),
+                $this->nuevoNombre ?: null,
+                $this->nuevaFecha,
+                $this->nuevoEnlace ?: null,
+                $this->nuevoDisponibleHasta ?: null,
+            );
+        }
+
         $this->irAVer($service);
     }
 
@@ -422,8 +479,10 @@ new #[Layout('layouts.app')] class extends Component
         </div>
 
         @if ($modo === 'crear' && $puedeRegistrar)
-            <form wire:submit="crearContinua" class="max-w-xl space-y-3 rounded-2xl border border-border bg-surface shadow-sm p-4">
-                <h3 class="font-display text-sm text-ink">Nueva evaluación continua -- Mitad {{ $mitadActual === 'primera' ? 'I' : 'II' }}</h3>
+            <form wire:submit="guardarContinua" class="max-w-xl space-y-3 rounded-2xl border border-border bg-surface shadow-sm p-4">
+                <h3 class="font-display text-sm text-ink">
+                    {{ $continuaEditandoId ? 'Editar evaluación continua' : 'Nueva evaluación continua' }} -- Mitad {{ $mitadActual === 'primera' ? 'I' : 'II' }}
+                </h3>
                 <p class="text-xs text-ink-faint">Cuenta junto a las demás continuas de esta mitad dentro del 60% del promedio. Puedes crear tantas como necesites.</p>
                 <div>
                     <x-input-label for="nuevoNombre" value="Nombre (opcional)" />
@@ -447,7 +506,7 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
                 <div class="flex justify-end gap-2">
                     <x-secondary-button type="button" wire:click="irAVer">Cancelar</x-secondary-button>
-                    <x-primary-button type="submit">Crear</x-primary-button>
+                    <x-primary-button type="submit">{{ $continuaEditandoId ? 'Guardar' : 'Crear' }}</x-primary-button>
                 </div>
             </form>
         @else
@@ -491,6 +550,21 @@ new #[Layout('layouts.app')] class extends Component
                                     {{ $continua->nombre() }}
                                     @if ($continua->estaPublicada())
                                         <span class="block text-[10px] normal-case text-accent">Publicada</span>
+                                    @endif
+                                    @if ($puedeRegistrar)
+                                        <span class="mt-1 flex items-center justify-center gap-1.5">
+                                            <button type="button" wire:click="editarContinua({{ $continua->id }})" class="text-ink-faint transition hover:text-accent" title="Editar">
+                                                <x-heroicon-o-pencil class="h-3.5 w-3.5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="text-ink-faint transition hover:text-danger"
+                                                title="Eliminar"
+                                                x-on:click="$store.confirm.preguntar('¿Eliminar «{{ $continua->nombre() }}»? Se borran también las notas que ya tenga registradas.', () => $wire.eliminarContinua({{ $continua->id }}), { etiquetaConfirmar: 'Eliminar' })"
+                                            >
+                                                <x-heroicon-o-trash class="h-3.5 w-3.5" />
+                                            </button>
+                                        </span>
                                     @endif
                                 </th>
                             @empty

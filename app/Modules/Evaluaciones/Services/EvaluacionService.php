@@ -136,6 +136,37 @@ class EvaluacionService
     }
 
     /**
+     * Corrige el nombre/fecha/enlace de una Continua ya creada -- por
+     * ejemplo, si el docente se equivocó al ingresarla.
+     */
+    public function actualizarContinua(Evaluacion $continua, ?string $nombre, string $fecha, ?string $enlaceExterno = null, ?string $disponibleHasta = null): Evaluacion
+    {
+        $continua->update([
+            'nombre' => $nombre ?: $continua->nombre,
+            'fecha' => $fecha,
+            'enlace_externo' => $enlaceExterno,
+            'disponible_hasta' => $disponibleHasta,
+        ]);
+
+        return $continua;
+    }
+
+    /**
+     * Borra una Continua y, en cascada (FK de calificaciones), las notas
+     * que ya tuviera registradas -- por ejemplo, una evaluación de prueba
+     * creada por error. El Examen no se puede borrar por acá: es fijo, uno
+     * por mitad, sembrado automáticamente.
+     */
+    public function eliminarContinua(Evaluacion $continua): void
+    {
+        if (! $continua->esContinua()) {
+            throw new InvalidArgumentException('Solo se pueden eliminar evaluaciones Continuas; el Examen es fijo por mitad.');
+        }
+
+        $continua->delete();
+    }
+
+    /**
      * @return Collection<int, Evaluacion>
      */
     public function continuasDeLaMitad(Horario $horario, MitadCicloEnum $mitad): Collection
