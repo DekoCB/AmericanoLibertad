@@ -109,6 +109,7 @@ new #[Layout('layouts.app')] class extends Component
             'cicloLibreta' => $cicloLibreta,
             'cursosLibreta' => $cursosLibreta,
             'situacionFinalLibreta' => $cursosLibreta->isNotEmpty() ? $libretas->calcularSituacionFinal($cursosLibreta) : null,
+            'promedioGeneralLibreta' => $libretas->promedioGeneralDelCiclo($cursosLibreta),
         ];
     }
 }; ?>
@@ -383,7 +384,7 @@ new #[Layout('layouts.app')] class extends Component
 
                     @if ($cicloLibreta)
                         <div class="mt-2">
-                            <x-evaluaciones.resumen-libreta :cursos="$cursosLibreta" :situacion-final="$situacionFinalLibreta" />
+                            <x-evaluaciones.resumen-libreta :cursos="$cursosLibreta" :situacion-final="$situacionFinalLibreta" :promedio-general="$promedioGeneralLibreta" />
                         </div>
                     @endif
                 @endif

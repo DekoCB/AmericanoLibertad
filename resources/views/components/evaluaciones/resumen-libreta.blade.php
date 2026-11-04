@@ -1,4 +1,4 @@
-@props(['cursos', 'situacionFinal' => null])
+@props(['cursos', 'situacionFinal' => null, 'promedioGeneral' => null])
 
 {{--
     Promedio por curso del estudiante en un ciclo, en formato tabla, más el
@@ -13,7 +13,12 @@
 <div class="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
     @if ($situacionFinal)
         <div class="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 class="text-sm font-semibold text-ink">Situación final</h2>
+            <div>
+                <h2 class="text-sm font-semibold text-ink">Situación final</h2>
+                @if ($promedioGeneral !== null)
+                    <p class="text-xs text-ink-faint">Promedio general del ciclo: <span class="font-semibold text-accent">{{ number_format($promedioGeneral, 2) }}</span></p>
+                @endif
+            </div>
             <x-badge :variant="$situacionFinal === 'APROBADO' ? 'ok' : 'danger'">{{ $situacionFinal }}</x-badge>
         </div>
     @endif

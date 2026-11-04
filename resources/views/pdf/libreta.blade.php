@@ -111,6 +111,9 @@
     @if ($cursos->isNotEmpty())
         <div class="situacion {{ $situacionFinal === 'APROBADO' ? 'aprobado' : 'desaprobado' }}">
             Situación final: {{ $situacionFinal }}
+            @if ($promedioGeneral !== null)
+                · Promedio general: {{ number_format($promedioGeneral, 2) }}
+            @endif
         </div>
     @endif
 

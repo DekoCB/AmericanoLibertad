@@ -93,6 +93,20 @@ class LibretaService
     }
 
     /**
+     * El promedio general del ciclo: el promedio de los Promedios Finales
+     * de los cursos que ya lo tienen calculado (un curso sin Promedio Final
+     * todavía no se cuenta, ni como 0 ni se excluye el ciclo entero).
+     *
+     * @param  SupportCollection<int, array{promedio: ?float}>  $cursos
+     */
+    public function promedioGeneralDelCiclo(SupportCollection $cursos): ?float
+    {
+        $promedios = $cursos->pluck('promedio')->filter();
+
+        return $promedios->isNotEmpty() ? round((float) $promedios->avg(), 2) : null;
+    }
+
+    /**
      * El "periodo promocional" tal como lo pide SIAGIE: "{año}-1"/"{año}-2"
      * -- a diferencia de Ciclo::nombre (texto libre tipo "Ciclo 1 (Enero -
      * Junio)" o "Periodo 2026-1"), esto es el formato exigido en la
@@ -120,7 +134,7 @@ class LibretaService
      * exporta sin persistir un registro Libreta) arme exactamente los
      * mismos datos, sin duplicar el cálculo de situación final/periodo.
      *
-     * @return array{estudiante: Estudiante, ciclo: Ciclo, matricula: ?Matricula, cursos: SupportCollection, situacionFinal: string, periodoPromocional: string, modalidadTexto: string}
+     * @return array{estudiante: Estudiante, ciclo: Ciclo, matricula: ?Matricula, cursos: SupportCollection, situacionFinal: string, promedioGeneral: ?float, periodoPromocional: string, modalidadTexto: string}
      */
     public function datosParaPdf(Estudiante $estudiante, Ciclo $ciclo): array
     {
@@ -139,6 +153,7 @@ class LibretaService
             'matricula' => $matricula,
             'cursos' => $cursos,
             'situacionFinal' => $this->calcularSituacionFinal($cursos),
+            'promedioGeneral' => $this->promedioGeneralDelCiclo($cursos),
             'periodoPromocional' => $this->periodoPromocional($ciclo),
             'modalidadTexto' => self::MODALIDAD_TEXTO,
         ];

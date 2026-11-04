@@ -514,7 +514,7 @@ new #[Layout('layouts.app')] class extends Component
                                             max="20"
                                             wire:model="notas.{{ $estudiante->id }}.{{ $columna->id }}"
                                             placeholder="—"
-                                            class="w-16 rounded-md border-border bg-surface text-center text-sm text-ink focus:border-accent focus:ring-accent"
+                                            class="w-24 rounded-md border-border bg-surface px-1 text-center text-sm text-ink focus:border-accent focus:ring-accent"
                                             @disabled(! $puedeRegistrar)
                                         >
                                     </td>
@@ -625,7 +625,7 @@ new #[Layout('layouts.app')] class extends Component
                                     max="20"
                                     wire:model="comportamiento.{{ $estudiante->id }}"
                                     placeholder="—"
-                                    class="w-20 rounded-md border-border bg-surface text-center text-sm text-ink focus:border-accent focus:ring-accent"
+                                    class="w-24 rounded-md border-border bg-surface px-1 text-center text-sm text-ink focus:border-accent focus:ring-accent"
                                 >
                             </div>
                         @endforeach

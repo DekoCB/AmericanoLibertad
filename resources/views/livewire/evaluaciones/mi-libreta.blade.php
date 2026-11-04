@@ -66,7 +66,7 @@ new #[Layout('layouts.app')] class extends Component
         $ciclo = $this->cicloId !== '' ? Ciclo::query()->find($this->cicloId) : null;
 
         if (! $ciclo) {
-            return ['ciclo' => null, 'libreta' => null, 'urlPdf' => null, 'cursos' => collect(), 'situacionFinal' => null];
+            return ['ciclo' => null, 'libreta' => null, 'urlPdf' => null, 'cursos' => collect(), 'situacionFinal' => null, 'promedioGeneral' => null];
         }
 
         $libreta = Libreta::query()
@@ -82,6 +82,7 @@ new #[Layout('layouts.app')] class extends Component
             'urlPdf' => $libreta?->getFirstMediaUrl('pdf'),
             'cursos' => $cursos,
             'situacionFinal' => $cursos->isNotEmpty() ? $service->calcularSituacionFinal($cursos) : null,
+            'promedioGeneral' => $service->promedioGeneralDelCiclo($cursos),
         ];
     }
 }; ?>
@@ -140,7 +141,7 @@ new #[Layout('layouts.app')] class extends Component
             </div>
 
             <div class="mt-6">
-                <x-evaluaciones.resumen-libreta :cursos="$cursos" :situacion-final="$situacionFinal" />
+                <x-evaluaciones.resumen-libreta :cursos="$cursos" :situacion-final="$situacionFinal" :promedio-general="$promedioGeneral" />
             </div>
         @endif
     @endif

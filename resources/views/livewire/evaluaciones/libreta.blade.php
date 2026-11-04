@@ -60,6 +60,7 @@ new #[Layout('layouts.app')] class extends Component
             'urlPdf' => $libreta?->getFirstMediaUrl('pdf'),
             'cursos' => $cursos,
             'situacionFinal' => $cursos->isNotEmpty() ? $service->calcularSituacionFinal($cursos) : null,
+            'promedioGeneral' => $service->promedioGeneralDelCiclo($cursos),
         ];
     }
 }; ?>
@@ -101,7 +102,7 @@ new #[Layout('layouts.app')] class extends Component
         </div>
 
         <div class="mt-6">
-            <x-evaluaciones.resumen-libreta :cursos="$cursos" :situacion-final="$situacionFinal" />
+            <x-evaluaciones.resumen-libreta :cursos="$cursos" :situacion-final="$situacionFinal" :promedio-general="$promedioGeneral" />
         </div>
     @endif
 </div>
