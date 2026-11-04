@@ -128,7 +128,6 @@ class EvaluacionesFlujoTest extends TestCase
 
         Volt::test('evaluaciones.show', ['horario' => $horario])
             ->set("notas.{$estudiante->id}.{$continua->id}", '17.5')
-            ->set("observaciones.{$estudiante->id}.{$continua->id}", 'Buen desempeño')
             ->call('guardarNotas')
             ->assertHasNoErrors();
 
@@ -136,7 +135,6 @@ class EvaluacionesFlujoTest extends TestCase
             'evaluacion_id' => $continua->id,
             'estudiante_id' => $estudiante->id,
             'nota_numerica' => 17.5,
-            'observaciones' => 'Buen desempeño',
         ]);
     }
 

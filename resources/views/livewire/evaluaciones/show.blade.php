@@ -8,7 +8,6 @@ use App\Modules\Evaluaciones\Models\Evaluacion;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Pagos\Services\BloqueoAccesoService;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -30,9 +29,6 @@ new #[Layout('layouts.app')] class extends Component
 
     /** @var array<int, array<int, string>> */
     public array $notas = [];
-
-    /** @var array<int, array<int, string>> */
-    public array $observaciones = [];
 
     public bool $guardado = false;
 
@@ -123,12 +119,10 @@ new #[Layout('layouts.app')] class extends Component
 
         foreach ($estudiantes as $estudiante) {
             $this->notas[$estudiante->id] = [];
-            $this->observaciones[$estudiante->id] = [];
 
             foreach ($columnas as $columna) {
                 $calificacion = $service->calificacionesDe($columna)->get($estudiante->id);
                 $this->notas[$estudiante->id][$columna->id] = $calificacion ? (string) $calificacion->nota_numerica : '';
-                $this->observaciones[$estudiante->id][$columna->id] = $calificacion?->observaciones ?? '';
             }
         }
     }
@@ -222,7 +216,7 @@ new #[Layout('layouts.app')] class extends Component
                     $columna,
                     $estudiante,
                     (float) $nota,
-                    $this->observaciones[$estudianteId][$columnaId] ?: null,
+                    null,
                     Auth::id(),
                 );
             }

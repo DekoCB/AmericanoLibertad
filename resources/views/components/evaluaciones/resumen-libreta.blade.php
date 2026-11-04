@@ -1,11 +1,14 @@
 @props(['cursos', 'situacionFinal' => null])
 
 {{--
-    Promedio por curso del estudiante en un ciclo, en formato tabla. La usan
-    tanto "Mi libreta" (el estudiante viendo su propia libreta) como la
-    libreta de un estudiante específico que consulta el personal.
-    situacionFinal (ver LibretaService::calcularSituacionFinal()) es
-    opcional: null mientras no haya cursos que evaluar.
+    Promedio por curso del estudiante en un ciclo, en formato tabla, más el
+    detalle de cada nota individual (continuas + examen de cada mitad) --
+    la cantidad de continuas varía por curso/mitad, así que se listan como
+    chips en vez de columnas fijas. La usan tanto "Mi libreta" (el
+    estudiante viendo su propia libreta) como la libreta de un estudiante
+    específico que consulta el personal. situacionFinal (ver
+    LibretaService::calcularSituacionFinal()) es opcional: null mientras no
+    haya cursos que evaluar.
 --}}
 <div class="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
     @if ($situacionFinal)
@@ -39,6 +42,29 @@
                             <span class="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">{{ $curso['letra'] }}</span>
                         @else
                             <span class="text-ink-faint">—</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr class="bg-surface-2">
+                    <td colspan="6" class="px-4 py-3">
+                        @foreach (['primera' => 'Mitad I', 'segunda' => 'Mitad II'] as $clave => $etiqueta)
+                            @php $mitad = $curso['mitades'][$clave]; @endphp
+                            @if (count($mitad['continuas']) > 0 || $mitad['examen'] !== null)
+                                <div class="mb-1 flex flex-wrap items-center gap-2 text-xs last:mb-0">
+                                    <span class="font-semibold text-ink-faint">{{ $etiqueta }}:</span>
+                                    @foreach ($mitad['continuas'] as $continua)
+                                        <span class="rounded-full border border-border bg-surface px-2 py-1 text-ink-dim">
+                                            {{ $continua['nombre'] }}: <span class="font-medium text-ink">{{ $continua['nota'] !== null ? number_format($continua['nota'], 2) : '—' }}</span>
+                                        </span>
+                                    @endforeach
+                                    <span class="rounded-full border border-border bg-surface px-2 py-1 text-ink-dim">
+                                        Examen: <span class="font-medium text-ink">{{ $mitad['examen'] !== null ? number_format($mitad['examen'], 2) : '—' }}</span>
+                                    </span>
+                                </div>
+                            @endif
+                        @endforeach
+                        @if (count($curso['mitades']['primera']['continuas']) === 0 && $curso['mitades']['primera']['examen'] === null && count($curso['mitades']['segunda']['continuas']) === 0 && $curso['mitades']['segunda']['examen'] === null)
+                            <p class="text-xs text-ink-faint">Sin notas publicadas todavía.</p>
                         @endif
                     </td>
                 </tr>
