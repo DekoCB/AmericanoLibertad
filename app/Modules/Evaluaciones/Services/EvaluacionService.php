@@ -380,52 +380,111 @@ class EvaluacionService
     }
 
     /**
-     * La nota del estudiante en una evaluación puntual, o null si no la
-     * tiene (o si $soloPublicadas pide ignorar evaluaciones sin publicar --
-     * lo que usa la vista del estudiante; el docente, mientras califica,
-     * necesita ver también lo que todavía no publicó).
+     * Las notas de UN estudiante para una lista de evaluaciones, en una
+     * sola consulta -- evita ir a la base de datos evaluación por
+     * evaluación (el cuello de botella real de antes: con muchas
+     * continuas y muchos estudiantes, las consultas se multiplicaban una
+     * por una hasta agotar el tiempo de espera del servidor).
+     *
+     * @param  SupportCollection<int, Evaluacion>  $columnas
+     * @return SupportCollection<int, float> keyed by evaluacion_id
      */
-    private function notaDe(Estudiante $estudiante, Evaluacion $evaluacion, bool $soloPublicadas): ?float
+    private function notasDelEstudiante(Estudiante $estudiante, SupportCollection $columnas): SupportCollection
     {
-        if ($soloPublicadas && ! $evaluacion->estaPublicada()) {
-            return null;
+        if ($columnas->isEmpty()) {
+            return collect();
         }
 
-        $calificacion = Calificacion::query()
-            ->where('evaluacion_id', $evaluacion->id)
+        return Calificacion::query()
             ->where('estudiante_id', $estudiante->id)
-            ->first();
-
-        return $calificacion !== null ? (float) $calificacion->nota_numerica : null;
+            ->whereIn('evaluacion_id', $columnas->pluck('id'))
+            ->get()
+            ->mapWithKeys(fn (Calificacion $calificacion) => [$calificacion->evaluacion_id => (float) $calificacion->nota_numerica]);
     }
 
     /**
-     * P1 o P2: promedio de las Continuas calificadas × 0.6 + Examen × 0.4.
+     * P1 o P2 de TODOS los estudiantes a la vez, en un puñado fijo de
+     * consultas (nunca una por estudiante ni una por evaluación) -- lo usa
+     * la grilla de calificación, que antes repetía la consulta de notas
+     * por cada combinación de estudiante y columna.
+     *
      * El promedio de las Continuas se calcula siempre entre las que
      * realmente tienen nota (sean 1, 4 o 10) -- no exige un número fijo.
      * Null si el Examen no tiene nota, o si ninguna Continua la tiene
      * todavía (no hay con qué promediar el 60%).
+     *
+     * @param  Collection<int, Estudiante>  $estudiantes
+     * @return SupportCollection keyed by estudiante_id (value: ?float)
      */
-    public function promedioMitad(Estudiante $estudiante, Horario $horario, MitadCicloEnum $mitad, bool $soloPublicadas = false): ?float
+    public function promediosMitadDeTodos(Collection $estudiantes, Horario $horario, MitadCicloEnum $mitad, bool $soloPublicadas = false): SupportCollection
     {
         $examen = $this->examenDeLaMitad($horario, $mitad);
-        $notaExamen = $examen !== null ? $this->notaDe($estudiante, $examen, $soloPublicadas) : null;
 
-        if ($notaExamen === null) {
-            return null;
+        if ($examen === null || ($soloPublicadas && ! $examen->estaPublicada())) {
+            return $estudiantes->mapWithKeys(fn (Estudiante $estudiante) => [$estudiante->id => null]);
         }
 
-        $notasContinuas = $this->continuasDeLaMitad($horario, $mitad)
-            ->map(fn (Evaluacion $continua) => $this->notaDe($estudiante, $continua, $soloPublicadas))
-            ->filter(fn (?float $nota) => $nota !== null);
+        $continuasQueCuentan = $this->continuasDeLaMitad($horario, $mitad)
+            ->filter(fn (Evaluacion $continua) => ! $soloPublicadas || $continua->estaPublicada());
 
-        if ($notasContinuas->isEmpty()) {
-            return null;
-        }
+        $columnas = (clone $continuasQueCuentan)->push($examen);
 
-        $promedioContinuas = $notasContinuas->avg();
+        $calificaciones = Calificacion::query()
+            ->whereIn('evaluacion_id', $columnas->pluck('id'))
+            ->get()
+            ->groupBy('estudiante_id');
 
-        return round(($promedioContinuas * 0.6) + ($notaExamen * 0.4), 2);
+        return $estudiantes->mapWithKeys(function (Estudiante $estudiante) use ($calificaciones, $continuasQueCuentan, $examen) {
+            $delEstudiante = $calificaciones->get($estudiante->id, collect())->keyBy('evaluacion_id');
+
+            $notaExamen = $delEstudiante->get($examen->id)?->nota_numerica;
+
+            if ($notaExamen === null) {
+                return [$estudiante->id => null];
+            }
+
+            $notasContinuas = $continuasQueCuentan
+                ->map(fn (Evaluacion $continua) => $delEstudiante->get($continua->id)?->nota_numerica)
+                ->filter(fn ($nota) => $nota !== null);
+
+            if ($notasContinuas->isEmpty()) {
+                return [$estudiante->id => null];
+            }
+
+            $promedio = round(((float) $notasContinuas->avg() * 0.6) + ((float) $notaExamen * 0.4), 2);
+
+            return [$estudiante->id => $promedio];
+        });
+    }
+
+    public function promedioMitad(Estudiante $estudiante, Horario $horario, MitadCicloEnum $mitad, bool $soloPublicadas = false): ?float
+    {
+        return $this->promediosMitadDeTodos(new Collection([$estudiante]), $horario, $mitad, $soloPublicadas)->get($estudiante->id);
+    }
+
+    /**
+     * El Promedio Final de TODOS los estudiantes a la vez (promedio de P1 y
+     * P2) -- misma razón que promediosMitadDeTodos(): un puñado fijo de
+     * consultas, no una cascada por estudiante.
+     *
+     * @param  Collection<int, Estudiante>  $estudiantes
+     * @return SupportCollection keyed by estudiante_id (value: ?float)
+     */
+    public function promediosFinalesDeTodos(Collection $estudiantes, Horario $horario, bool $soloPublicadas = false): SupportCollection
+    {
+        $p1 = $this->promediosMitadDeTodos($estudiantes, $horario, MitadCicloEnum::PRIMERA, $soloPublicadas);
+        $p2 = $this->promediosMitadDeTodos($estudiantes, $horario, MitadCicloEnum::SEGUNDA, $soloPublicadas);
+
+        return $estudiantes->mapWithKeys(function (Estudiante $estudiante) use ($p1, $p2) {
+            $uno = $p1->get($estudiante->id);
+            $dos = $p2->get($estudiante->id);
+
+            if ($uno === null || $dos === null) {
+                return [$estudiante->id => null];
+            }
+
+            return [$estudiante->id => round(($uno + $dos) / 2, 2)];
+        });
     }
 
     /**
@@ -434,14 +493,7 @@ class EvaluacionService
      */
     public function promedioFinalDelEstudiante(Estudiante $estudiante, Horario $horario, bool $soloPublicadas = false): ?float
     {
-        $p1 = $this->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA, $soloPublicadas);
-        $p2 = $this->promedioMitad($estudiante, $horario, MitadCicloEnum::SEGUNDA, $soloPublicadas);
-
-        if ($p1 === null || $p2 === null) {
-            return null;
-        }
-
-        return round(($p1 + $p2) / 2, 2);
+        return $this->promediosFinalesDeTodos(new Collection([$estudiante]), $horario, $soloPublicadas)->get($estudiante->id);
     }
 
     /**
@@ -469,19 +521,24 @@ class EvaluacionService
     public function resumenMitadesDelEstudiante(Estudiante $estudiante, Horario $horario, bool $soloPublicadas = true): array
     {
         $armar = function (MitadCicloEnum $mitad) use ($estudiante, $horario, $soloPublicadas): array {
-            $continuas = $this->continuasDeLaMitad($horario, $mitad)
+            $continuas = $this->continuasDeLaMitad($horario, $mitad);
+            $examen = $this->examenDeLaMitad($horario, $mitad);
+            $columnas = (clone $continuas)->when($examen, fn (SupportCollection $c) => $c->push($examen));
+
+            $notas = $this->notasDelEstudiante($estudiante, $columnas);
+            $visible = fn (Evaluacion $evaluacion) => ! $soloPublicadas || $evaluacion->estaPublicada();
+
+            $continuasConNota = $continuas
                 ->map(fn (Evaluacion $continua) => [
                     'nombre' => $continua->nombre(),
-                    'nota' => $this->notaDe($estudiante, $continua, $soloPublicadas),
+                    'nota' => $visible($continua) ? $notas->get($continua->id) : null,
                 ])
                 ->values()
                 ->all();
 
-            $examen = $this->examenDeLaMitad($horario, $mitad);
-
             return [
-                'continuas' => $continuas,
-                'examen' => $examen !== null ? $this->notaDe($estudiante, $examen, $soloPublicadas) : null,
+                'continuas' => $continuasConNota,
+                'examen' => $examen !== null && $visible($examen) ? $notas->get($examen->id) : null,
                 'promedio' => $this->promedioMitad($estudiante, $horario, $mitad, $soloPublicadas),
             ];
         };

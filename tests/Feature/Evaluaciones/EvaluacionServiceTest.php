@@ -19,6 +19,7 @@ use App\Modules\Migraciones\Enums\EstadoRefuerzoEnum;
 use App\Modules\Migraciones\Models\MatriculaRefuerzo;
 use App\Modules\Notificaciones\Models\Notificacion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Tests\TestCase;
 
@@ -412,6 +413,65 @@ class EvaluacionServiceTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $service->eliminarContinua($examen);
+    }
+
+    /**
+     * Regresión del 504 real en producción: antes, promedioMitad() y
+     * promedioFinalDelEstudiante() hacían una consulta por cada
+     * combinación de estudiante y evaluación (y cargarMitad() en el
+     * componente Livewire hacía lo mismo para las notas), así que con
+     * varios estudiantes y varias continuas de prueba el número de
+     * consultas se disparaba. promediosMitadDeTodos()/
+     * promediosFinalesDeTodos() deben resolver TODOS los estudiantes en un
+     * puñado fijo de consultas, sin importar cuántos estudiantes o
+     * continuas haya.
+     */
+    public function test_promedios_de_todos_no_escala_con_la_cantidad_de_estudiantes_ni_continuas(): void
+    {
+        $horario = Horario::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+
+        $estudiantes = Estudiante::factory()->count(12)->create();
+        foreach ($estudiantes as $estudiante) {
+            Matricula::factory()->create([
+                'estudiante_id' => $estudiante->id,
+                'carrera_id' => $horario->carrera_id,
+                'ciclo_curricular' => $horario->ciclo_curricular,
+                'ciclo_id' => $horario->ciclo_id,
+            ]);
+        }
+
+        foreach (range(1, 6) as $numero) {
+            $continua = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, "C{$numero}", '2026-07-15');
+            foreach ($estudiantes as $estudiante) {
+                $service->calificar($continua, $estudiante, 15.0, null, null);
+            }
+        }
+        $examen = $service->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+        foreach ($estudiantes as $estudiante) {
+            $service->calificar($examen, $estudiante, 16.0, null, null);
+        }
+
+        $estudiantesDelHorario = $service->estudiantesDelHorario($horario);
+
+        DB::enableQueryLog();
+        $promedios = $service->promediosMitadDeTodos($estudiantesDelHorario, $horario, MitadCicloEnum::PRIMERA);
+        $consultasMitad = count(DB::getQueryLog());
+
+        DB::flushQueryLog();
+        $service->promediosFinalesDeTodos($estudiantesDelHorario, $horario);
+        $consultasFinales = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertCount(12, $promedios);
+        $this->assertTrue($promedios->every(fn (?float $p) => $p !== null));
+
+        // Fijas (no proporcionales a 12 estudiantes x 6 continuas = 72
+        // combinaciones): antes de la corrección esto se iba a cientos de
+        // consultas.
+        $this->assertLessThan(10, $consultasMitad, 'promediosMitadDeTodos() no debería escalar con la cantidad de estudiantes/continuas.');
+        $this->assertLessThan(15, $consultasFinales, 'promediosFinalesDeTodos() no debería escalar con la cantidad de estudiantes/continuas.');
     }
 
     public function test_calificar_dos_veces_al_mismo_estudiante_actualiza_en_vez_de_duplicar(): void

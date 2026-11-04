@@ -15,6 +15,7 @@ use App\Modules\Matricula\Models\Matricula;
 use App\Shared\Enums\RolEnum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -483,5 +484,49 @@ class EvaluacionesFlujoTest extends TestCase
 
         $examen = $this->service()->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
         $this->assertSame(EstadoEvaluacionEnum::PUBLICADA, $examen->fresh()->estado);
+    }
+
+    /**
+     * Regresión del 504 real en producción: cargarMitad() (lo que arma la
+     * grilla al entrar, cambiar de mitad, crear o eliminar una continua)
+     * hacía una consulta por cada combinación de estudiante y columna. Con
+     * varios estudiantes y varias continuas de prueba creadas/eliminadas
+     * repetidamente, el número de consultas se disparaba hasta agotar el
+     * tiempo de espera del servidor.
+     */
+    public function test_la_grilla_no_escala_con_la_cantidad_de_estudiantes_ni_continuas(): void
+    {
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
+        $horario = Horario::factory()->create(['docente_id' => $docente->id]);
+
+        foreach (Estudiante::factory()->count(10)->create() as $estudiante) {
+            Matricula::factory()->create([
+                'estudiante_id' => $estudiante->id,
+                'carrera_id' => $horario->carrera_id,
+                'ciclo_curricular' => $horario->ciclo_curricular,
+                'ciclo_id' => $horario->ciclo_id,
+            ]);
+        }
+
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        foreach (range(1, 5) as $numero) {
+            $service->crearContinua($horario, MitadCicloEnum::PRIMERA, "C{$numero}", '2026-07-15');
+        }
+
+        $this->actingAs($docente);
+
+        DB::enableQueryLog();
+        Volt::test('evaluaciones.show', ['horario' => $horario])->assertOk();
+        $consultas = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // Las ~40 primeras son overhead normal de autenticación/middleware
+        // del framework, no de este código. Lo que importa es que no
+        // escale con 10 estudiantes x 6 columnas (5 continuas + examen) =
+        // 60 combinaciones -- antes de la corrección esto se iba a
+        // decenas/cientos de consultas adicionales por encima de ese piso.
+        $this->assertLessThan(70, $consultas, 'Cargar la grilla no debería escalar con la cantidad de estudiantes/continuas.');
     }
 }

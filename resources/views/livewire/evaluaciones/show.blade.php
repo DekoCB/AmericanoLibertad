@@ -163,9 +163,17 @@ new #[Layout('layouts.app')] class extends Component
 
         foreach ($estudiantes as $estudiante) {
             $this->notas[$estudiante->id] = [];
+        }
 
-            foreach ($columnas as $columna) {
-                $calificacion = $service->calificacionesDe($columna)->get($estudiante->id);
+        // Una consulta por columna (no una por cada combinación de
+        // estudiante y columna) -- con muchos estudiantes y varias
+        // continuas, la versión anterior multiplicaba las consultas hasta
+        // volverse muy lenta.
+        foreach ($columnas as $columna) {
+            $calificacionesDeLaColumna = $service->calificacionesDe($columna);
+
+            foreach ($estudiantes as $estudiante) {
+                $calificacion = $calificacionesDeLaColumna->get($estudiante->id);
                 $this->notas[$estudiante->id][$columna->id] = $calificacion ? (string) $calificacion->nota_numerica : '';
             }
         }
@@ -367,13 +375,8 @@ new #[Layout('layouts.app')] class extends Component
             $examen = $service->examenDeLaMitad($this->horario, $mitad);
             $columnas = (clone $continuas)->when($examen, fn ($c) => $c->push($examen));
 
-            $promedios = $estudiantes->mapWithKeys(fn (Estudiante $estudiante) => [
-                $estudiante->id => $service->promedioMitad($estudiante, $this->horario, $mitad),
-            ]);
-
-            $promediosFinales = $estudiantes->mapWithKeys(fn (Estudiante $estudiante) => [
-                $estudiante->id => $service->promedioFinalDelEstudiante($estudiante, $this->horario),
-            ]);
+            $promedios = $service->promediosMitadDeTodos($estudiantes, $this->horario, $mitad);
+            $promediosFinales = $service->promediosFinalesDeTodos($estudiantes, $this->horario);
 
             return [
                 'puedeRegistrar' => $puedeRegistrar,
