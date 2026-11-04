@@ -10,6 +10,8 @@ use App\Modules\Asistencia\Services\JustificacionService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
+use App\Modules\Migraciones\Enums\EstadoRefuerzoEnum;
+use App\Modules\Migraciones\Models\MatriculaRefuerzo;
 use App\Shared\Enums\RolEnum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -83,6 +85,28 @@ class AsistenciaPermisosTest extends TestCase
         $this->actingAs($usuario)
             ->get(route('asistencia.show', $horario))
             ->assertForbidden();
+    }
+
+    public function test_un_estudiante_con_el_horario_como_curso_en_recuperacion_puede_ver_su_asistencia(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ESTUDIANTE->value);
+        $estudiante = Estudiante::factory()->create(['user_id' => $usuario->id]);
+
+        // Un horario de un ciclo_curricular distinto al de la matrícula
+        // normal del estudiante: solo lo cursa como refuerzo/recuperación.
+        $horarioDeRefuerzo = Horario::factory()->create();
+        $matricula = Matricula::factory()->create(['estudiante_id' => $estudiante->id]);
+        MatriculaRefuerzo::factory()->create([
+            'matricula_id' => $matricula->id,
+            'curso_id' => $horarioDeRefuerzo->curso_id,
+            'horario_id' => $horarioDeRefuerzo->id,
+            'estado' => EstadoRefuerzoEnum::CURSANDO,
+        ]);
+
+        $this->actingAs($usuario)
+            ->get(route('asistencia.show', $horarioDeRefuerzo))
+            ->assertOk();
     }
 
     public function test_coordinador_puede_supervisar_cualquier_horario(): void

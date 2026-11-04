@@ -5,6 +5,7 @@ namespace Tests\Feature\Evaluaciones;
 use App\Models\User;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\Models\Estudiante;
@@ -26,6 +27,29 @@ class EvaluacionesBloqueoTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
+    private function service(): EvaluacionService
+    {
+        return $this->app->make(EvaluacionService::class);
+    }
+
+    private function calificarYPublicarC1(Horario $horario, Estudiante $estudiante, float $nota): void
+    {
+        $this->service()->sembrarExamenes($horario);
+        $examen = $this->service()->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+        $this->service()->calificar($examen, $estudiante, $nota, null, null);
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $this->service()->calificar($continua, $estudiante, $nota, null, null);
+        $this->service()->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+    }
+
+    private function publicarExamenConEnlace(Horario $horario, string $enlace): void
+    {
+        $this->service()->sembrarExamenes($horario);
+        $examen = $this->service()->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+        $this->service()->actualizarEnlace($examen, $enlace);
+        $this->service()->publicarMitad($horario, MitadCicloEnum::PRIMERA);
     }
 
     private function estudianteBloqueado(): array
@@ -54,9 +78,7 @@ class EvaluacionesBloqueoTest extends TestCase
     {
         [$usuario, $estudiante, $horario] = $this->estudianteBloqueado();
 
-        $evaluacion = $this->app->make(EvaluacionService::class)->crear($horario, 'Evaluación mensual', now()->format('Y-m-d'));
-        $this->app->make(EvaluacionService::class)->calificar($evaluacion, $estudiante, 18.0, null, null);
-        $this->app->make(EvaluacionService::class)->publicar($evaluacion);
+        $this->calificarYPublicarC1($horario, $estudiante, 18.0);
 
         $this->actingAs($usuario)
             ->get(route('evaluaciones.show', $horario))
@@ -79,9 +101,7 @@ class EvaluacionesBloqueoTest extends TestCase
             'ciclo_id' => $horario->ciclo_id,
         ]);
 
-        $evaluacion = $this->app->make(EvaluacionService::class)->crear($horario, 'Evaluación mensual', now()->format('Y-m-d'));
-        $this->app->make(EvaluacionService::class)->calificar($evaluacion, $estudiante, 18.0, null, null);
-        $this->app->make(EvaluacionService::class)->publicar($evaluacion);
+        $this->calificarYPublicarC1($horario, $estudiante, 18.0);
 
         $this->actingAs($usuario)
             ->get(route('evaluaciones.show', $horario))
@@ -125,9 +145,7 @@ class EvaluacionesBloqueoTest extends TestCase
     {
         [$usuario, $estudiante, $horario] = $this->estudianteConUnaCuotaVencidaEnCicloActivo();
 
-        $evaluacion = $this->app->make(EvaluacionService::class)->crear($horario, 'Evaluación mensual', now()->format('Y-m-d'));
-        $this->app->make(EvaluacionService::class)->calificar($evaluacion, $estudiante, 18.0, null, null);
-        $this->app->make(EvaluacionService::class)->publicar($evaluacion);
+        $this->calificarYPublicarC1($horario, $estudiante, 18.0);
 
         $this->assertFalse($this->app->make(BloqueoAccesoService::class)->estaBloqueado($estudiante));
 
@@ -153,10 +171,9 @@ class EvaluacionesBloqueoTest extends TestCase
         [$usuario, , $horario] = $this->estudianteBloqueado();
 
         // Publicada a propósito: así el "no lo ve" se debe únicamente al
-        // bloqueo por deuda, sin mezclarlo con el nuevo requisito de que
-        // la evaluación esté publicada.
-        $evaluacion = $this->app->make(EvaluacionService::class)->crear($horario, 'Evaluación mensual', now()->format('Y-m-d'), 'https://forms.test/examen');
-        $this->app->make(EvaluacionService::class)->publicar($evaluacion);
+        // bloqueo por deuda, sin mezclarlo con el requisito de que la
+        // mitad esté publicada.
+        $this->publicarExamenConEnlace($horario, 'https://forms.test/examen');
 
         $this->actingAs($usuario);
         Volt::test('evaluaciones.show', ['horario' => $horario])
@@ -168,8 +185,7 @@ class EvaluacionesBloqueoTest extends TestCase
     {
         [$usuario, , $horario] = $this->estudianteConUnaCuotaVencidaEnCicloActivo();
 
-        $evaluacion = $this->app->make(EvaluacionService::class)->crear($horario, 'Evaluación mensual', now()->format('Y-m-d'), 'https://forms.test/examen');
-        $this->app->make(EvaluacionService::class)->publicar($evaluacion);
+        $this->publicarExamenConEnlace($horario, 'https://forms.test/examen');
 
         $this->actingAs($usuario);
         Volt::test('evaluaciones.show', ['horario' => $horario])
@@ -201,9 +217,7 @@ class EvaluacionesBloqueoTest extends TestCase
         $planAnterior = PlanPago::factory()->create(['matricula_id' => $matriculaAnterior->id]);
         Cuota::factory()->vencida()->create(['plan_pago_id' => $planAnterior->id, 'numero' => 1]);
 
-        $evaluacion = $this->app->make(EvaluacionService::class)->crear($horario, 'Evaluación mensual', now()->format('Y-m-d'));
-        $this->app->make(EvaluacionService::class)->calificar($evaluacion, $estudiante, 18.0, null, null);
-        $this->app->make(EvaluacionService::class)->publicar($evaluacion);
+        $this->calificarYPublicarC1($horario, $estudiante, 18.0);
 
         $this->actingAs($usuario)
             ->get(route('evaluaciones.show', $horario))

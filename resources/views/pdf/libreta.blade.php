@@ -28,7 +28,7 @@
         table.calificaciones { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
         table.calificaciones thead td { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.03em; color: #5B6472; border-bottom: 1px solid #DBDFE6; padding: 6px 8px; }
         table.calificaciones tbody td { padding: 8px; border-bottom: 1px solid #EEF0F3; }
-        table.calificaciones td.nota { text-align: center; font-weight: bold; width: 140px; }
+        table.calificaciones td.nota { text-align: center; font-weight: bold; width: 70px; }
         .sin-datos { color: #8891A0; font-style: italic; }
 
         .situacion { margin: 22px 0; padding: 10px 14px; text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 4px; }
@@ -85,6 +85,10 @@
         <thead>
             <tr>
                 <td>Asignatura o actividades de aprendizaje</td>
+                <td class="nota">P1</td>
+                <td class="nota">P2</td>
+                <td class="nota">Promedio final</td>
+                <td class="nota">Comportamiento</td>
                 <td class="nota">Calificación final (Nota)</td>
             </tr>
         </thead>
@@ -92,10 +96,14 @@
             @forelse ($cursos as $curso)
                 <tr>
                     <td>{{ $curso['nombre'] }}</td>
+                    <td class="nota">{{ $curso['mitades']['primera']['promedio'] !== null ? number_format($curso['mitades']['primera']['promedio'], 2) : '—' }}</td>
+                    <td class="nota">{{ $curso['mitades']['segunda']['promedio'] !== null ? number_format($curso['mitades']['segunda']['promedio'], 2) : '—' }}</td>
+                    <td class="nota">{{ $curso['promedio'] !== null ? number_format($curso['promedio'], 2) : '—' }}</td>
+                    <td class="nota">{{ $curso['comportamiento'] !== null ? number_format($curso['comportamiento'], 2) : '—' }}</td>
                     <td class="nota">{{ $curso['letra'] ?? '—' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="2" class="sin-datos">No hay cursos registrados para este ciclo.</td></tr>
+                <tr><td colspan="6" class="sin-datos">No hay cursos registrados para este ciclo.</td></tr>
             @endforelse
         </tbody>
     </table>

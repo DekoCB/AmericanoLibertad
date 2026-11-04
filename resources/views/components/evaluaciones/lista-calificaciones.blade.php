@@ -49,9 +49,9 @@
                                 @foreach ($item['calificaciones'] as $calificacion)
                                     <div class="flex items-center justify-between gap-4 py-2 text-sm">
                                         <div>
-                                            <p class="text-ink">{{ $calificacion->evaluacion->nombre }}</p>
+                                            <p class="text-ink">{{ $calificacion->evaluacion->nombre() }}</p>
                                             <p class="text-xs text-ink-faint">
-                                                {{ $calificacion->evaluacion->fecha->format('d/m/Y') }}
+                                                {{ $calificacion->evaluacion->fecha?->format('d/m/Y') ?? '—' }}
                                                 @if ($calificacion->observaciones)
                                                     · {{ $calificacion->observaciones }}
                                                 @endif

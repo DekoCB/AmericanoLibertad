@@ -10,6 +10,7 @@ use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Periodo;
 use App\Modules\Academico\Services\CicloService;
 use App\Modules\Academico\Services\PeriodoService;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
@@ -146,9 +147,14 @@ class MigracionServiceTest extends TestCase
 
         if ($nota !== null) {
             $evaluaciones = $this->app->make(EvaluacionService::class);
-            $evaluacion = $evaluaciones->crear($horario, 'Evaluación', now()->subDay()->format('Y-m-d'));
-            $evaluaciones->calificar($evaluacion, $estudiante, $nota, null, null);
-            $evaluaciones->publicar($evaluacion);
+            $evaluaciones->sembrarExamenes($horario);
+            foreach (MitadCicloEnum::cases() as $mitad) {
+                $examen = $evaluaciones->examenDeLaMitad($horario, $mitad);
+                $evaluaciones->calificar($examen, $estudiante, $nota, null, null);
+                $continua = $evaluaciones->crearContinua($horario, $mitad, null, '2026-07-15');
+                $evaluaciones->calificar($continua, $estudiante, $nota, null, null);
+                $evaluaciones->publicarMitad($horario, $mitad);
+            }
         }
 
         return $horario;
@@ -244,10 +250,19 @@ class MigracionServiceTest extends TestCase
         // mano como haría el coordinador desde Ficha de Estudiante.
         $refuerzoEnB = $matriculaB->refuerzos()->first();
         $refuerzoEnB->update(['horario_id' => $horarioJalado->id]);
+        // "Segundo intento": el curso ya estaba calificado y publicado
+        // (ambas mitades, por cursoConNota()) -- esto solo actualiza las
+        // notas existentes, no crea columnas nuevas.
         $evaluaciones = $this->app->make(EvaluacionService::class);
-        $evaluacion = $evaluaciones->crear($horarioJalado, 'Segundo intento', now()->format('Y-m-d'));
-        $evaluaciones->calificar($evaluacion, $estudiante, 4.0, null, null);
-        $evaluaciones->publicar($evaluacion);
+        foreach (MitadCicloEnum::cases() as $mitad) {
+            $columnas = $evaluaciones->continuasDeLaMitad($horarioJalado, $mitad);
+            if ($examen = $evaluaciones->examenDeLaMitad($horarioJalado, $mitad)) {
+                $columnas->push($examen);
+            }
+            foreach ($columnas as $columna) {
+                $evaluaciones->calificar($columna, $estudiante, 4.0, null, null);
+            }
+        }
 
         $matriculaC = $this->service()->migrar($matriculaB, $cicloC->id, 3, null);
 

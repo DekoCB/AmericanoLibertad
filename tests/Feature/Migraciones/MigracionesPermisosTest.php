@@ -8,6 +8,7 @@ use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Periodo;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\DTOs\RegistrarEstudianteData;
@@ -143,9 +144,14 @@ class MigracionesPermisosTest extends TestCase
         $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1, 'nombre' => 'Farmacología']);
         $horario = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $cicloOrigen->id]);
         $evaluaciones = $this->app->make(EvaluacionService::class);
-        $evaluacion = $evaluaciones->crear($horario, 'Evaluación', now()->format('Y-m-d'));
-        $evaluaciones->calificar($evaluacion, $estudiante, 6.0, null, null);
-        $evaluaciones->publicar($evaluacion);
+        $evaluaciones->sembrarExamenes($horario);
+        foreach (MitadCicloEnum::cases() as $mitad) {
+            $examen = $evaluaciones->examenDeLaMitad($horario, $mitad);
+            $evaluaciones->calificar($examen, $estudiante, 6.0, null, null);
+            $continua = $evaluaciones->crearContinua($horario, $mitad, null, '2026-07-15');
+            $evaluaciones->calificar($continua, $estudiante, 6.0, null, null);
+            $evaluaciones->publicarMitad($horario, $mitad);
+        }
 
         $this->actingAs($usuario);
 

@@ -5,6 +5,7 @@ namespace Tests\Feature\Evaluaciones;
 use App\Models\User;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Horario;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\Models\Estudiante;
@@ -24,6 +25,25 @@ class MiLibretaTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
+    private function evaluacionService(): EvaluacionService
+    {
+        return $this->app->make(EvaluacionService::class);
+    }
+
+    private function completarMitad(Horario $horario, Estudiante $estudiante, float $nota): void
+    {
+        $service = $this->evaluacionService();
+        $service->sembrarExamenes($horario);
+
+        $examen = $service->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->calificar($examen, $estudiante, $nota, null, null);
+
+        $continua = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $service->calificar($continua, $estudiante, $nota, null, null);
+
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
     }
 
     public function test_un_estudiante_ve_su_libreta_del_ciclo_mas_reciente_por_defecto(): void
@@ -51,10 +71,7 @@ class MiLibretaTest extends TestCase
             'ciclo_id' => $cicloReciente->id,
         ]);
 
-        $evaluacionService = $this->app->make(EvaluacionService::class);
-        $evaluacion = $evaluacionService->crear($horarioReciente, 'Evaluación', '2026-07-15');
-        $evaluacionService->calificar($evaluacion, $estudiante, 17.0, null, null);
-        $evaluacionService->publicar($evaluacion);
+        $this->completarMitad($horarioReciente, $estudiante, 17.0);
 
         $this->actingAs($usuario)
             ->get(route('evaluaciones.mi-libreta'))
@@ -126,10 +143,7 @@ class MiLibretaTest extends TestCase
             'ciclo_id' => $cicloReciente->id,
         ]);
 
-        $evaluacionService = $this->app->make(EvaluacionService::class);
-        $evaluacion = $evaluacionService->crear($horarioAnterior, 'Evaluación', '2026-03-15');
-        $evaluacionService->calificar($evaluacion, $estudiante, 14.0, null, null);
-        $evaluacionService->publicar($evaluacion);
+        $this->completarMitad($horarioAnterior, $estudiante, 14.0);
 
         $this->actingAs($usuario);
 

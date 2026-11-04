@@ -6,15 +6,17 @@ namespace App\Modules\Evaluaciones\Services;
 
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Evaluaciones\Enums\EstadoEvaluacionEnum;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
 use App\Modules\Evaluaciones\Enums\NotaLetraEnum;
+use App\Modules\Evaluaciones\Enums\TipoEvaluacionEnum;
 use App\Modules\Evaluaciones\Models\Calificacion;
+use App\Modules\Evaluaciones\Models\Comportamiento;
 use App\Modules\Evaluaciones\Models\Evaluacion;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Notificaciones\Enums\TipoNotificacionEnum;
 use App\Modules\Notificaciones\Services\NotificacionService;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as SupportCollection;
 use InvalidArgumentException;
 use Throwable;
@@ -91,17 +93,75 @@ class EvaluacionService
         return Horario::query()->with(['curso', 'carrera', 'ciclo', 'docente', 'dias'])->get();
     }
 
-    public function crear(Horario $horario, string $nombre, string $fecha, ?string $enlaceExterno = null, ?string $disponibleHasta = null, ?int $semana = null): Evaluacion
+    /**
+     * Crea (si todavía no existen) el Examen parcial y el Examen final de un
+     * horario -- a diferencia de las Continuas, el Examen es fijo, uno por
+     * mitad, y no lo crea el docente a mano. Idempotente -- se puede llamar
+     * en cada visita a la pantalla de calificar sin duplicar nada, igual
+     * que CursoVirtualService::activarParaHorario().
+     */
+    public function sembrarExamenes(Horario $horario): void
     {
+        foreach (MitadCicloEnum::cases() as $mitad) {
+            Evaluacion::query()->firstOrCreate([
+                'horario_id' => $horario->id,
+                'mitad' => $mitad,
+                'tipo' => TipoEvaluacionEnum::EXAMEN,
+            ], [
+                'estado' => EstadoEvaluacionEnum::BORRADOR,
+            ]);
+        }
+    }
+
+    /**
+     * Crea una nueva evaluación Continua en una mitad del horario. Sin
+     * nombre, se autonumera como "C{siguiente}" según cuántas continuas ya
+     * tiene esa mitad -- así un docente que no quiere pensar en nombres
+     * simplemente obtiene C1, C2, C3… en el orden en que las crea.
+     */
+    public function crearContinua(Horario $horario, MitadCicloEnum $mitad, ?string $nombre, string $fecha, ?string $enlaceExterno = null, ?string $disponibleHasta = null): Evaluacion
+    {
+        $siguiente = $this->continuasDeLaMitad($horario, $mitad)->count() + 1;
+
         return Evaluacion::query()->create([
             'horario_id' => $horario->id,
-            'semana' => $semana,
-            'nombre' => $nombre,
+            'tipo' => TipoEvaluacionEnum::CONTINUA,
+            'mitad' => $mitad,
+            'nombre' => $nombre ?: "C{$siguiente}",
             'fecha' => $fecha,
             'enlace_externo' => $enlaceExterno,
             'disponible_hasta' => $disponibleHasta,
             'estado' => EstadoEvaluacionEnum::BORRADOR,
         ]);
+    }
+
+    /**
+     * @return Collection<int, Evaluacion>
+     */
+    public function continuasDeLaMitad(Horario $horario, MitadCicloEnum $mitad): Collection
+    {
+        return Evaluacion::query()
+            ->where('horario_id', $horario->id)
+            ->where('mitad', $mitad)
+            ->where('tipo', TipoEvaluacionEnum::CONTINUA)
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function examenDeLaMitad(Horario $horario, MitadCicloEnum $mitad): ?Evaluacion
+    {
+        return Evaluacion::query()
+            ->where('horario_id', $horario->id)
+            ->where('mitad', $mitad)
+            ->where('tipo', TipoEvaluacionEnum::EXAMEN)
+            ->first();
+    }
+
+    public function actualizarFecha(Evaluacion $evaluacion, ?string $fecha): Evaluacion
+    {
+        $evaluacion->update(['fecha' => $fecha]);
+
+        return $evaluacion;
     }
 
     public function actualizarEnlace(Evaluacion $evaluacion, ?string $enlaceExterno, ?string $disponibleHasta = null): Evaluacion
@@ -114,33 +174,19 @@ class EvaluacionService
         return $evaluacion;
     }
 
-    public function actualizarSemana(Evaluacion $evaluacion, ?int $semana): Evaluacion
-    {
-        $evaluacion->update(['semana' => $semana]);
-
-        return $evaluacion;
-    }
-
     /**
+     * Todas las evaluaciones (continuas + examen) de un horario, ordenadas
+     * por mitad y luego por tipo.
+     *
      * @return Collection<int, Evaluacion>
      */
     public function evaluacionesDelHorario(Horario $horario): Collection
     {
         return Evaluacion::query()
             ->where('horario_id', $horario->id)
-            ->orderByDesc('fecha')
-            ->get();
-    }
-
-    /**
-     * @return Collection<int, Evaluacion>
-     */
-    public function evaluacionesPublicadasDelHorario(Horario $horario): Collection
-    {
-        return Evaluacion::query()
-            ->where('horario_id', $horario->id)
-            ->where('estado', EstadoEvaluacionEnum::PUBLICADA)
-            ->orderByDesc('fecha')
+            ->orderBy('mitad')
+            ->orderBy('tipo')
+            ->orderBy('id')
             ->get();
     }
 
@@ -231,19 +277,36 @@ class EvaluacionService
         return ['exitosos' => $exitosos, 'errores' => $errores];
     }
 
-    public function publicar(Evaluacion $evaluacion): void
+    /**
+     * Publica todas las evaluaciones (continuas + examen) de una mitad del
+     * horario de una sola vez -- una sola notificación a los estudiantes,
+     * no una por columna.
+     */
+    public function publicarMitad(Horario $horario, MitadCicloEnum $mitad): void
     {
-        $evaluacion->update(['estado' => EstadoEvaluacionEnum::PUBLICADA]);
+        $evaluaciones = Evaluacion::query()
+            ->where('horario_id', $horario->id)
+            ->where('mitad', $mitad)
+            ->where('estado', EstadoEvaluacionEnum::BORRADOR)
+            ->get();
 
-        $usuarios = $this->estudiantesDelHorario($evaluacion->horario)
+        if ($evaluaciones->isEmpty()) {
+            return;
+        }
+
+        Evaluacion::query()
+            ->whereIn('id', $evaluaciones->pluck('id'))
+            ->update(['estado' => EstadoEvaluacionEnum::PUBLICADA]);
+
+        $usuarios = $this->estudiantesDelHorario($horario)
             ->map(fn (Estudiante $estudiante) => $estudiante->user)
             ->filter();
 
         $this->notificaciones->notificarVarios(
             $usuarios,
             TipoNotificacionEnum::EVALUACION_PUBLICADA,
-            "Se publicó la evaluación \"{$evaluacion->nombre}\"",
-            route('evaluaciones.show', $evaluacion->horario),
+            "Se publicaron las notas de la mitad {$mitad->label()} de {$horario->curso->nombre}",
+            route('evaluaciones.show', $horario),
         );
     }
 
@@ -263,7 +326,9 @@ class EvaluacionService
             ->where(function ($query) {
                 $query->whereNull('disponible_hasta')->orWhere('disponible_hasta', '>=', now());
             })
-            ->orderByDesc('fecha')
+            ->orderBy('mitad')
+            ->orderBy('tipo')
+            ->orderBy('id')
             ->get();
     }
 
@@ -284,69 +349,143 @@ class EvaluacionService
     }
 
     /**
-     * Cuántos exámenes mensuales entran en el promedio final de un curso
-     * (los últimos N por fecha, ver misCalificaciones()): todo Ciclo dura
-     * 6 meses de clases desde que se retiró el SIAGIE anual (que llegaba
-     * a 8), así que son siempre 6.
+     * La nota del estudiante en una evaluación puntual, o null si no la
+     * tiene (o si $soloPublicadas pide ignorar evaluaciones sin publicar --
+     * lo que usa la vista del estudiante; el docente, mientras califica,
+     * necesita ver también lo que todavía no publicó).
      */
-    private const EXAMENES_QUE_CUENTAN = 6;
-
-    /**
-     * Promedio de las calificaciones publicadas del estudiante en un
-     * horario, considerando solo los últimos EXAMENES_QUE_CUENTAN
-     * exámenes mensuales por fecha. Si hay menos registrados, promedia
-     * los que existan. La ponderación por tipo de evaluación queda fuera
-     * de alcance: hoy solo existe un tipo (mensual).
-     */
-    public function promedioDelEstudiante(Estudiante $estudiante, Horario $horario): ?float
+    private function notaDe(Estudiante $estudiante, Evaluacion $evaluacion, bool $soloPublicadas): ?float
     {
-        $notas = $this->misCalificaciones($estudiante, $horario)
-            ->sortByDesc(fn (Calificacion $calificacion) => $calificacion->evaluacion->fecha)
-            ->take(self::EXAMENES_QUE_CUENTAN)
-            ->pluck('nota_numerica');
-
-        if ($notas->isEmpty()) {
+        if ($soloPublicadas && ! $evaluacion->estaPublicada()) {
             return null;
         }
 
-        return round((float) $notas->avg(), 2);
+        $calificacion = Calificacion::query()
+            ->where('evaluacion_id', $evaluacion->id)
+            ->where('estudiante_id', $estudiante->id)
+            ->first();
+
+        return $calificacion !== null ? (float) $calificacion->nota_numerica : null;
+    }
+
+    /**
+     * P1 o P2: promedio de las Continuas calificadas × 0.6 + Examen × 0.4.
+     * El promedio de las Continuas se calcula siempre entre las que
+     * realmente tienen nota (sean 1, 4 o 10) -- no exige un número fijo.
+     * Null si el Examen no tiene nota, o si ninguna Continua la tiene
+     * todavía (no hay con qué promediar el 60%).
+     */
+    public function promedioMitad(Estudiante $estudiante, Horario $horario, MitadCicloEnum $mitad, bool $soloPublicadas = false): ?float
+    {
+        $examen = $this->examenDeLaMitad($horario, $mitad);
+        $notaExamen = $examen !== null ? $this->notaDe($estudiante, $examen, $soloPublicadas) : null;
+
+        if ($notaExamen === null) {
+            return null;
+        }
+
+        $notasContinuas = $this->continuasDeLaMitad($horario, $mitad)
+            ->map(fn (Evaluacion $continua) => $this->notaDe($estudiante, $continua, $soloPublicadas))
+            ->filter(fn (?float $nota) => $nota !== null);
+
+        if ($notasContinuas->isEmpty()) {
+            return null;
+        }
+
+        $promedioContinuas = $notasContinuas->avg();
+
+        return round(($promedioContinuas * 0.6) + ($notaExamen * 0.4), 2);
+    }
+
+    /**
+     * Promedio Final = promedio(P1, P2). Null si falta cualquiera de las
+     * dos mitades.
+     */
+    public function promedioFinalDelEstudiante(Estudiante $estudiante, Horario $horario, bool $soloPublicadas = false): ?float
+    {
+        $p1 = $this->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA, $soloPublicadas);
+        $p2 = $this->promedioMitad($estudiante, $horario, MitadCicloEnum::SEGUNDA, $soloPublicadas);
+
+        if ($p1 === null || $p2 === null) {
+            return null;
+        }
+
+        return round(($p1 + $p2) / 2, 2);
     }
 
     /**
      * La letra de la nota final del estudiante en este horario, o null si
-     * todavía no tiene ninguna calificación publicada -- misma regla que ya
-     * usa LibretaService::calcularSituacionFinal() (letra C = desaprobado;
-     * sin calificar nunca cuenta como desaprobado). Usado por
-     * MigracionService para decidir qué cursos se arrastran como refuerzo
-     * al migrar de ciclo.
+     * todavía no tiene Promedio Final publicado -- misma regla que ya usa
+     * LibretaService::calcularSituacionFinal() (letra C = desaprobado; sin
+     * calificar nunca cuenta como desaprobado). Usado por MigracionService
+     * para decidir qué cursos se arrastran como refuerzo al migrar de
+     * ciclo.
      */
     public function notaLetraDelEstudiante(Estudiante $estudiante, Horario $horario): ?NotaLetraEnum
     {
-        $promedio = $this->promedioDelEstudiante($estudiante, $horario);
+        $promedio = $this->promedioFinalDelEstudiante($estudiante, $horario, soloPublicadas: true);
 
         return $promedio !== null ? NotaLetraEnum::desde($promedio) : null;
     }
 
     /**
-     * El desglose mes a mes del promedio del estudiante en un horario, para
-     * la libreta de notas: cada elemento trae "mes" (label legible, ej.
-     * "Marzo 2026") y "promedio", ordenados cronológicamente. Se agrupa por
-     * la fecha de la evaluación (no de la calificación, que no tiene fecha
-     * propia), así que un mes sin evaluaciones calificadas simplemente no
-     * aparece en el desglose.
+     * El desglose completo del estudiante en un horario para la libreta y
+     * la pantalla de calificación: la lista de Continuas (con su nombre y
+     * nota) + la nota del Examen + el promedio, para cada mitad.
      *
-     * @return SupportCollection<int, array{mes: string, promedio: float}>
+     * @return array{primera: array{continuas: list<array{nombre: string, nota: ?float}>, examen: ?float, promedio: ?float}, segunda: array{continuas: list<array{nombre: string, nota: ?float}>, examen: ?float, promedio: ?float}}
      */
-    public function promedioMensualDelEstudiante(Estudiante $estudiante, Horario $horario): SupportCollection
+    public function resumenMitadesDelEstudiante(Estudiante $estudiante, Horario $horario, bool $soloPublicadas = true): array
     {
-        return $this->misCalificaciones($estudiante, $horario)
-            ->groupBy(fn (Calificacion $calificacion) => $calificacion->evaluacion->fecha->format('Y-m'))
-            ->sortKeys()
-            ->map(fn (Collection $calificaciones, string $clave) => [
-                'mes' => Carbon::createFromFormat('Y-m', $clave)->translatedFormat('F Y'),
-                'promedio' => round((float) $calificaciones->pluck('nota_numerica')->avg(), 2),
-            ])
-            ->values();
+        $armar = function (MitadCicloEnum $mitad) use ($estudiante, $horario, $soloPublicadas): array {
+            $continuas = $this->continuasDeLaMitad($horario, $mitad)
+                ->map(fn (Evaluacion $continua) => [
+                    'nombre' => $continua->nombre(),
+                    'nota' => $this->notaDe($estudiante, $continua, $soloPublicadas),
+                ])
+                ->values()
+                ->all();
+
+            $examen = $this->examenDeLaMitad($horario, $mitad);
+
+            return [
+                'continuas' => $continuas,
+                'examen' => $examen !== null ? $this->notaDe($estudiante, $examen, $soloPublicadas) : null,
+                'promedio' => $this->promedioMitad($estudiante, $horario, $mitad, $soloPublicadas),
+            ];
+        };
+
+        return [
+            'primera' => $armar(MitadCicloEnum::PRIMERA),
+            'segunda' => $armar(MitadCicloEnum::SEGUNDA),
+        ];
+    }
+
+    public function registrarComportamiento(Horario $horario, Estudiante $estudiante, float $nota, ?int $registradoPor): Comportamiento
+    {
+        return Comportamiento::query()->updateOrCreate(
+            ['horario_id' => $horario->id, 'estudiante_id' => $estudiante->id],
+            ['nota_numerica' => $nota, 'registrado_por' => $registradoPor],
+        );
+    }
+
+    /**
+     * @return Collection<int, Comportamiento>
+     */
+    public function comportamientosDelHorario(Horario $horario): Collection
+    {
+        return Comportamiento::query()
+            ->where('horario_id', $horario->id)
+            ->get()
+            ->keyBy('estudiante_id');
+    }
+
+    public function comportamientoDelEstudiante(Horario $horario, Estudiante $estudiante): ?Comportamiento
+    {
+        return Comportamiento::query()
+            ->where('horario_id', $horario->id)
+            ->where('estudiante_id', $estudiante->id)
+            ->first();
     }
 
     /**
@@ -355,17 +494,18 @@ class EvaluacionService
      * tener que entrar horario por horario a revisar cada uno.
      *
      * Cada elemento es un array con las claves "horario" (Horario),
-     * "calificaciones" (Collection<int, Calificacion>) y "promedio" (?float).
-     * Sin generics en el @return: el TValue de Collection no es covariante
-     * (ver https://phpstan.org/blog/whats-up-with-template-covariant), así
-     * que ninguna anotación de forma de array sobrevive a un ->map().
+     * "calificaciones" (Collection<int, Calificacion>) y "promedio" (?float,
+     * el Promedio Final). Sin generics en el @return: el TValue de
+     * Collection no es covariante (ver
+     * https://phpstan.org/blog/whats-up-with-template-covariant), así que
+     * ninguna anotación de forma de array sobrevive a un ->map().
      */
     public function resumenDelEstudiante(Estudiante $estudiante): SupportCollection
     {
         return collect($this->horariosDelEstudiante($estudiante))->map(fn (Horario $horario) => [
             'horario' => $horario,
             'calificaciones' => $this->misCalificaciones($estudiante, $horario),
-            'promedio' => $this->promedioDelEstudiante($estudiante, $horario),
+            'promedio' => $this->promedioFinalDelEstudiante($estudiante, $horario, soloPublicadas: true),
         ]);
     }
 

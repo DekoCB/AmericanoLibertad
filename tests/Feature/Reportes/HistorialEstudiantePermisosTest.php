@@ -8,8 +8,10 @@ use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Periodo;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
 use App\Modules\Evaluaciones\Models\Calificacion;
 use App\Modules\Evaluaciones\Models\Evaluacion;
+use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Matricula\Enums\ModalidadEstudioEnum;
 use App\Modules\Matricula\Models\Estudiante;
@@ -29,6 +31,26 @@ class HistorialEstudiantePermisosTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
+    /**
+     * Completa y publica ambas mitades con la misma nota -- el Promedio
+     * Final que muestra la libreta exige las dos (ver
+     * EvaluacionService::promedioFinalDelEstudiante()), así que con una
+     * sola mitad calificada el promedio quedaría nulo y no se vería nada.
+     */
+    private function calificarYPublicarMitad(Horario $horario, Estudiante $estudiante, float $nota): void
+    {
+        $service = $this->app->make(EvaluacionService::class);
+        $service->sembrarExamenes($horario);
+
+        foreach (MitadCicloEnum::cases() as $mitad) {
+            $examen = $service->examenDeLaMitad($horario, $mitad);
+            $service->calificar($examen, $estudiante, $nota, null, null);
+            $continua = $service->crearContinua($horario, $mitad, null, '2026-07-15');
+            $service->calificar($continua, $estudiante, $nota, null, null);
+            $service->publicarMitad($horario, $mitad);
+        }
     }
 
     public function test_coordinador_puede_ver_el_historial_de_estudiante(): void
@@ -232,13 +254,11 @@ class HistorialEstudiantePermisosTest extends TestCase
 
         $cursoUno = Curso::factory()->create(['carrera_id' => $matriculaUno->carrera_id, 'ciclo_curricular' => $matriculaUno->ciclo_curricular]);
         $horarioUno = Horario::factory()->create(['curso_id' => $cursoUno->id, 'ciclo_id' => $matriculaUno->ciclo_id]);
-        $evaluacionUno = Evaluacion::factory()->create(['horario_id' => $horarioUno->id, 'estado' => 'publicada']);
-        Calificacion::factory()->create(['evaluacion_id' => $evaluacionUno->id, 'estudiante_id' => $estudiante->id, 'nota_numerica' => 12]);
+        $this->calificarYPublicarMitad($horarioUno, $estudiante, 12.0);
 
         $cursoDos = Curso::factory()->create(['carrera_id' => $matriculaDos->carrera_id, 'ciclo_curricular' => $matriculaDos->ciclo_curricular]);
         $horarioDos = Horario::factory()->create(['curso_id' => $cursoDos->id, 'ciclo_id' => $matriculaDos->ciclo_id]);
-        $evaluacionDos = Evaluacion::factory()->create(['horario_id' => $horarioDos->id, 'estado' => 'publicada']);
-        Calificacion::factory()->create(['evaluacion_id' => $evaluacionDos->id, 'estudiante_id' => $estudiante->id, 'nota_numerica' => 18]);
+        $this->calificarYPublicarMitad($horarioDos, $estudiante, 18.0);
 
         $this->actingAs($coordinador);
 

@@ -5,6 +5,7 @@ namespace Tests\Feature\Evaluaciones;
 use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\Periodo;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Evaluaciones\Services\LibretaService;
 use App\Modules\Matricula\Models\Estudiante;
@@ -21,6 +22,32 @@ class LibretaServiceTest extends TestCase
     private function libretaService(): LibretaService
     {
         return $this->app->make(LibretaService::class);
+    }
+
+    private function evaluacionService(): EvaluacionService
+    {
+        return $this->app->make(EvaluacionService::class);
+    }
+
+    /**
+     * Siembra el examen, crea 2 continuas, y califica y publica todo con la
+     * misma nota -- así el promedio de esa mitad (y por tanto el Promedio
+     * Final, si se hace para ambas mitades) queda en ese mismo valor exacto.
+     */
+    private function completarMitad(Horario $horario, Estudiante $estudiante, MitadCicloEnum $mitad, float $nota): void
+    {
+        $service = $this->evaluacionService();
+        $service->sembrarExamenes($horario);
+
+        $examen = $service->examenDeLaMitad($horario, $mitad);
+        $service->calificar($examen, $estudiante, $nota, null, null);
+
+        foreach (range(1, 2) as $i) {
+            $continua = $service->crearContinua($horario, $mitad, null, '2026-07-15');
+            $service->calificar($continua, $estudiante, $nota, null, null);
+        }
+
+        $service->publicarMitad($horario, $mitad);
     }
 
     public function test_generar_libreta_falla_si_no_hay_matricula_aprobada_en_ese_ciclo(): void
@@ -47,10 +74,8 @@ class LibretaServiceTest extends TestCase
             'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
-        $evaluacionService = $this->app->make(EvaluacionService::class);
-        $evaluacion = $evaluacionService->crear($horario, 'Evaluación', '2026-07-15');
-        $evaluacionService->calificar($evaluacion, $estudiante, 16.0, null, null);
-        $evaluacionService->publicar($evaluacion);
+        $this->completarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 16.0);
+        $this->completarMitad($horario, $estudiante, MitadCicloEnum::SEGUNDA, 16.0);
 
         $libreta = $this->libretaService()->generar($estudiante, $ciclo);
 
@@ -91,10 +116,8 @@ class LibretaServiceTest extends TestCase
             'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
-        $evaluacionService = $this->app->make(EvaluacionService::class);
-        $evaluacion = $evaluacionService->crear($horario, 'Evaluación', '2026-07-15');
-        $evaluacionService->calificar($evaluacion, $estudiante, 18.0, null, null);
-        $evaluacionService->publicar($evaluacion);
+        $this->completarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 18.0);
+        $this->completarMitad($horario, $estudiante, MitadCicloEnum::SEGUNDA, 18.0);
 
         $resumen = $this->libretaService()->resumenPorCursos($estudiante, $ciclo);
 
@@ -114,7 +137,7 @@ class LibretaServiceTest extends TestCase
         $this->assertTrue($resumen->isEmpty());
     }
 
-    public function test_resumen_por_cursos_incluye_el_desglose_mes_a_mes(): void
+    public function test_resumen_por_cursos_incluye_el_desglose_por_mitades_y_comportamiento(): void
     {
         $ciclo = Ciclo::factory()->create();
         $estudiante = Estudiante::factory()->create();
@@ -126,21 +149,19 @@ class LibretaServiceTest extends TestCase
             'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
-        $evaluacionService = $this->app->make(EvaluacionService::class);
+        $this->completarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 14.0);
+        $this->evaluacionService()->registrarComportamiento($horario, $estudiante, 16.0, null);
 
-        $marzo = $evaluacionService->crear($horario, 'Evaluación de marzo', '2026-03-10');
-        $evaluacionService->calificar($marzo, $estudiante, 14.0, null, null);
-        $evaluacionService->publicar($marzo);
+        $mitades = $this->libretaService()->resumenPorCursos($estudiante, $ciclo)->first()['mitades'];
 
-        $abril = $evaluacionService->crear($horario, 'Evaluación de abril', '2026-04-10');
-        $evaluacionService->calificar($abril, $estudiante, 18.0, null, null);
-        $evaluacionService->publicar($abril);
+        $this->assertCount(2, $mitades['primera']['continuas']);
+        $this->assertSame(14.0, $mitades['primera']['continuas'][0]['nota']);
+        $this->assertSame(14.0, $mitades['primera']['promedio']);
+        $this->assertSame([], $mitades['segunda']['continuas']);
+        $this->assertNull($mitades['segunda']['promedio']);
 
-        $porMes = $this->libretaService()->resumenPorCursos($estudiante, $ciclo)->first()['porMes'];
-
-        $this->assertCount(2, $porMes);
-        $this->assertSame(14.0, $porMes[0]['promedio']);
-        $this->assertSame(18.0, $porMes[1]['promedio']);
+        $comportamiento = $this->libretaService()->resumenPorCursos($estudiante, $ciclo)->first()['comportamiento'];
+        $this->assertSame(16.0, $comportamiento);
     }
 
     public function test_calcular_situacion_final_es_aprobado_sin_ningun_curso_con_letra_c(): void
@@ -209,10 +230,8 @@ class LibretaServiceTest extends TestCase
             'ciclo_curricular' => $horario->ciclo_curricular,
         ]);
 
-        $evaluacionService = $this->app->make(EvaluacionService::class);
-        $evaluacion = $evaluacionService->crear($horario, 'Evaluación', '2026-07-15');
-        $evaluacionService->calificar($evaluacion, $estudiante, 18.0, null, null);
-        $evaluacionService->publicar($evaluacion);
+        $this->completarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 18.0);
+        $this->completarMitad($horario, $estudiante, MitadCicloEnum::SEGUNDA, 18.0);
 
         $datos = $this->libretaService()->datosParaPdf($estudiante, $ciclo);
 

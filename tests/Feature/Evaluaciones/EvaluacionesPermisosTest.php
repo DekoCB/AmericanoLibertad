@@ -127,12 +127,12 @@ class EvaluacionesPermisosTest extends TestCase
             ->assertDontSee('Todavía no tienes horarios asignados este ciclo.');
     }
 
-    public function test_coordinador_puede_publicar_una_evaluacion(): void
+    public function test_coordinador_puede_publicar_una_mitad(): void
     {
         $docente = User::factory()->create();
         $docente->assignRole(RolEnum::DOCENTE->value);
         $horario = $this->cursoDelDocente($docente);
-        $evaluacion = $this->app->make(EvaluacionService::class)->crear($horario, 'Evaluación', '2026-07-15');
+        $this->app->make(EvaluacionService::class)->sembrarExamenes($horario);
 
         $coordinador = User::factory()->create();
         $coordinador->assignRole(RolEnum::COORDINADOR->value);
@@ -140,26 +140,24 @@ class EvaluacionesPermisosTest extends TestCase
         $this->actingAs($coordinador);
 
         Volt::test('evaluaciones.show', ['horario' => $horario])
-            ->call('seleccionar', $evaluacion->id)
-            ->call('publicar')
+            ->call('publicarMitad')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('evaluaciones', ['id' => $evaluacion->id, 'estado' => 'publicada']);
+        $this->assertDatabaseHas('evaluaciones', ['horario_id' => $horario->id, 'mitad' => 'primera', 'estado' => 'publicada']);
     }
 
-    public function test_un_docente_no_puede_publicar_su_propia_evaluacion(): void
+    public function test_un_docente_no_puede_publicar_su_propia_mitad(): void
     {
         $docente = User::factory()->create();
         $docente->assignRole(RolEnum::DOCENTE->value);
         $horario = $this->cursoDelDocente($docente);
-        $evaluacion = $this->app->make(EvaluacionService::class)->crear($horario, 'Evaluación', '2026-07-15');
+        $this->app->make(EvaluacionService::class)->sembrarExamenes($horario);
 
         $this->actingAs($docente);
 
         rescue(fn () => Volt::test('evaluaciones.show', ['horario' => $horario])
-            ->call('seleccionar', $evaluacion->id)
-            ->call('publicar'), report: false);
+            ->call('publicarMitad'), report: false);
 
-        $this->assertDatabaseHas('evaluaciones', ['id' => $evaluacion->id, 'estado' => 'borrador']);
+        $this->assertDatabaseHas('evaluaciones', ['horario_id' => $horario->id, 'mitad' => 'primera', 'estado' => 'borrador']);
     }
 }

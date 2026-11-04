@@ -40,9 +40,14 @@ class HorarioAsistenciaPolicy
     }
 
     /**
-     * Solo cuenta como matriculado el estudiante con una matrícula
-     * aprobada en la misma carrera, ciclo curricular y ciclo del horario (ver
-     * Matricula::scopeDelHorario()).
+     * Cuenta como matriculado el estudiante con una matrícula aprobada en
+     * la misma carrera, ciclo curricular y ciclo del horario (ver
+     * Matricula::scopeDelHorario()), o que esté repitiendo este horario
+     * como curso en recuperación (MatriculaRefuerzo) -- sin esto, un
+     * estudiante con un curso jalado quedaría sin poder ver su propia
+     * asistencia en ese horario, aunque sí pueda ver sus evaluaciones y el
+     * aula virtual de ese mismo curso (ver EvaluacionService y
+     * CursoVirtualService, que sí contemplan el refuerzo).
      */
     private function estudianteMatriculado(User $user, Horario $horario): bool
     {
@@ -56,9 +61,13 @@ class HorarioAsistenciaPolicy
             return false;
         }
 
+        if (Matricula::query()->where('estudiante_id', $estudiante->id)->delHorario($horario)->exists()) {
+            return true;
+        }
+
         return Matricula::query()
             ->where('estudiante_id', $estudiante->id)
-            ->delHorario($horario)
+            ->whereHas('refuerzos', fn ($query) => $query->where('horario_id', $horario->id))
             ->exists();
     }
 }

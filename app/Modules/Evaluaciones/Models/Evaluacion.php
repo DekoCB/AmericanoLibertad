@@ -7,6 +7,8 @@ namespace App\Modules\Evaluaciones\Models;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Evaluaciones\Database\Factories\EvaluacionFactory;
 use App\Modules\Evaluaciones\Enums\EstadoEvaluacionEnum;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
+use App\Modules\Evaluaciones\Enums\TipoEvaluacionEnum;
 use App\Modules\Identidad\Support\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,9 +19,10 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $horario_id
- * @property int|null $semana
- * @property string $nombre
- * @property Carbon $fecha
+ * @property TipoEvaluacionEnum $tipo
+ * @property MitadCicloEnum $mitad
+ * @property string|null $nombre
+ * @property Carbon|null $fecha
  * @property string|null $enlace_externo
  * @property Carbon|null $disponible_hasta
  * @property EstadoEvaluacionEnum $estado
@@ -34,7 +37,8 @@ class Evaluacion extends Model
 
     protected $fillable = [
         'horario_id',
-        'semana',
+        'tipo',
+        'mitad',
         'nombre',
         'fecha',
         'enlace_externo',
@@ -45,6 +49,8 @@ class Evaluacion extends Model
     protected function casts(): array
     {
         return [
+            'tipo' => TipoEvaluacionEnum::class,
+            'mitad' => MitadCicloEnum::class,
             'fecha' => 'date',
             'disponible_hasta' => 'datetime',
             'estado' => EstadoEvaluacionEnum::class,
@@ -67,6 +73,23 @@ class Evaluacion extends Model
     public function calificaciones(): HasMany
     {
         return $this->hasMany(Calificacion::class);
+    }
+
+    /**
+     * El Examen no tiene nombre propio: siempre se llama "Examen parcial" o
+     * "Examen final" según la mitad (ver MitadCicloEnum::examenLabel()).
+     * Una Continua sí lo trae (ej. "C1", o lo que haya puesto el docente).
+     */
+    public function nombre(): string
+    {
+        return $this->tipo === TipoEvaluacionEnum::EXAMEN
+            ? $this->mitad->examenLabel()
+            : ($this->attributes['nombre'] ?? 'Continua');
+    }
+
+    public function esContinua(): bool
+    {
+        return $this->tipo === TipoEvaluacionEnum::CONTINUA;
     }
 
     public function estaPublicada(): bool

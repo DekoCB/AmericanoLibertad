@@ -230,7 +230,7 @@ new #[Layout('layouts.app')] class extends Component
                                     wire:model="evaluacionId"
                                     id="evaluacionId"
                                     class="mt-1 block w-full"
-                                    :options="collect($evaluacionesNoRealizadas)->mapWithKeys(fn ($e) => [$e->id => $e->nombre.' ('.$e->fecha->format('d/m/Y').')'])"
+                                    :options="collect($evaluacionesNoRealizadas)->mapWithKeys(fn ($e) => [$e->id => $e->nombre().($e->fecha ? ' ('.$e->fecha->format('d/m/Y').')' : '')])"
                                 />
                             @endif
                             <x-input-error :messages="$errors->get('evaluacionId')" class="mt-1" />
@@ -278,7 +278,7 @@ new #[Layout('layouts.app')] class extends Component
                 @endif
 
                 @if ($incidencia->evaluacion)
-                    <p class="mt-1 text-xs text-ink-faint">Evaluación: {{ $incidencia->evaluacion->nombre }}</p>
+                    <p class="mt-1 text-xs text-ink-faint">Evaluación: {{ $incidencia->evaluacion->nombre() }}</p>
                 @endif
 
                 <div class="mt-3 flex items-center justify-between text-xs text-ink-faint">

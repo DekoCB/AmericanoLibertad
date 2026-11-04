@@ -19,7 +19,10 @@
         <thead class="bg-surface-2">
             <tr>
                 <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Curso</th>
-                <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Promedio</th>
+                <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">P1</th>
+                <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">P2</th>
+                <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Promedio final</th>
+                <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Comportamiento</th>
                 <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Escala</th>
             </tr>
         </thead>
@@ -27,7 +30,10 @@
             @forelse ($cursos as $curso)
                 <tr>
                     <td class="px-4 py-3 text-ink">{{ $curso['nombre'] }}</td>
+                    <td class="px-4 py-3 text-ink">{{ $curso['mitades']['primera']['promedio'] !== null ? number_format($curso['mitades']['primera']['promedio'], 2) : '—' }}</td>
+                    <td class="px-4 py-3 text-ink">{{ $curso['mitades']['segunda']['promedio'] !== null ? number_format($curso['mitades']['segunda']['promedio'], 2) : '—' }}</td>
                     <td class="px-4 py-3 text-ink">{{ $curso['promedio'] !== null ? number_format($curso['promedio'], 2) : '—' }}</td>
+                    <td class="px-4 py-3 text-ink">{{ $curso['comportamiento'] !== null ? number_format($curso['comportamiento'], 2) : '—' }}</td>
                     <td class="px-4 py-3">
                         @if ($curso['letra'])
                             <span class="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">{{ $curso['letra'] }}</span>
@@ -36,24 +42,9 @@
                         @endif
                     </td>
                 </tr>
-                <tr class="bg-surface-2">
-                    <td colspan="3" class="px-4 py-3">
-                        @if (($curso['porMes'] ?? collect())->isNotEmpty())
-                            <div class="flex flex-wrap gap-2">
-                                @foreach ($curso['porMes'] as $mes)
-                                    <span class="rounded-full border border-border bg-surface px-2 py-1 text-xs text-ink-dim">
-                                        {{ ucfirst($mes['mes']) }}: <span class="font-medium text-ink">{{ number_format($mes['promedio'], 2) }}</span>
-                                    </span>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="text-xs text-ink-faint">Sin calificaciones registradas por mes.</p>
-                        @endif
-                    </td>
-                </tr>
             @empty
                 <tr>
-                    <td colspan="3" class="px-4 py-8 text-center text-sm text-ink-faint">No hay cursos registrados para este ciclo.</td>
+                    <td colspan="6" class="px-4 py-8 text-center text-sm text-ink-faint">No hay cursos registrados para este ciclo.</td>
                 </tr>
             @endforelse
         </tbody>

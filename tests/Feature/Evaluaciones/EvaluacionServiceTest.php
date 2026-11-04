@@ -8,7 +8,10 @@ use App\Modules\Academico\Models\Ciclo;
 use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Evaluaciones\Enums\EstadoEvaluacionEnum;
+use App\Modules\Evaluaciones\Enums\MitadCicloEnum;
 use App\Modules\Evaluaciones\Enums\NotaLetraEnum;
+use App\Modules\Evaluaciones\Enums\TipoEvaluacionEnum;
+use App\Modules\Evaluaciones\Models\Evaluacion;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
 use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
@@ -27,43 +30,24 @@ class EvaluacionServiceTest extends TestCase
         return $this->app->make(EvaluacionService::class);
     }
 
-    public function test_crear_una_evaluacion_queda_en_estado_borrador(): void
+    /**
+     * Siembra el examen y crea $continuas evaluaciones continuas en una
+     * mitad del horario, calificando TODO (continuas + examen) con la
+     * misma nota -- así su promedio queda exactamente en ese valor, sin
+     * importar cuántas continuas haya (ver EvaluacionService::promedioMitad()).
+     */
+    private function calificarMitad(Horario $horario, Estudiante $estudiante, MitadCicloEnum $mitad, float $nota, int $continuas = 4): void
     {
-        $horario = Horario::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
 
-        $evaluacion = $this->service()->crear($horario, 'Evaluación mensual — julio', '2026-07-15');
+        $examen = $service->examenDeLaMitad($horario, $mitad);
+        $service->calificar($examen, $estudiante, $nota, null, null);
 
-        $this->assertSame(EstadoEvaluacionEnum::BORRADOR, $evaluacion->estado);
-        $this->assertDatabaseHas('evaluaciones', ['nombre' => 'Evaluación mensual — julio', 'estado' => 'borrador']);
-    }
-
-    public function test_crear_una_evaluacion_persiste_la_semana_indicada(): void
-    {
-        $horario = Horario::factory()->create();
-
-        $evaluacion = $this->service()->crear($horario, 'Evaluación mensual — julio', '2026-07-15', null, null, 4);
-
-        $this->assertSame(4, $evaluacion->fresh()->semana);
-    }
-
-    public function test_actualizar_semana_cambia_la_semana_de_una_evaluacion(): void
-    {
-        $horario = Horario::factory()->create();
-        $evaluacion = $this->service()->crear($horario, 'Evaluación mensual — julio', '2026-07-15', null, null, 1);
-
-        $this->service()->actualizarSemana($evaluacion, 5);
-
-        $this->assertSame(5, $evaluacion->fresh()->semana);
-    }
-
-    public function test_actualizar_semana_a_null_la_deja_en_bienvenida(): void
-    {
-        $horario = Horario::factory()->create();
-        $evaluacion = $this->service()->crear($horario, 'Evaluación mensual — julio', '2026-07-15', null, null, 3);
-
-        $this->service()->actualizarSemana($evaluacion, null);
-
-        $this->assertNull($evaluacion->fresh()->semana);
+        for ($i = 0; $i < $continuas; $i++) {
+            $continua = $service->crearContinua($horario, $mitad, null, '2026-07-15');
+            $service->calificar($continua, $estudiante, $nota, null, null);
+        }
     }
 
     public function test_estudiantes_del_horario_solo_incluye_matriculados_aprobados(): void
@@ -208,118 +192,6 @@ class EvaluacionServiceTest extends TestCase
         $this->assertTrue($estudiantes->contains('id', $matricula->estudiante_id));
     }
 
-    public function test_calificar_dos_veces_al_mismo_estudiante_actualiza_en_vez_de_duplicar(): void
-    {
-        $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
-        $service = $this->service();
-        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15');
-
-        $service->calificar($evaluacion, $estudiante, 15.5, 'Primer intento', null);
-        $service->calificar($evaluacion, $estudiante, 18.0, 'Segundo intento', null);
-
-        $this->assertDatabaseCount('calificaciones', 1);
-        $this->assertDatabaseHas('calificaciones', ['nota_numerica' => 18.0, 'observaciones' => 'Segundo intento']);
-    }
-
-    public function test_un_estudiante_no_ve_calificaciones_de_una_evaluacion_en_borrador(): void
-    {
-        $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
-        $service = $this->service();
-        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15');
-        $service->calificar($evaluacion, $estudiante, 17.0, null, null);
-
-        $this->assertTrue($service->misCalificaciones($estudiante, $horario)->isEmpty());
-
-        $service->publicar($evaluacion);
-
-        $this->assertCount(1, $service->misCalificaciones($estudiante, $horario));
-    }
-
-    public function test_promedio_del_estudiante_solo_considera_evaluaciones_publicadas(): void
-    {
-        $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
-        $service = $this->service();
-
-        $evaluacionUno = $service->crear($horario, 'Evaluación 1', '2026-07-01');
-        $service->calificar($evaluacionUno, $estudiante, 14.0, null, null);
-        $service->publicar($evaluacionUno);
-
-        $evaluacionDos = $service->crear($horario, 'Evaluación 2', '2026-07-15');
-        $service->calificar($evaluacionDos, $estudiante, 20.0, null, null);
-        $service->publicar($evaluacionDos);
-
-        $evaluacionSinPublicar = $service->crear($horario, 'Evaluación 3', '2026-07-20');
-        $service->calificar($evaluacionSinPublicar, $estudiante, 0.0, null, null);
-
-        $this->assertSame(17.0, $service->promedioDelEstudiante($estudiante, $horario));
-    }
-
-    public function test_promedio_del_estudiante_solo_considera_los_ultimos_6_examenes_en_un_ciclo_de_seis_meses(): void
-    {
-        // Ciclo::factory() no fija modalidad, así que hereda el default de
-        // columna ('seis_meses') -- confirma que examenesQueCuentan() = 6.
-        $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
-        $service = $this->service();
-
-        // La primera evaluación (nota 0) queda fuera del promedio: hay 7
-        // publicadas y solo cuentan las últimas 6 por fecha.
-        $evaluacionMasAntigua = $service->crear($horario, 'Evaluación 1', '2026-01-10');
-        $service->calificar($evaluacionMasAntigua, $estudiante, 0.0, null, null);
-        $service->publicar($evaluacionMasAntigua);
-
-        foreach (range(2, 7) as $numero) {
-            $evaluacion = $service->crear($horario, "Evaluación {$numero}", "2026-0{$numero}-10");
-            $service->calificar($evaluacion, $estudiante, 20.0, null, null);
-            $service->publicar($evaluacion);
-        }
-
-        $this->assertSame(20.0, $service->promedioDelEstudiante($estudiante, $horario));
-    }
-
-    public function test_publicar_notifica_a_los_estudiantes_matriculados_con_usuario_vinculado(): void
-    {
-        $horario = Horario::factory()->create();
-        $usuario = User::factory()->create();
-        $estudiante = Estudiante::factory()->create(['user_id' => $usuario->id]);
-        Matricula::factory()->create([
-            'estudiante_id' => $estudiante->id,
-            'carrera_id' => $horario->carrera_id,
-            'ciclo_curricular' => $horario->ciclo_curricular,
-            'ciclo_id' => $horario->ciclo_id,
-        ]);
-        $service = $this->service();
-        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15');
-
-        $service->publicar($evaluacion);
-
-        $this->assertDatabaseHas('notificaciones', [
-            'user_id' => $usuario->id,
-            'tipo' => 'evaluacion_publicada',
-        ]);
-    }
-
-    public function test_publicar_no_notifica_a_estudiantes_sin_usuario_vinculado(): void
-    {
-        $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create(['user_id' => null]);
-        Matricula::factory()->create([
-            'estudiante_id' => $estudiante->id,
-            'carrera_id' => $horario->carrera_id,
-            'ciclo_curricular' => $horario->ciclo_curricular,
-            'ciclo_id' => $horario->ciclo_id,
-        ]);
-        $service = $this->service();
-        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15');
-
-        $service->publicar($evaluacion);
-
-        $this->assertSame(0, Notificacion::query()->count());
-    }
-
     public function test_horarios_del_estudiante_sin_asignacion_explicita_incluye_todos_los_horarios_de_la_carrera(): void
     {
         $carrera = Carrera::factory()->create();
@@ -372,36 +244,370 @@ class EvaluacionServiceTest extends TestCase
         $this->assertFalse($rosterSeccionA->contains('id', $estudianteB->id));
     }
 
-    public function test_promedio_es_null_sin_calificaciones_publicadas(): void
+    public function test_sembrar_examenes_crea_el_examen_de_cada_mitad(): void
     {
         $horario = Horario::factory()->create();
-        $estudiante = Estudiante::factory()->create();
 
-        $this->assertNull($this->service()->promedioDelEstudiante($estudiante, $horario));
+        $this->service()->sembrarExamenes($horario);
+
+        $this->assertDatabaseCount('evaluaciones', 2);
+        foreach (MitadCicloEnum::cases() as $mitad) {
+            $this->assertDatabaseHas('evaluaciones', [
+                'horario_id' => $horario->id,
+                'mitad' => $mitad->value,
+                'tipo' => TipoEvaluacionEnum::EXAMEN->value,
+            ]);
+        }
     }
 
-    public function test_nota_letra_del_estudiante_es_c_si_el_promedio_desaprueba(): void
+    public function test_sembrar_examenes_es_idempotente(): void
+    {
+        $horario = Horario::factory()->create();
+
+        $this->service()->sembrarExamenes($horario);
+        $this->service()->sembrarExamenes($horario);
+
+        $this->assertDatabaseCount('evaluaciones', 2);
+    }
+
+    public function test_sembrar_examenes_nace_en_estado_borrador(): void
+    {
+        $horario = Horario::factory()->create();
+
+        $this->service()->sembrarExamenes($horario);
+
+        $this->assertSame(0, Evaluacion::query()->where('estado', EstadoEvaluacionEnum::PUBLICADA)->count());
+    }
+
+    public function test_crear_continua_autonumera_sin_nombre(): void
+    {
+        $horario = Horario::factory()->create();
+        $service = $this->service();
+
+        $c1 = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $c2 = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-16');
+        $c3 = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-17');
+
+        $this->assertSame('C1', $c1->nombre());
+        $this->assertSame('C2', $c2->nombre());
+        $this->assertSame('C3', $c3->nombre());
+    }
+
+    public function test_crear_continua_respeta_un_nombre_personalizado(): void
+    {
+        $horario = Horario::factory()->create();
+
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, 'Trabajo en grupo', '2026-07-15');
+
+        $this->assertSame('Trabajo en grupo', $continua->nombre());
+    }
+
+    public function test_crear_continua_queda_en_estado_borrador(): void
+    {
+        $horario = Horario::factory()->create();
+
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+
+        $this->assertSame(EstadoEvaluacionEnum::BORRADOR, $continua->estado);
+        $this->assertSame(TipoEvaluacionEnum::CONTINUA, $continua->tipo);
+    }
+
+    public function test_continuas_de_la_mitad_no_incluye_las_de_otra_mitad(): void
+    {
+        $horario = Horario::factory()->create();
+        $service = $this->service();
+        $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $service->crearContinua($horario, MitadCicloEnum::SEGUNDA, null, '2026-09-15');
+
+        $this->assertCount(1, $service->continuasDeLaMitad($horario, MitadCicloEnum::PRIMERA));
+        $this->assertCount(1, $service->continuasDeLaMitad($horario, MitadCicloEnum::SEGUNDA));
+    }
+
+    public function test_examen_de_la_mitad_es_null_sin_sembrar(): void
+    {
+        $horario = Horario::factory()->create();
+
+        $this->assertNull($this->service()->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA));
+    }
+
+    public function test_actualizar_fecha_cambia_la_fecha_de_una_evaluacion(): void
+    {
+        $horario = Horario::factory()->create();
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-10');
+
+        $this->service()->actualizarFecha($continua, '2026-07-15');
+
+        $this->assertSame('2026-07-15', $continua->fresh()->fecha->format('Y-m-d'));
+    }
+
+    public function test_actualizar_fecha_a_null_la_deja_sin_fecha(): void
+    {
+        $horario = Horario::factory()->create();
+        $continua = $this->service()->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+
+        $this->service()->actualizarFecha($continua, null);
+
+        $this->assertNull($continua->fresh()->fecha);
+    }
+
+    public function test_calificar_dos_veces_al_mismo_estudiante_actualiza_en_vez_de_duplicar(): void
     {
         $horario = Horario::factory()->create();
         $estudiante = Estudiante::factory()->create();
         $service = $this->service();
+        $continua = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
 
-        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15');
-        $service->calificar($evaluacion, $estudiante, 10.0, null, null);
-        $service->publicar($evaluacion);
+        $service->calificar($continua, $estudiante, 15.5, 'Primer intento', null);
+        $service->calificar($continua, $estudiante, 18.0, 'Segundo intento', null);
+
+        $this->assertDatabaseCount('calificaciones', 1);
+        $this->assertDatabaseHas('calificaciones', ['nota_numerica' => 18.0, 'observaciones' => 'Segundo intento']);
+    }
+
+    public function test_un_estudiante_no_ve_calificaciones_de_una_mitad_sin_publicar(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 17.0, continuas: 2);
+
+        $this->assertTrue($service->misCalificaciones($estudiante, $horario)->isEmpty());
+
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+
+        // 2 continuas + 1 examen de la mitad calificada.
+        $this->assertCount(3, $service->misCalificaciones($estudiante, $horario));
+    }
+
+    public function test_publicar_mitad_publica_continuas_y_examen_de_una_sola_vez(): void
+    {
+        $horario = Horario::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-16');
+        $service->crearContinua($horario, MitadCicloEnum::SEGUNDA, null, '2026-09-15');
+
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+
+        // Mitad I: 2 continuas + 1 examen, todas publicadas.
+        $this->assertSame(3, Evaluacion::query()
+            ->where('horario_id', $horario->id)
+            ->where('mitad', MitadCicloEnum::PRIMERA)
+            ->where('estado', EstadoEvaluacionEnum::PUBLICADA)
+            ->count());
+        // Mitad II: nada publicado todavía.
+        $this->assertSame(0, Evaluacion::query()
+            ->where('horario_id', $horario->id)
+            ->where('mitad', MitadCicloEnum::SEGUNDA)
+            ->where('estado', EstadoEvaluacionEnum::PUBLICADA)
+            ->count());
+    }
+
+    public function test_publicar_mitad_envia_una_sola_notificacion_por_estudiante_no_una_por_columna(): void
+    {
+        $horario = Horario::factory()->create();
+        $usuario = User::factory()->create();
+        $estudiante = Estudiante::factory()->create(['user_id' => $usuario->id]);
+        Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
+            'ciclo_id' => $horario->ciclo_id,
+        ]);
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-16');
+        $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-17');
+
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+
+        $this->assertSame(1, Notificacion::query()->where('user_id', $usuario->id)->count());
+    }
+
+    public function test_publicar_mitad_no_notifica_a_estudiantes_sin_usuario_vinculado(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create(['user_id' => null]);
+        Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
+            'ciclo_id' => $horario->ciclo_id,
+        ]);
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+
+        $this->assertSame(0, Notificacion::query()->count());
+    }
+
+    public function test_publicar_mitad_dos_veces_no_duplica_la_notificacion(): void
+    {
+        $horario = Horario::factory()->create();
+        $usuario = User::factory()->create();
+        $estudiante = Estudiante::factory()->create(['user_id' => $usuario->id]);
+        Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'carrera_id' => $horario->carrera_id,
+            'ciclo_curricular' => $horario->ciclo_curricular,
+            'ciclo_id' => $horario->ciclo_id,
+        ]);
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+
+        $this->assertSame(1, Notificacion::query()->where('user_id', $usuario->id)->count());
+    }
+
+    public function test_promedio_mitad_pondera_60_las_continuas_y_40_el_examen(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $examen = $service->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->calificar($examen, $estudiante, 10.0, null, null);
+
+        foreach (range(1, 2) as $i) {
+            $continua = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+            $service->calificar($continua, $estudiante, 20.0, null, null);
+        }
+
+        // promedio(continuas)=20 * 0.6 + examen=10 * 0.4 = 16.0
+        $this->assertSame(16.0, $service->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA));
+    }
+
+    /**
+     * Prueba explícita de que el divisor de las continuas es cuántas
+     * tienen nota, no un número fijo -- antes eran siempre 4, ahora el
+     * docente puede crear las que quiera.
+     */
+    public function test_promedio_mitad_divide_entre_la_cantidad_real_de_continuas_calificadas(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $examen = $service->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->calificar($examen, $estudiante, 10.0, null, null);
+
+        foreach ([20.0, 20.0, 10.0] as $nota) {
+            $continua = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+            $service->calificar($continua, $estudiante, $nota, null, null);
+        }
+
+        // promedio(continuas)=(20+20+10)/3=16.6667 * 0.6 + examen=10 * 0.4 = 14.0
+        $this->assertSame(14.0, $service->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA));
+    }
+
+    public function test_promedio_mitad_solo_promedia_las_continuas_que_ya_tienen_nota(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $examen = $service->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->calificar($examen, $estudiante, 10.0, null, null);
+
+        $calificada1 = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $calificada2 = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-16');
+        $service->calificar($calificada1, $estudiante, 20.0, null, null);
+        $service->calificar($calificada2, $estudiante, 20.0, null, null);
+        // Esta tercera continua existe pero todavía no tiene nota -- no debe
+        // afectar el promedio ni contar como un 0.
+        $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-17');
+
+        // promedio(solo las 2 calificadas)=20 * 0.6 + examen=10 * 0.4 = 16.0
+        $this->assertSame(16.0, $service->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA));
+    }
+
+    public function test_promedio_mitad_es_null_si_el_examen_no_tiene_nota(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $continua = $service->crearContinua($horario, MitadCicloEnum::PRIMERA, null, '2026-07-15');
+        $service->calificar($continua, $estudiante, 20.0, null, null);
+
+        $this->assertNull($service->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA));
+    }
+
+    public function test_promedio_mitad_es_null_si_ninguna_continua_tiene_nota(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $service->sembrarExamenes($horario);
+        $examen = $service->examenDeLaMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->calificar($examen, $estudiante, 10.0, null, null);
+
+        $this->assertNull($service->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA));
+    }
+
+    public function test_promedio_mitad_solo_publicadas_ignora_evaluaciones_en_borrador(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 18.0, continuas: 2);
+
+        $this->assertSame(18.0, $service->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA, soloPublicadas: false));
+        $this->assertNull($service->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA, soloPublicadas: true));
+
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+
+        $this->assertSame(18.0, $service->promedioMitad($estudiante, $horario, MitadCicloEnum::PRIMERA, soloPublicadas: true));
+    }
+
+    public function test_promedio_final_es_el_promedio_de_p1_y_p2(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 14.0, continuas: 2);
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::SEGUNDA, 18.0, continuas: 2);
+
+        $this->assertSame(16.0, $service->promedioFinalDelEstudiante($estudiante, $horario));
+    }
+
+    public function test_promedio_final_es_null_si_falta_cualquiera_de_las_dos_mitades(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 14.0, continuas: 2);
+
+        $this->assertNull($service->promedioFinalDelEstudiante($estudiante, $horario));
+    }
+
+    public function test_nota_letra_del_estudiante_es_c_si_el_promedio_final_desaprueba(): void
+    {
+        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 10.0, continuas: 2);
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::SEGUNDA, 10.0, continuas: 2);
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->publicarMitad($horario, MitadCicloEnum::SEGUNDA);
 
         $this->assertSame(NotaLetraEnum::C, $service->notaLetraDelEstudiante($estudiante, $horario));
     }
 
-    public function test_nota_letra_del_estudiante_aprueba_con_promedio_de_11_a_mas(): void
+    public function test_nota_letra_del_estudiante_aprueba_con_promedio_final_de_11_a_mas(): void
     {
         $horario = Horario::factory()->create();
         $estudiante = Estudiante::factory()->create();
         $service = $this->service();
-
-        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15');
-        $service->calificar($evaluacion, $estudiante, 15.0, null, null);
-        $service->publicar($evaluacion);
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 15.0, continuas: 2);
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::SEGUNDA, 15.0, continuas: 2);
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->publicarMitad($horario, MitadCicloEnum::SEGUNDA);
 
         $this->assertSame(NotaLetraEnum::A, $service->notaLetraDelEstudiante($estudiante, $horario));
     }
@@ -414,130 +620,63 @@ class EvaluacionServiceTest extends TestCase
         $this->assertNull($this->service()->notaLetraDelEstudiante($estudiante, $horario));
     }
 
-    public function test_crear_una_evaluacion_con_enlace_lo_persiste(): void
+    public function test_resumen_mitades_del_estudiante_trae_las_continuas_y_el_promedio_de_cada_mitad(): void
     {
         $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
+        $service = $this->service();
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 16.0, continuas: 2);
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
 
-        $evaluacion = $this->service()->crear($horario, 'Evaluación', '2026-07-15', 'https://forms.test/examen');
+        $resumen = $service->resumenMitadesDelEstudiante($estudiante, $horario);
 
-        $this->assertSame('https://forms.test/examen', $evaluacion->enlace_externo);
-        $this->assertTrue($evaluacion->tieneEnlaceExterno());
+        $this->assertCount(2, $resumen['primera']['continuas']);
+        $this->assertSame('C1', $resumen['primera']['continuas'][0]['nombre']);
+        $this->assertSame(16.0, $resumen['primera']['continuas'][0]['nota']);
+        $this->assertSame('C2', $resumen['primera']['continuas'][1]['nombre']);
+        $this->assertSame(16.0, $resumen['primera']['continuas'][1]['nota']);
+        $this->assertSame(16.0, $resumen['primera']['examen']);
+        $this->assertSame(16.0, $resumen['primera']['promedio']);
+
+        $this->assertSame([], $resumen['segunda']['continuas']);
+        $this->assertNull($resumen['segunda']['examen']);
+        $this->assertNull($resumen['segunda']['promedio']);
     }
 
-    public function test_crear_una_evaluacion_sin_enlace_lo_deja_nulo(): void
+    public function test_registrar_comportamiento_crea_y_actualiza_en_vez_de_duplicar(): void
     {
         $horario = Horario::factory()->create();
-
-        $evaluacion = $this->service()->crear($horario, 'Evaluación', '2026-07-15');
-
-        $this->assertNull($evaluacion->enlace_externo);
-        $this->assertFalse($evaluacion->tieneEnlaceExterno());
-    }
-
-    public function test_actualizar_enlace_modifica_el_enlace_de_una_evaluacion_existente(): void
-    {
-        $horario = Horario::factory()->create();
-        $evaluacion = $this->service()->crear($horario, 'Evaluación', '2026-07-15');
-
-        $this->service()->actualizarEnlace($evaluacion, 'https://forms.test/nuevo');
-
-        $this->assertSame('https://forms.test/nuevo', $evaluacion->refresh()->enlace_externo);
-    }
-
-    public function test_evaluaciones_con_enlace_del_horario_solo_incluye_las_que_tienen_enlace(): void
-    {
-        $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
         $service = $this->service();
 
-        $conEnlace = $service->crear($horario, 'Con enlace', '2026-07-15', 'https://forms.test/examen');
-        $service->publicar($conEnlace);
-        $sinEnlace = $service->crear($horario, 'Sin enlace', '2026-07-16');
-        $service->publicar($sinEnlace);
+        $service->registrarComportamiento($horario, $estudiante, 15.0, null);
+        $service->registrarComportamiento($horario, $estudiante, 18.0, null);
 
-        $resultado = $service->evaluacionesConEnlaceDelHorario($horario);
-
-        $this->assertTrue($resultado->contains('id', $conEnlace->id));
-        $this->assertFalse($resultado->contains('id', $sinEnlace->id));
+        $this->assertDatabaseCount('comportamientos', 1);
+        $this->assertSame(18.0, (float) $service->comportamientoDelEstudiante($horario, $estudiante)->nota_numerica);
     }
 
-    public function test_evaluaciones_con_enlace_del_horario_excluye_evaluaciones_en_borrador(): void
+    public function test_comportamiento_del_estudiante_es_null_sin_registrar(): void
     {
         $horario = Horario::factory()->create();
-        $evaluacion = $this->service()->crear($horario, 'Con enlace', '2026-07-15', 'https://forms.test/examen');
+        $estudiante = Estudiante::factory()->create();
 
-        $this->assertSame(EstadoEvaluacionEnum::BORRADOR, $evaluacion->estado);
-        $this->assertFalse($this->service()->evaluacionesConEnlaceDelHorario($horario)->contains('id', $evaluacion->id));
+        $this->assertNull($this->service()->comportamientoDelEstudiante($horario, $estudiante));
     }
 
-    public function test_evaluaciones_con_enlace_del_horario_excluye_las_vencidas(): void
+    public function test_comportamientos_del_horario_indexa_por_estudiante(): void
     {
         $horario = Horario::factory()->create();
+        $estudiante = Estudiante::factory()->create();
         $service = $this->service();
+        $service->registrarComportamiento($horario, $estudiante, 17.0, null);
 
-        $vigente = $service->crear($horario, 'Vigente', '2026-07-15', 'https://forms.test/vigente', now()->addDay()->format('Y-m-d H:i:s'));
-        $service->publicar($vigente);
+        $comportamientos = $service->comportamientosDelHorario($horario);
 
-        $vencida = $service->crear($horario, 'Vencida', '2026-07-14', 'https://forms.test/vencida', now()->subDay()->format('Y-m-d H:i:s'));
-        $service->publicar($vencida);
-
-        $resultado = $service->evaluacionesConEnlaceDelHorario($horario);
-
-        $this->assertTrue($resultado->contains('id', $vigente->id));
-        $this->assertFalse($resultado->contains('id', $vencida->id));
+        $this->assertSame(17.0, (float) $comportamientos->get($estudiante->id)->nota_numerica);
     }
 
-    public function test_crear_una_evaluacion_con_disponible_hasta_lo_persiste(): void
-    {
-        $horario = Horario::factory()->create();
-        $fecha = now()->addWeek();
-
-        $evaluacion = $this->service()->crear($horario, 'Evaluación', '2026-07-15', 'https://forms.test/examen', $fecha->format('Y-m-d H:i:s'));
-
-        $this->assertSame($fecha->format('Y-m-d H:i'), $evaluacion->disponible_hasta->format('Y-m-d H:i'));
-    }
-
-    public function test_actualizar_enlace_tambien_actualiza_disponible_hasta(): void
-    {
-        $horario = Horario::factory()->create();
-        $evaluacion = $this->service()->crear($horario, 'Evaluación', '2026-07-15', 'https://forms.test/examen');
-        $fecha = now()->addWeek();
-
-        $this->service()->actualizarEnlace($evaluacion, 'https://forms.test/nuevo', $fecha->format('Y-m-d H:i:s'));
-
-        $evaluacion->refresh();
-        $this->assertSame('https://forms.test/nuevo', $evaluacion->enlace_externo);
-        $this->assertSame($fecha->format('Y-m-d H:i'), $evaluacion->disponible_hasta->format('Y-m-d H:i'));
-    }
-
-    public function test_enlace_disponible_es_falso_si_no_esta_publicada(): void
-    {
-        $horario = Horario::factory()->create();
-        $evaluacion = $this->service()->crear($horario, 'Evaluación', '2026-07-15', 'https://forms.test/examen');
-
-        $this->assertFalse($evaluacion->enlaceDisponible());
-    }
-
-    public function test_enlace_disponible_es_verdadero_publicada_sin_fecha_limite(): void
-    {
-        $horario = Horario::factory()->create();
-        $service = $this->service();
-        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15', 'https://forms.test/examen');
-        $service->publicar($evaluacion);
-
-        $this->assertTrue($evaluacion->refresh()->enlaceDisponible());
-    }
-
-    public function test_enlace_disponible_es_falso_publicada_pero_vencida(): void
-    {
-        $horario = Horario::factory()->create();
-        $service = $this->service();
-        $evaluacion = $service->crear($horario, 'Evaluación', '2026-07-15', 'https://forms.test/examen', now()->subDay()->format('Y-m-d H:i:s'));
-        $service->publicar($evaluacion);
-
-        $this->assertFalse($evaluacion->refresh()->enlaceDisponible());
-    }
-
-    public function test_resumen_del_estudiante_incluye_promedio_y_calificaciones_por_curso(): void
+    public function test_resumen_del_estudiante_incluye_promedio_final_y_calificaciones_por_curso(): void
     {
         $horario = Horario::factory()->create();
         $estudiante = Estudiante::factory()->create();
@@ -549,16 +688,18 @@ class EvaluacionServiceTest extends TestCase
         ]);
 
         $service = $this->service();
-        $evaluacion = $service->crear($horario, 'Evaluación mensual', '2026-07-15');
-        $service->publicar($evaluacion);
-        $service->calificar($evaluacion, $estudiante, 17.5, 'Buen desempeño', null);
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::PRIMERA, 17.5, continuas: 2);
+        $this->calificarMitad($horario, $estudiante, MitadCicloEnum::SEGUNDA, 17.5, continuas: 2);
+        $service->publicarMitad($horario, MitadCicloEnum::PRIMERA);
+        $service->publicarMitad($horario, MitadCicloEnum::SEGUNDA);
 
         $resumen = $service->resumenDelEstudiante($estudiante);
 
         $this->assertCount(1, $resumen);
         $this->assertSame($horario->id, $resumen->first()['horario']->id);
         $this->assertSame(17.5, $resumen->first()['promedio']);
-        $this->assertCount(1, $resumen->first()['calificaciones']);
+        // 2 continuas + 1 examen por mitad, x2 mitades.
+        $this->assertCount(6, $resumen->first()['calificaciones']);
     }
 
     public function test_resumen_del_estudiante_no_incluye_cursos_ajenos(): void
@@ -611,13 +752,15 @@ class EvaluacionServiceTest extends TestCase
         Matricula::factory()->create(['estudiante_id' => $estudiante->id, 'carrera_id' => $carrera->id, 'ciclo_curricular' => 1, 'ciclo_id' => $cicloActual->id]);
 
         $service = $this->service();
-        $evaluacionAnterior = $service->crear($horarioAnterior, 'Evaluación', '2026-03-15');
-        $service->publicar($evaluacionAnterior);
-        $service->calificar($evaluacionAnterior, $estudiante, 12.0, null, null);
+        $this->calificarMitad($horarioAnterior, $estudiante, MitadCicloEnum::PRIMERA, 12.0, continuas: 2);
+        $this->calificarMitad($horarioAnterior, $estudiante, MitadCicloEnum::SEGUNDA, 12.0, continuas: 2);
+        $service->publicarMitad($horarioAnterior, MitadCicloEnum::PRIMERA);
+        $service->publicarMitad($horarioAnterior, MitadCicloEnum::SEGUNDA);
 
-        $evaluacionActual = $service->crear($horarioActual, 'Evaluación', '2026-07-15');
-        $service->publicar($evaluacionActual);
-        $service->calificar($evaluacionActual, $estudiante, 18.0, null, null);
+        $this->calificarMitad($horarioActual, $estudiante, MitadCicloEnum::PRIMERA, 18.0, continuas: 2);
+        $this->calificarMitad($horarioActual, $estudiante, MitadCicloEnum::SEGUNDA, 18.0, continuas: 2);
+        $service->publicarMitad($horarioActual, MitadCicloEnum::PRIMERA);
+        $service->publicarMitad($horarioActual, MitadCicloEnum::SEGUNDA);
 
         $porCiclo = $service->resumenDelEstudiantePorCiclo($estudiante);
 

@@ -40,9 +40,10 @@ class LibretaService
      * para mostrar contenido, no para disparar una acción.
      *
      * Cada elemento es un array con las claves "nombre" (string), "promedio"
-     * (?float), "letra" (?string) y "porMes" (el desglose mes a mes, ver
-     * EvaluacionService::promedioMensualDelEstudiante()). Sin generics en el
-     * tipo de retorno: el TValue de Collection no es covariante (ver
+     * (?float, el Promedio Final), "letra" (?string), "mitades" (ver
+     * EvaluacionService::resumenMitadesDelEstudiante()) y "comportamiento"
+     * (?float). Sin generics en el tipo de retorno: el TValue de Collection
+     * no es covariante (ver
      * https://phpstan.org/blog/whats-up-with-template-covariant), así que
      * ninguna anotación de forma de array sobrevive a un ->map().
      */
@@ -64,13 +65,15 @@ class LibretaService
         $horarios = $matricula->todosLosHorarios()->load(['curso', 'ciclo']);
 
         return $horarios->map(function (Horario $horario) use ($estudiante) {
-            $promedio = $this->evaluaciones->promedioDelEstudiante($estudiante, $horario);
+            $promedio = $this->evaluaciones->promedioFinalDelEstudiante($estudiante, $horario, soloPublicadas: true);
+            $comportamiento = $this->evaluaciones->comportamientoDelEstudiante($horario, $estudiante);
 
             return [
                 'nombre' => $horario->curso->nombre,
                 'promedio' => $promedio,
                 'letra' => $promedio !== null ? NotaLetraEnum::desde($promedio)->value : null,
-                'porMes' => $this->evaluaciones->promedioMensualDelEstudiante($estudiante, $horario),
+                'mitades' => $this->evaluaciones->resumenMitadesDelEstudiante($estudiante, $horario, soloPublicadas: true),
+                'comportamiento' => $comportamiento !== null ? (float) $comportamiento->nota_numerica : null,
             ];
         });
     }

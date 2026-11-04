@@ -91,7 +91,7 @@ class ReporteService
                 $calificacion->estudiante?->nombreCompleto() ?? '—',
                 $calificacion->evaluacion->horario->carrera->name,
                 $calificacion->evaluacion->horario->curso->nombre,
-                $calificacion->evaluacion->nombre,
+                $calificacion->evaluacion->nombre(),
                 number_format((float) $calificacion->nota_numerica, 2),
                 (float) $calificacion->nota_numerica >= 11 ? 'Aprobado' : 'Desaprobado',
             ])->all(),
@@ -262,10 +262,10 @@ class ReporteService
         return [
             'columnas' => ['Evaluación', 'Carrera', 'Curso', 'Fecha', 'Estado'],
             'filas' => $evaluaciones->map(fn (Evaluacion $evaluacion) => [
-                $evaluacion->nombre,
+                $evaluacion->nombre(),
                 $evaluacion->horario->carrera->name,
                 $evaluacion->horario->curso->nombre,
-                $evaluacion->fecha->format('d/m/Y'),
+                $evaluacion->fecha?->format('d/m/Y') ?? '—',
                 $evaluacion->estado->label(),
             ])->all(),
         ];
