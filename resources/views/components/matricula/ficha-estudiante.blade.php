@@ -9,6 +9,7 @@
     'celularNuevo' => '',
     'emailNuevo' => '',
     'direccionNueva' => '',
+    'cicloActualNuevo' => '',
     'documentos',
     'examenes',
     'matriculas',
@@ -109,6 +110,18 @@
                         <x-text-input wire:model="direccionNueva" id="direccionNueva" class="mt-1 block w-full text-sm" />
                         <x-input-error :messages="$errors->get('direccionNueva')" class="mt-1" />
                     </div>
+                    <div>
+                        <x-input-label for="cicloActualNuevo" value="Ciclo actual" />
+                        <x-select-input
+                            wire:model="cicloActualNuevo"
+                            id="cicloActualNuevo"
+                            class="mt-1 block w-full text-sm"
+                            :options="['1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI']"
+                            placeholder="Sin asignar"
+                        />
+                        <p class="mt-1 text-xs text-ink-faint">En qué ciclo curricular está cursando ahora mismo. Corrígelo aquí si no coincide con el real.</p>
+                        <x-input-error :messages="$errors->get('cicloActualNuevo')" class="mt-1" />
+                    </div>
                 </div>
                 <div class="flex justify-end gap-2">
                     <button type="button" wire:click="cancelarEdicionDatosPersonales" class="text-xs text-ink-faint hover:text-ink">Cancelar</button>
@@ -131,6 +144,10 @@
                 <div><dt class="text-ink-faint">Correo</dt><dd class="text-ink">{{ $estudiante->email ?? '—' }}</dd></div>
                 <div class="sm:col-span-2"><dt class="text-ink-faint">Dirección</dt><dd class="text-ink">{{ $estudiante->direccion ?? '—' }}</dd></div>
                 <div><dt class="text-ink-faint">Carrera actual</dt><dd class="text-ink">{{ $estudiante->carreraActual?->name ?? '—' }}</dd></div>
+                <div>
+                    <dt class="text-ink-faint">Ciclo actual</dt>
+                    <dd class="text-ink">{{ $estudiante->ciclo_actual ? (['', 'I', 'II', 'III', 'IV', 'V', 'VI'][$estudiante->ciclo_actual] ?? $estudiante->ciclo_actual) : '—' }}</dd>
+                </div>
                 <div>
                     <dt class="text-ink-faint">Ciclos completados</dt>
                     <dd class="text-ink">{{ $estudiante->ciclos_completados }}{{ $estudiante->carreraActual ? ' / '.$estudiante->carreraActual->total_ciclos : '' }}</dd>

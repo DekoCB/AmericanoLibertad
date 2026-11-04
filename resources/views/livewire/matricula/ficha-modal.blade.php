@@ -56,6 +56,8 @@ new class extends Component
 
     public string $direccionNueva = '';
 
+    public string $cicloActualNuevo = '';
+
     public ?int $editandoFechaFinMatriculaId = null;
 
     public string $fechaFinEstudioNueva = '';
@@ -102,6 +104,7 @@ new class extends Component
         $this->celularNuevo = '';
         $this->emailNuevo = '';
         $this->direccionNueva = '';
+        $this->cicloActualNuevo = '';
         $this->editandoFechaFinMatriculaId = null;
         $this->fechaFinEstudioNueva = '';
         $this->editandoHorarioMatriculaId = null;
@@ -167,6 +170,7 @@ new class extends Component
         $this->celularNuevo = $estudiante->celular ?? '';
         $this->emailNuevo = $estudiante->email ?? '';
         $this->direccionNueva = $estudiante->direccion ?? '';
+        $this->cicloActualNuevo = $estudiante->ciclo_actual !== null ? (string) $estudiante->ciclo_actual : '';
         $this->editandoDatosPersonales = true;
     }
 
@@ -200,6 +204,7 @@ new class extends Component
             'celularNuevo' => 'nullable|string|max:20',
             'emailNuevo' => 'nullable|email|max:150',
             'direccionNueva' => 'nullable|string|max:255',
+            'cicloActualNuevo' => 'nullable|integer|min:1|max:6',
         ]);
 
         // corregirDni() recalcula el correo institucional ({dni}@...) si el
@@ -216,6 +221,7 @@ new class extends Component
             'celular' => $this->celularNuevo !== '' ? $this->celularNuevo : null,
             'email' => $dniCambio ? $correoInstitucionalNuevo : ($this->emailNuevo !== '' ? $this->emailNuevo : null),
             'direccion' => $this->direccionNueva !== '' ? $this->direccionNueva : null,
+            'ciclo_actual' => $this->cicloActualNuevo !== '' ? (int) $this->cicloActualNuevo : null,
         ]);
 
         $this->editandoDatosPersonales = false;

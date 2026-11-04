@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Academico\Models\Horario;
+use App\Modules\AulaVirtual\Models\CursoVirtual;
 use App\Modules\Evaluaciones\Imports\HojaConEncabezadosImport;
 use App\Modules\Evaluaciones\Models\Evaluacion;
 use App\Modules\Evaluaciones\Services\EvaluacionService;
@@ -241,6 +242,13 @@ new #[Layout('layouts.app')] class extends Component
         $puedeSupervisar = ! $puedeRegistrar && $user->hasPermissionTo('evaluaciones.ver');
         $puedePublicar = $user->hasPermissionTo('evaluaciones.publicar');
 
+        // Para el enlace "← Volver al curso": cada Horario tiene siempre un
+        // CursoVirtual (HorarioService::crear() lo activa automáticamente),
+        // así que esto nunca debería ser null en uso real -- pero un
+        // Horario de prueba creado directo con el factory (sin pasar por el
+        // servicio) sí podría no tenerlo.
+        $cursoVirtual = CursoVirtual::query()->where('horario_id', $this->horario->id)->first();
+
         if ($puedeRegistrar || $puedeSupervisar) {
             $evaluaciones = $service->evaluacionesDelHorario($this->horario);
             $estudiantes = $service->estudiantesDelHorario($this->horario);
@@ -258,6 +266,7 @@ new #[Layout('layouts.app')] class extends Component
                 'misCalificaciones' => collect(),
                 'promedio' => null,
                 'evaluacionesConEnlacePorSemana' => collect(),
+                'cursoVirtual' => $cursoVirtual,
             ];
         }
 
@@ -289,13 +298,18 @@ new #[Layout('layouts.app')] class extends Component
             'evaluacionesConEnlacePorSemana' => $evaluacionesConEnlacePorSemana,
             'miEstudianteId' => $user->estudiante?->id,
             'estaBloqueado' => $estaBloqueado,
+            'cursoVirtual' => $cursoVirtual,
         ];
     }
 }; ?>
 
 <div>
     <x-slot name="header">
-        <a href="{{ route('evaluaciones.index') }}" wire:navigate class="text-sm text-ink-faint hover:text-ink">← Evaluaciones</a>
+        @if ($cursoVirtual)
+            <a href="{{ route('aula-virtual.show', $cursoVirtual) }}" wire:navigate class="text-sm text-ink-faint hover:text-ink">← Volver al curso</a>
+        @else
+            <a href="{{ route('evaluaciones.index') }}" wire:navigate class="text-sm text-ink-faint hover:text-ink">← Evaluaciones</a>
+        @endif
         <div class="mt-1 flex items-center gap-2">
             <h1 class="font-display text-2xl text-ink">{{ $horario->curso->nombre }}</h1>
         </div>

@@ -769,6 +769,76 @@ class MatriculaPermisosTest extends TestCase
         $this->assertNull($estudiante->fresh()->estado_civil);
     }
 
+    public function test_guardar_datos_personales_actualiza_el_ciclo_actual(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create(['ciclo_actual' => 1]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->assertSet('cicloActualNuevo', '1')
+            ->set('cicloActualNuevo', '3')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $this->assertSame(3, $estudiante->fresh()->ciclo_actual);
+    }
+
+    public function test_guardar_datos_personales_desde_el_modal_actualiza_el_ciclo_actual(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create(['ciclo_actual' => 2]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.ficha-modal')
+            ->call('abrir', $estudiante->id)
+            ->call('editarDatosPersonales')
+            ->set('cicloActualNuevo', '5')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $this->assertSame(5, $estudiante->fresh()->ciclo_actual);
+    }
+
+    public function test_guardar_datos_personales_sin_ciclo_actual_lo_deja_nulo(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create(['ciclo_actual' => 4]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->set('cicloActualNuevo', '')
+            ->call('guardarDatosPersonales')
+            ->assertHasNoErrors();
+
+        $this->assertNull($estudiante->fresh()->ciclo_actual);
+    }
+
+    public function test_un_ciclo_actual_fuera_de_rango_muestra_error_de_validacion(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+        $estudiante = Estudiante::factory()->create(['ciclo_actual' => 1]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('editarDatosPersonales')
+            ->set('cicloActualNuevo', '9')
+            ->call('guardarDatosPersonales')
+            ->assertHasErrors(['cicloActualNuevo']);
+
+        $this->assertSame(1, $estudiante->fresh()->ciclo_actual);
+    }
+
     public function test_no_se_puede_editar_datos_personales_sin_el_permiso_de_editar_matricula(): void
     {
         $usuario = User::factory()->create();

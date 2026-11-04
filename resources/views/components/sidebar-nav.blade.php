@@ -91,39 +91,24 @@
         </a>
     @endcanany
 
-    @canany(['evaluaciones.ver', 'evaluaciones.registrar', 'evaluaciones.ver_propio'])
+    {{-- El enlace "Evaluaciones" ya no vive aquí: se accede desde la pestaña
+         "Evaluaciones" dentro de cada curso virtual (Aula Virtual). "Mi
+         libreta" sigue aquí porque es por ciclo completo, no por curso, y no
+         tiene un lugar natural dentro de un curso virtual individual. --}}
+    @if (auth()->user()->hasRole(\App\Shared\Enums\RolEnum::ESTUDIANTE->value) && auth()->user()->can('evaluaciones.ver_propio') && auth()->user()->estudiante)
         <a
-            href="{{ route('evaluaciones.index') }}"
+            href="{{ route('evaluaciones.mi-libreta') }}"
             wire:navigate
             @class([
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition',
-                'bg-accent text-white shadow-md shadow-accent/30' =>request()->routeIs('evaluaciones.index', 'evaluaciones.show', 'evaluaciones.libreta'),
-                'text-ink-dim hover:bg-surface-2 hover:text-ink' => ! request()->routeIs('evaluaciones.index', 'evaluaciones.show', 'evaluaciones.libreta'),
+                'bg-accent text-white shadow-md shadow-accent/30' =>request()->routeIs('evaluaciones.mi-libreta'),
+                'text-ink-dim hover:bg-surface-2 hover:text-ink' => ! request()->routeIs('evaluaciones.mi-libreta'),
             ])
         >
-            <x-heroicon-o-pencil-square class="h-5 w-5 shrink-0" />
-            <span class="sidebar-label">Evaluaciones</span>
+            <x-heroicon-o-book-open class="h-5 w-5 shrink-0" />
+            <span class="sidebar-label">Mi libreta</span>
         </a>
-
-        {{-- evaluaciones.ver_propio también lo tiene Gerencia vía '*', pero
-             "Mi libreta" es exclusivo de Estudiante -- un hasRole explícito
-             evita que Gerencia la vea aunque tenga una ficha de Estudiante
-             vinculada. --}}
-        @if (auth()->user()->hasRole(\App\Shared\Enums\RolEnum::ESTUDIANTE->value) && auth()->user()->can('evaluaciones.ver_propio') && auth()->user()->estudiante)
-            <a
-                href="{{ route('evaluaciones.mi-libreta') }}"
-                wire:navigate
-                @class([
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition',
-                    'bg-accent text-white shadow-md shadow-accent/30' =>request()->routeIs('evaluaciones.mi-libreta'),
-                    'text-ink-dim hover:bg-surface-2 hover:text-ink' => ! request()->routeIs('evaluaciones.mi-libreta'),
-                ])
-            >
-                <x-heroicon-o-book-open class="h-5 w-5 shrink-0" />
-                <span class="sidebar-label">Mi libreta</span>
-            </a>
-        @endif
-    @endcanany
+    @endif
 
     @canany(['incidencias.ver', 'incidencias.crear', 'incidencias.gestionar_propio', 'incidencias.ver_propio'])
         <a

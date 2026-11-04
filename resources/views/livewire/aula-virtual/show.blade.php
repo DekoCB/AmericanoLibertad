@@ -473,6 +473,27 @@ new #[Layout('layouts.app')] class extends Component
                 {{ $etiqueta }}
             </button>
         @endforeach
+
+        {{--
+            No es otro valor de $tab (lleva a evaluaciones.show, una página
+            Livewire aparte con su propio estado de calificación/publicación
+            -- fusionarla aquí duplicaría esa lógica) pero se ve y se ubica
+            igual que el resto de pestañas para que Evaluaciones se sienta
+            parte de Cursos Virtuales, no un módulo aparte.
+        --}}
+        @can('evaluaciones.ver-horario', $curso->horario)
+            <a
+                href="{{ route('evaluaciones.show', $curso->horario) }}"
+                wire:navigate
+                @class([
+                    'border-b-2 px-4 py-2 font-display text-sm font-medium transition',
+                    'border-accent text-accent' => request()->routeIs('evaluaciones.show'),
+                    'border-transparent text-ink-faint hover:text-ink' => ! request()->routeIs('evaluaciones.show'),
+                ])
+            >
+                Evaluaciones
+            </a>
+        @endcan
     </div>
 
     {{-- Materiales --}}

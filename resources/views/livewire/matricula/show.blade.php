@@ -50,6 +50,8 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $direccionNueva = '';
 
+    public string $cicloActualNuevo = '';
+
     public ?int $editandoFechaFinMatriculaId = null;
 
     public string $fechaFinEstudioNueva = '';
@@ -138,6 +140,7 @@ new #[Layout('layouts.app')] class extends Component
         $this->celularNuevo = $this->estudiante->celular ?? '';
         $this->emailNuevo = $this->estudiante->email ?? '';
         $this->direccionNueva = $this->estudiante->direccion ?? '';
+        $this->cicloActualNuevo = $this->estudiante->ciclo_actual !== null ? (string) $this->estudiante->ciclo_actual : '';
         $this->editandoDatosPersonales = true;
     }
 
@@ -165,6 +168,7 @@ new #[Layout('layouts.app')] class extends Component
             'celularNuevo' => 'nullable|string|max:20',
             'emailNuevo' => 'nullable|email|max:150',
             'direccionNueva' => 'nullable|string|max:255',
+            'cicloActualNuevo' => 'nullable|integer|min:1|max:6',
         ]);
 
         // corregirDni() recalcula el correo institucional ({dni}@...) si el
@@ -181,6 +185,7 @@ new #[Layout('layouts.app')] class extends Component
             'celular' => $this->celularNuevo !== '' ? $this->celularNuevo : null,
             'email' => $dniCambio ? $correoInstitucionalNuevo : ($this->emailNuevo !== '' ? $this->emailNuevo : null),
             'direccion' => $this->direccionNueva !== '' ? $this->direccionNueva : null,
+            'ciclo_actual' => $this->cicloActualNuevo !== '' ? (int) $this->cicloActualNuevo : null,
         ]);
 
         $this->editandoDatosPersonales = false;
