@@ -549,7 +549,7 @@ new #[Layout('layouts.app')] class extends Component
                         <tr>
                             <th class="px-4 py-3 text-left font-mono text-xs uppercase tracking-wide text-ink-faint">Estudiante</th>
                             @forelse ($continuas as $continua)
-                                <th class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wide text-ink-faint">
+                                <th wire:key="encabezado-{{ $continua->id }}" class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wide text-ink-faint">
                                     {{ $continua->nombre() }}
                                     @if ($continua->estaPublicada())
                                         <span class="block text-[10px] normal-case text-accent">Publicada</span>
@@ -574,7 +574,7 @@ new #[Layout('layouts.app')] class extends Component
                                 <th class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wide text-ink-faint">Sin continuas aún</th>
                             @endforelse
                             @if ($examen)
-                                <th class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wide text-ink-faint">
+                                <th wire:key="encabezado-{{ $examen->id }}" class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wide text-ink-faint">
                                     {{ $examen->nombre() }}
                                     @if ($examen->estaPublicada())
                                         <span class="block text-[10px] normal-case text-accent">Publicada</span>
@@ -587,10 +587,10 @@ new #[Layout('layouts.app')] class extends Component
                     </thead>
                     <tbody class="divide-y divide-border">
                         @forelse ($estudiantes as $estudiante)
-                            <tr>
+                            <tr wire:key="fila-{{ $estudiante->id }}">
                                 <td class="px-4 py-2 text-ink">{{ $estudiante->nombreCompleto() }}</td>
                                 @foreach ($columnas as $columna)
-                                    <td class="px-2 py-2">
+                                    <td wire:key="celda-{{ $estudiante->id }}-{{ $columna->id }}" class="px-2 py-2">
                                         <input
                                             type="number"
                                             step="0.01"
@@ -703,7 +703,7 @@ new #[Layout('layouts.app')] class extends Component
 
                     <div class="mt-3 divide-y divide-border rounded-lg border border-border">
                         @foreach ($estudiantes as $estudiante)
-                            <div class="flex items-center justify-between gap-4 px-4 py-2 text-sm">
+                            <div wire:key="comportamiento-{{ $estudiante->id }}" class="flex items-center justify-between gap-4 px-4 py-2 text-sm">
                                 <p class="text-ink">{{ $estudiante->nombreCompleto() }}</p>
                                 <input
                                     type="number"

@@ -14,6 +14,7 @@
     'examenes',
     'matriculas',
     'cursosConHorarios' => [],
+    'buscarCurso' => '',
     'refuerzosPorMatricula' => [],
     'editandoHorarioMatriculaId' => null,
     'editandoHorarioCursoId' => null,
@@ -329,7 +330,12 @@
                     @endcan
 
                     <div class="mt-2">
-                        <p class="text-ink-faint">Horarios:</p>
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-ink-faint">Horarios:</p>
+                            @can('matricula.editar')
+                                <x-text-input wire:model.live.debounce.300ms="buscarCurso" type="search" placeholder="Buscar curso…" class="w-48 text-xs" />
+                            @endcan
+                        </div>
                         <div class="mt-1 space-y-1">
                             @forelse ($cursosConHorarios[$matricula->id] ?? [] as $entrada)
                                 @php $editandoEsteCurso = $editandoHorarioMatriculaId === $matricula->id && $editandoHorarioCursoId === $entrada['curso']->id; @endphp
@@ -370,7 +376,9 @@
                                     @endif
                                 @endcan
                             @empty
-                                <p class="text-xs text-ink-faint">Esta carrera no tiene cursos con horario en este ciclo todavía.</p>
+                                <p class="text-xs text-ink-faint">
+                                    {{ $buscarCurso !== '' ? 'Ningún curso de este ciclo coincide con la búsqueda.' : 'Esta carrera no tiene cursos registrados en este ciclo todavía.' }}
+                                </p>
                             @endforelse
                         </div>
                     </div>

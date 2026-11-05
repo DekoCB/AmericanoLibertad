@@ -68,6 +68,8 @@ new class extends Component
 
     public string $horarioSeleccionado = '';
 
+    public string $buscarCurso = '';
+
     public ?int $editandoMontoPlanId = null;
 
     public string $montoTotalNuevo = '';
@@ -110,6 +112,7 @@ new class extends Component
         $this->editandoHorarioMatriculaId = null;
         $this->editandoHorarioCursoId = null;
         $this->horarioSeleccionado = '';
+        $this->buscarCurso = '';
         $this->editandoMontoPlanId = null;
         $this->montoTotalNuevo = '';
         $this->editandoMontoCargoId = null;
@@ -472,31 +475,50 @@ new class extends Component
      * uno con sus horarios disponibles (por si tiene varias secciones),
      * cuál está asignado explícitamente (si alguno) y si hace falta elegir
      * uno ("ambiguo" = el curso tiene más de una sección, ver
-     * Matricula::scopeDelHorario()).
+     * Matricula::scopeDelHorario()). Parte de TODOS los cursos del plan de
+     * estudios de esa carrera+ciclo curricular (no solo los que ya tienen
+     * un Horario creado) -- así un curso al que todavía no se le creó
+     * ningún horario en este periodo también aparece en la ficha, en vez
+     * de quedar invisible hasta que alguien note la ausencia en
+     * Académico. Reactivo a $matricula->estudiante->ciclo_actual: si no
+     * coincide con el ciclo_curricular original de la matrícula (p. ej.
+     * porque se corrigió después de matricular), se usa el ciclo_actual
+     * para esta lista -- es lo que el usuario puede corregir en la ficha,
+     * y es lo que debería reflejar qué cursos le tocan ahora mismo.
      *
      * @return Collection<int, array{curso: Curso, opciones: Collection<int, Horario>, asignado: ?Horario, ambiguo: bool}>
      */
     private function cursosConHorarios(Matricula $matricula): Collection
     {
+        $cicloCurricular = $matricula->estudiante->ciclo_actual ?? $matricula->ciclo_curricular;
+
         $horariosPorCurso = Horario::query()
             ->where('ciclo_id', $matricula->ciclo_id)
             ->where('carrera_id', $matricula->carrera_id)
-            ->where('ciclo_curricular', $matricula->ciclo_curricular)
+            ->where('ciclo_curricular', $cicloCurricular)
             ->with(['curso', 'docente', 'dias'])
             ->get()
             ->groupBy('curso_id');
 
         $asignadosPorCurso = $matricula->horarios->keyBy('curso_id');
 
-        return $horariosPorCurso
-            ->map(fn (Collection $opciones, int $cursoId) => [
-                'curso' => $opciones->first()->curso,
+        $cursos = Curso::query()
+            ->where('carrera_id', $matricula->carrera_id)
+            ->where('ciclo_curricular', $cicloCurricular)
+            ->when($this->buscarCurso !== '', fn ($query) => $query->where('nombre', 'like', '%'.$this->buscarCurso.'%'))
+            ->orderBy('nombre')
+            ->get();
+
+        return $cursos->map(function (Curso $curso) use ($horariosPorCurso, $asignadosPorCurso) {
+            $opciones = $horariosPorCurso->get($curso->id, collect());
+
+            return [
+                'curso' => $curso,
                 'opciones' => $opciones->sortBy(fn (Horario $horario) => $horario->diasResumen())->values(),
-                'asignado' => $asignadosPorCurso->get($cursoId),
+                'asignado' => $asignadosPorCurso->get($curso->id),
                 'ambiguo' => $opciones->count() > 1,
-            ])
-            ->sortBy(fn (array $entrada) => $entrada['curso']->nombre)
-            ->values();
+            ];
+        })->values();
     }
 
     /**
@@ -593,6 +615,7 @@ new class extends Component
                     :examenes="$examenes"
                     :matriculas="$matriculas"
                     :cursos-con-horarios="$cursosConHorarios"
+                    :buscar-curso="$buscarCurso"
                     :refuerzos-por-matricula="$refuerzosPorMatricula"
                     :editando-horario-matricula-id="$editandoHorarioMatriculaId"
                     :editando-horario-curso-id="$editandoHorarioCursoId"

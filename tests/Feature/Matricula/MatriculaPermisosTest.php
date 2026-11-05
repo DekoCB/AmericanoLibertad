@@ -1140,6 +1140,72 @@ class MatriculaPermisosTest extends TestCase
         $this->assertFalse($matricula->fresh()->horarios->pluck('id')->contains($seccionA->id));
     }
 
+    public function test_la_ficha_muestra_un_curso_del_plan_de_estudios_aunque_no_tenga_horario_creado(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $carrera = Carrera::factory()->create();
+        Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1, 'nombre' => 'Curso Sin Horario']);
+        $estudiante = Estudiante::factory()->create();
+        Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 1,
+        ]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->assertSee('Curso Sin Horario')
+            ->assertSee('Sin horario creado en este ciclo todavía.');
+    }
+
+    public function test_buscar_curso_filtra_la_lista_de_horarios_de_la_ficha(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $carrera = Carrera::factory()->create();
+        Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1, 'nombre' => 'Anatomía Humana']);
+        Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1, 'nombre' => 'Fisiología General']);
+        $estudiante = Estudiante::factory()->create();
+        Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 1,
+        ]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->set('buscarCurso', 'Anatomía')
+            ->assertSee('Anatomía Humana')
+            ->assertDontSee('Fisiología General');
+    }
+
+    public function test_la_lista_de_cursos_de_la_ficha_usa_el_ciclo_actual_corregido_del_estudiante(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $carrera = Carrera::factory()->create();
+        Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 1, 'nombre' => 'Curso De Ciclo Uno']);
+        Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 2, 'nombre' => 'Curso De Ciclo Dos']);
+        $estudiante = Estudiante::factory()->create(['ciclo_actual' => 2]);
+        Matricula::factory()->create([
+            'estudiante_id' => $estudiante->id,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 1,
+        ]);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->assertSee('Curso De Ciclo Dos')
+            ->assertDontSee('Curso De Ciclo Uno');
+    }
+
     public function test_la_ficha_muestra_el_curso_en_recuperacion_con_su_propio_ciclo_y_estado(): void
     {
         $usuario = User::factory()->create();
