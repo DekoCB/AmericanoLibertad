@@ -3,53 +3,58 @@
 <head>
     <meta charset="utf-8">
     <style>
-        body { font-family: 'Helvetica', sans-serif; font-size: 11px; color: #1B1F27; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #1B1F27; }
+        p { margin: 0; }
 
-        table.encabezado { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+        table { border-collapse: collapse; }
+
+        table.encabezado { width: 100%; margin-bottom: 14px; }
         table.encabezado td { vertical-align: middle; }
-        .logo-celda { width: 78px; padding-right: 14px; text-align: center; }
-        .logo-celda img { width: 70px; }
-        .centro-costo { margin: 2px 0 0; font-size: 9px; font-weight: bold; letter-spacing: 0.06em; color: #12225C; }
-        .colegio-nombre { font-size: 16px; font-weight: bold; color: #12225C; margin: 0; line-height: 1.15; }
-        .colegio-nombre span { display: block; font-size: 22px; }
-        .colegio-subtitulo { font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6472; margin: 2px 0 0; }
+        .logo-celda { width: 80px; padding-right: 12px; text-align: center; }
+        .logo-celda img { width: 74px; }
+        .institucion { padding-right: 12px; }
+        .colegio-nombre { font-size: 12px; font-weight: bold; color: #12225C; line-height: 1.25; margin-bottom: 3px; }
+        .colegio-dato { font-size: 9.5px; color: #5B6472; line-height: 1.35; }
+        .caja-comprobante { width: 170px; border: 1.5px solid #12225C; border-radius: 4px; text-align: center; padding: 8px 6px; }
+        .caja-comprobante p { font-size: 10px; font-weight: bold; color: #12225C; line-height: 1.5; }
+        .caja-comprobante .tipo { font-size: 12px; letter-spacing: 0.04em; }
+        .caja-comprobante .numero { font-size: 12px; }
 
-        hr.regla { border: none; border-top: 2px solid #12225C; margin: 6px 0 16px; }
+        table.datos { width: 100%; margin-bottom: 14px; border: 1px solid #C7CEDB; }
+        table.datos td { padding: 4px 6px; vertical-align: top; }
+        table.datos .etiqueta { width: 13%; font-weight: bold; color: #5B6472; white-space: nowrap; }
+        table.datos .valor { width: 37%; }
 
-        .titulo-recibo { text-align: center; margin-bottom: 18px; }
-        .titulo-recibo h1 { font-size: 16px; letter-spacing: 0.05em; text-transform: uppercase; color: #12225C; margin: 0; }
-        .titulo-recibo p { margin: 2px 0 0; font-size: 11px; color: #5B6472; }
+        table.conceptos { width: 100%; margin-bottom: 10px; }
+        table.conceptos th { background: #12225C; color: #FFFFFF; text-align: left; padding: 6px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.03em; }
+        table.conceptos td { padding: 8px; border-bottom: 1px solid #C7CEDB; }
+        table.conceptos .col-cant { width: 7%; text-align: center; }
+        table.conceptos .col-monto { width: 11%; text-align: right; white-space: nowrap; }
 
-        table.fechas { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        table.fechas td { width: 50%; vertical-align: top; padding: 0 8px 0 0; }
-        table.fechas .etiqueta { font-size: 9px; text-transform: uppercase; letter-spacing: 0.03em; color: #5B6472; margin: 0 0 4px; }
-        table.caja { width: 100%; border-collapse: collapse; }
-        table.caja th, table.caja td { border: 1px solid #C7CEDB; text-align: center; padding: 5px 4px; font-size: 10px; }
-        table.caja th { background: #F0F2F5; color: #5B6472; font-weight: normal; text-transform: uppercase; font-size: 8px; }
+        table.resumen { width: 100%; margin-bottom: 14px; }
+        table.resumen td { vertical-align: top; }
+        .son-celda { padding-right: 16px; }
+        .son { font-weight: bold; font-size: 10px; border: 1px dashed #C7CEDB; padding: 6px 8px; }
+        .totales-celda { width: 42%; }
+        table.totales { width: 100%; }
+        table.totales td { padding: 3px 6px; }
+        table.totales .importe { text-align: right; white-space: nowrap; }
+        table.totales tr.total td { font-weight: bold; font-size: 12px; color: #12225C; border-top: 1.5px solid #12225C; padding-top: 5px; }
 
-        table.alumno { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        table.alumno td { padding: 4px 0; font-size: 11px; }
-        table.alumno .etiqueta { color: #5B6472; width: 18%; text-transform: uppercase; letter-spacing: 0.03em; font-size: 9px; }
-        table.alumno .valor { font-weight: bold; border-bottom: 1px solid #C7CEDB; padding-bottom: 3px; }
+        .adicional { border: 1px solid #C7CEDB; border-radius: 3px; padding: 8px 10px; margin-bottom: 18px; }
+        .adicional-titulo { font-weight: bold; font-size: 10.5px; color: #12225C; margin-bottom: 4px; }
+        table.adicional-tabla { width: 100%; }
+        table.adicional-tabla td { padding: 2px 0; vertical-align: top; }
+        table.adicional-tabla .etiqueta { width: 20%; font-weight: bold; color: #5B6472; }
 
-        table.conceptos { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        table.conceptos th { background: #F0F2F5; text-align: left; padding: 6px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.03em; color: #5B6472; border: 1px solid #C7CEDB; }
-        table.conceptos td { padding: 8px; border: 1px solid #C7CEDB; }
-        table.conceptos .col-cant { width: 10%; text-align: center; }
-        table.conceptos .col-monto { width: 18%; text-align: right; white-space: nowrap; }
-
-        .observacion { margin-bottom: 16px; }
-        .observacion .etiqueta { font-size: 9px; text-transform: uppercase; letter-spacing: 0.03em; color: #5B6472; margin: 0 0 4px; }
-        .observacion .caja-texto { border: 1px solid #C7CEDB; border-radius: 3px; min-height: 28px; padding: 6px 8px; font-size: 10.5px; }
-
-        table.pie { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        table.pie td { width: 33.33%; padding: 4px 0; font-size: 10.5px; }
-        table.pie .etiqueta { color: #5B6472; font-size: 9px; text-transform: uppercase; letter-spacing: 0.03em; }
-
-        .codigo { margin-top: 30px; font-size: 9px; color: #8891A0; text-align: center; }
+        .gracias { text-align: center; font-size: 11px; margin-bottom: 24px; }
+        .codigo { font-size: 8.5px; color: #8891A0; text-align: center; }
     </style>
 </head>
 <body>
-    @include('pdf.partials.cuerpo-recibo', ['serie' => $serie])
+    @include('pdf.partials.cuerpo-recibo', [
+        'serie' => $serie,
+        'd' => $detalle ?? \App\Modules\Pagos\Support\DetalleRecibo::desde($pago, $recibo),
+    ])
 </body>
 </html>

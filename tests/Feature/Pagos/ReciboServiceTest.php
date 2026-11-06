@@ -55,7 +55,7 @@ class ReciboServiceTest extends TestCase
 
         $html = view('pdf.recibo', ['pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL])->render();
 
-        $this->assertStringContainsString('Recibo de pago', $html);
+        $this->assertStringContainsString('BOLETA', $html);
         $this->assertStringContainsString('001-000001', $html);
         $this->assertStringNotContainsString('002-000001', $html);
     }

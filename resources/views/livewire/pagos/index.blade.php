@@ -8,6 +8,7 @@ use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Enums\MetodoPagoEnum;
 use App\Modules\Pagos\Enums\NumeroCuotasEnum;
+use App\Modules\Pagos\Enums\OrigenPagoEnum;
 use App\Modules\Pagos\Enums\SerieReciboEnum;
 use App\Modules\Pagos\Enums\EstadoCuotaEnum;
 use App\Modules\Pagos\Enums\TipoConceptoEnum;
@@ -57,6 +58,13 @@ new #[Layout('layouts.app')] class extends Component
     ];
 
     public $comprobante = null;
+
+    // Origen y N.° de operación que se imprimen en la boleta -- las
+    // opciones de origen y si el número es obligatorio dependen de los
+    // métodos elegidos en $partes (ver OrigenPagoEnum::reglas()).
+    public string $origen = '';
+
+    public string $numeroOperacion = '';
 
     // Rechazo de pago
     /** @var array<int, string> */
@@ -172,6 +180,21 @@ new #[Layout('layouts.app')] class extends Component
         $this->cobrosCursoId = '';
     }
 
+    /**
+     * Al cambiar un método, el origen elegido puede dejar de ser válido
+     * (ej. "Pago QR" y luego cambia a Efectivo): se limpia, y si solo queda
+     * una opción posible se selecciona sola.
+     */
+    public function updatedPartes(): void
+    {
+        $disponibles = OrigenPagoEnum::disponiblesPara(OrigenPagoEnum::metodosDesde(array_column($this->partes, 'metodo')));
+        $valores = array_map(fn (OrigenPagoEnum $o) => $o->value, $disponibles);
+
+        if (! in_array($this->origen, $valores, true)) {
+            $this->origen = count($valores) === 1 ? $valores[0] : '';
+        }
+    }
+
     public function agregarParte(): void
     {
         $this->partes[] = ['monto' => '', 'metodo' => ''];
@@ -185,6 +208,7 @@ new #[Layout('layouts.app')] class extends Component
 
         unset($this->partes[$indice]);
         $this->partes = array_values($this->partes);
+        $this->updatedPartes();
     }
 
     public function registrarPago(PagoService $service, CobranzaService $cobranza): void
@@ -204,7 +228,11 @@ new #[Layout('layouts.app')] class extends Component
             unset($reglas['conceptoId']);
         }
 
-        $this->validate($reglas);
+        $metodosElegidos = OrigenPagoEnum::metodosDesde(array_column($this->partes, 'metodo'));
+        $this->updatedPartes();
+        $reglas +=OrigenPagoEnum::reglas($metodosElegidos, 'origen', 'numeroOperacion');
+
+        $this->validate($reglas, [], ['origen' => 'origen', 'numeroOperacion' => 'N.° de operación']);
 
         $estudiante = Estudiante::query()->findOrFail($this->estudianteSeleccionadoId);
 
@@ -240,9 +268,13 @@ new #[Layout('layouts.app')] class extends Component
             'metodo' => $parte['metodo'],
         ])->all();
 
-        $service->registrar($estudiante, $concepto, $partes, $cuota, $this->comprobante, Auth::id(), $this->detalle ?: null, $this->observacion ?: null, $cargoAdicional);
+        $service->registrar(
+            $estudiante, $concepto, $partes, $cuota, $this->comprobante, Auth::id(), $this->detalle ?: null, $this->observacion ?: null, $cargoAdicional,
+            origen: OrigenPagoEnum::from($this->origen),
+            numeroOperacion: $this->numeroOperacion,
+        );
 
-        $this->reset(['estudianteSeleccionadoId', 'estudianteSeleccionadoNombre', 'conceptoId', 'cargoAdicionalId', 'detalle', 'observacion', 'partes', 'comprobante']);
+        $this->reset(['estudianteSeleccionadoId', 'estudianteSeleccionadoNombre', 'conceptoId', 'cargoAdicionalId', 'detalle', 'observacion', 'partes', 'comprobante', 'origen', 'numeroOperacion']);
         session()->flash('status', 'Pago registrado. Queda pendiente de aprobación de Tesorería.');
     }
 
@@ -412,6 +444,8 @@ new #[Layout('layouts.app')] class extends Component
             'numerosCuotas' => NumeroCuotasEnum::cases(),
             'metodosPago' => MetodoPagoEnum::seleccionables(),
             'totalPartes' => collect($this->partes)->sum(fn (array $parte) => (float) ($parte['monto'] ?: 0)),
+            'origenesDisponibles' => OrigenPagoEnum::disponiblesPara(OrigenPagoEnum::metodosDesde(array_column($this->partes, 'metodo'))),
+            'requiereNumeroOperacion' => OrigenPagoEnum::requiereNumeroOperacion(OrigenPagoEnum::metodosDesde(array_column($this->partes, 'metodo'))),
             'cobrosResultadosBusqueda' => $cobrosResultadosBusqueda,
             'cobrosDeudaIndividual' => $cobrosDeudaIndividual,
             'cobrosReporteGrupal' => $cobrosReporteGrupal,
@@ -484,6 +518,14 @@ new #[Layout('layouts.app')] class extends Component
                             @if ($pago->partes->count() > 1)
                                 <p class="text-xs text-ink-faint">
                                     {{ $pago->partes->map(fn ($parte) => 'S/ '.number_format((float) $parte->monto, 2).' '.$parte->metodo->label())->implode(' + ') }}
+                                </p>
+                            @endif
+                            @if ($pago->origen || $pago->numero_operacion)
+                                <p class="text-xs text-ink-faint">
+                                    {{ $pago->origen?->label() ?? '—' }}
+                                    @if ($pago->numero_operacion)
+                                        · Op. <span class="font-medium text-ink">{{ $pago->numero_operacion }}</span>
+                                    @endif
                                 </p>
                             @endif
                             @if ($pago->getFirstMedia('comprobante'))
@@ -672,6 +714,36 @@ new #[Layout('layouts.app')] class extends Component
 
                 <x-input-error :messages="$errors->get('partes')" class="mt-1" />
                 <p class="mt-2 text-right text-sm font-display text-ink">Total: S/ {{ number_format($totalPartes, 2) }}</p>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <x-input-label value="Origen" />
+                    @if ($origenesDisponibles === [])
+                        <p class="mt-2 text-xs text-ink-faint">Elige primero el método de pago.</p>
+                    @else
+                        <x-select-input
+                            wire:model.live="origen"
+                            wire:key="origen-{{ implode('-', array_map(fn ($o) => $o->value, $origenesDisponibles)) }}"
+                            placeholder="Origen…"
+                            class="mt-1 block w-full"
+                            :options="collect($origenesDisponibles)->mapWithKeys(fn ($origenOpcion) => [$origenOpcion->value => $origenOpcion->label()])"
+                        />
+                    @endif
+                    <x-input-error :messages="$errors->get('origen')" class="mt-1" />
+                </div>
+                <div>
+                    <x-input-label for="numeroOperacion" :value="$requiereNumeroOperacion ? 'N.° de operación' : 'N.° de operación (no aplica en efectivo)'" />
+                    <x-text-input
+                        wire:model="numeroOperacion"
+                        id="numeroOperacion"
+                        maxlength="50"
+                        class="mt-1 block w-full"
+                        placeholder="Ej. 16221931"
+                        :disabled="! $requiereNumeroOperacion"
+                    />
+                    <x-input-error :messages="$errors->get('numeroOperacion')" class="mt-1" />
+                </div>
             </div>
 
             <div>

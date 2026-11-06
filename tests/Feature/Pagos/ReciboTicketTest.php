@@ -89,9 +89,9 @@ class ReciboTicketTest extends TestCase
 
         $alto = $this->service()->alturaTicketMm($pago, 80);
 
-        // Antes de este fix se usaba un alto fijo de 400mm sin importar el
-        // contenido -- esto confirma que un recibo simple ya no se acerca a eso.
-        $this->assertLessThan(150, $alto);
+        // Antes se usaba un alto fijo de 400mm sin importar el contenido --
+        // un recibo simple (aun con el encabezado y los totales completos) queda muy por debajo.
+        $this->assertLessThan(220, $alto);
     }
 
     public function test_la_ruta_de_ticket_devuelve_un_pdf_para_un_administrativo(): void
@@ -148,5 +148,41 @@ class ReciboTicketTest extends TestCase
         $this->actingAs($docente)
             ->get(route('pagos.recibos.ticket', [$recibo, 80]))
             ->assertForbidden();
+    }
+
+    public function test_el_ticket_muestra_el_detalle_completo_de_la_boleta(): void
+    {
+        config(['institucion.ruc' => '20123456789']);
+
+        $pago = Pago::factory()->create(['monto' => 230, 'observacion' => '2.ª pensión de agosto']);
+        $recibo = $this->service()->emitir($pago, SerieReciboEnum::ORIGINAL);
+
+        $html = view('pdf.recibo-ticket', [
+            'pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL, 'anchoMm' => 80, 'altoMm' => 200,
+        ])->render();
+
+        $this->assertStringContainsString('RUC: 20123456789', $html);
+        $this->assertStringContainsString('BOLETA', $html);
+        $this->assertStringContainsString('001-000001', $html);
+        $this->assertStringContainsString('H. EMISIÓN', $html);
+        $this->assertStringContainsString('VALOR DE VENTA', $html);
+        $this->assertStringContainsString('TOTAL A PAGAR', $html);
+        $this->assertStringContainsString('SON: DOSCIENTOS TREINTA CON 00/100 SOLES', $html);
+        $this->assertStringContainsString('2.ª pensión de agosto', $html);
+        $this->assertStringContainsString('Gracias por su pago', $html);
+    }
+
+    public function test_sin_ruc_configurado_no_imprime_la_linea_de_ruc(): void
+    {
+        config(['institucion.ruc' => '']);
+
+        $pago = Pago::factory()->create();
+        $recibo = $this->service()->emitir($pago, SerieReciboEnum::ORIGINAL);
+
+        $html = view('pdf.recibo-ticket', [
+            'pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL, 'anchoMm' => 58, 'altoMm' => 200,
+        ])->render();
+
+        $this->assertStringNotContainsString('RUC:', $html);
     }
 }

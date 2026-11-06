@@ -46,6 +46,8 @@ class PagosFlujoTest extends TestCase
             ->set('conceptoId', (string) $concepto->id)
             ->set('partes.0.monto', '150')
             ->set('partes.0.metodo', 'yape')
+            ->set('origen', 'pago_qr')
+            ->set('numeroOperacion', '16221931')
             ->call('registrarPago')
             ->assertHasNoErrors();
 
@@ -122,6 +124,8 @@ class PagosFlujoTest extends TestCase
             ->call('agregarParte')
             ->set('partes.1.monto', '40')
             ->set('partes.1.metodo', 'yape')
+            ->set('origen', 'pago_qr')
+            ->set('numeroOperacion', '16221931')
             ->call('registrarPago')
             ->assertHasNoErrors();
 
@@ -152,6 +156,8 @@ class PagosFlujoTest extends TestCase
             ->call('agregarParte')
             ->set('partes.1.monto', '40')
             ->set('partes.1.metodo', 'yape')
+            ->set('origen', 'pago_qr')
+            ->set('numeroOperacion', '16221931')
             ->call('quitarParte', 1)
             ->call('registrarPago')
             ->assertHasNoErrors();
@@ -280,6 +286,8 @@ class PagosFlujoTest extends TestCase
         Volt::test('pagos.mi-cuenta')
             ->set("montoPorCuota.{$cuota->id}", '100')
             ->set("metodoPorCuota.{$cuota->id}", 'yape')
+            ->set("origenPorCuota.{$cuota->id}", 'pago_qr')
+            ->set("operacionPorCuota.{$cuota->id}", '16221931')
             ->set("comprobantePorCuota.{$cuota->id}", UploadedFile::fake()->create('comprobante.pdf', 100, 'application/pdf'))
             ->call('subirComprobante', $cuota->id)
             ->assertHasNoErrors();
@@ -315,6 +323,8 @@ class PagosFlujoTest extends TestCase
         Volt::test('pagos.mi-cuenta')
             ->set("montoPorCuota.{$cuota->id}", '40')
             ->set("metodoPorCuota.{$cuota->id}", 'yape')
+            ->set("origenPorCuota.{$cuota->id}", 'pago_qr')
+            ->set("operacionPorCuota.{$cuota->id}", '16221931')
             ->set("comprobantePorCuota.{$cuota->id}", UploadedFile::fake()->create('comprobante.pdf', 100, 'application/pdf'))
             ->call('subirComprobante', $cuota->id)
             ->assertHasNoErrors();

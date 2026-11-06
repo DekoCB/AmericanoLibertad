@@ -1,53 +1,51 @@
 {{-- @var \App\Modules\Pagos\Enums\SerieReciboEnum $serie --}}
+{{-- @var \App\Modules\Pagos\Support\DetalleRecibo $d --}}
+@php
+    $soles = fn (float $monto): string => number_format($monto, 2);
+@endphp
+
 <table class="encabezado">
     <tr>
         <td class="logo-celda">
             <img src="{{ $serie->logoPath() }}" alt="Americano Libertad {{ $serie->centroCostoIniciales() }}">
-            <p class="centro-costo">{{ $serie->centroCostoIniciales() }}</p>
         </td>
-        <td>
-            <p class="colegio-nombre">INSTITUTO<span>AMERICANO LIBERTAD</span></p>
-            <p class="colegio-subtitulo">Instituto Superior Tecnológico Privado</p>
+        <td class="institucion">
+            <p class="colegio-nombre">{{ mb_strtoupper($d->razonSocial) }}</p>
+            @if ($d->ruc !== '')
+                <p class="colegio-dato">RUC: {{ $d->ruc }}</p>
+            @endif
+            <p class="colegio-dato">{{ $d->direccionInstitucion }}</p>
+            @if ($d->telefonoInstitucion !== '')
+                <p class="colegio-dato">Telf.: {{ $d->telefonoInstitucion }}</p>
+            @endif
+        </td>
+        <td class="caja-comprobante">
+            @if ($d->ruc !== '')
+                <p>RUC {{ $d->ruc }}</p>
+            @endif
+            <p class="tipo">BOLETA</p>
+            <p class="numero">{{ $serie->numeroCompleto($recibo->numero_recibo) }}</p>
         </td>
     </tr>
 </table>
-<hr class="regla">
 
-<div class="titulo-recibo">
-    <h1>{{ $serie->titulo() }}</h1>
-    <p>N.° {{ $serie->numeroCompleto($recibo->numero_recibo) }}</p>
-</div>
-
-<table class="fechas">
+<table class="datos">
     <tr>
-        <td>
-            <p class="etiqueta">Fecha de emisión</p>
-            <table class="caja">
-                <tr><th>Día</th><th>Mes</th><th>Año</th></tr>
-                <tr>
-                    <td>{{ $recibo->emitido_en->format('d') }}</td>
-                    <td>{{ $recibo->emitido_en->format('m') }}</td>
-                    <td>{{ $recibo->emitido_en->format('Y') }}</td>
-                </tr>
-            </table>
-        </td>
-        <td>
-            <p class="etiqueta">Fecha de pago</p>
-            <table class="caja">
-                <tr><th>Día</th><th>Mes</th><th>Año</th></tr>
-                <tr>
-                    <td>{{ $pago->fecha_pago->format('d') }}</td>
-                    <td>{{ $pago->fecha_pago->format('m') }}</td>
-                    <td>{{ $pago->fecha_pago->format('Y') }}</td>
-                </tr>
-            </table>
-        </td>
+        <td class="etiqueta">Cliente</td><td class="valor">: {{ $d->cliente }}</td>
+        <td class="etiqueta">F. emisión</td><td class="valor">: {{ $d->emitidoEn->format('d/m/Y') }}</td>
     </tr>
-</table>
-
-<table class="alumno">
-    <tr><td class="etiqueta">Alumno(a)</td><td class="valor">{{ $pago->estudiante?->nombreCompleto() ?? '—' }}</td></tr>
-    <tr><td class="etiqueta">DNI</td><td class="valor">{{ $pago->estudiante?->dni ?? '—' }}</td></tr>
+    <tr>
+        <td class="etiqueta">DNI/RUC</td><td class="valor">: {{ $d->dni }}</td>
+        <td class="etiqueta">H. emisión</td><td class="valor">: {{ $d->emitidoEn->format('H:i:s') }}</td>
+    </tr>
+    <tr>
+        <td class="etiqueta">Dirección</td><td class="valor">: {{ $d->direccionCliente }}</td>
+        <td class="etiqueta">F. de pago</td><td class="valor">: {{ $d->fechaPago->format('d/m/Y') }}</td>
+    </tr>
+    <tr>
+        <td class="etiqueta">Aula</td><td class="valor">: {{ $d->aula }}</td>
+        <td class="etiqueta">F. vencimiento</td><td class="valor">: {{ $d->fechaVencimiento?->format('d/m/Y') ?? '—' }}</td>
+    </tr>
 </table>
 
 <table class="conceptos">
@@ -56,63 +54,72 @@
             <th class="col-cant">Cant.</th>
             <th>Descripción</th>
             <th class="col-monto">P. Unit.</th>
-            <th class="col-monto">Total</th>
+            <th class="col-monto">Desc.</th>
+            <th class="col-monto">Otros</th>
+            <th class="col-monto">Importe</th>
         </tr>
     </thead>
     <tbody>
         <tr>
             <td class="col-cant">1</td>
-            <td>{{ $pago->concepto->nombre }}{{ $pago->detalle ? ' — '.$pago->detalle : '' }}</td>
-            <td class="col-monto">S/ {{ number_format((float) $pago->monto, 2) }}</td>
-            <td class="col-monto">S/ {{ number_format((float) $pago->monto, 2) }}</td>
+            <td>{{ $d->descripcion }}</td>
+            <td class="col-monto">{{ $soles($d->precioUnitario) }}</td>
+            <td class="col-monto">{{ $soles($d->descuento) }}</td>
+            <td class="col-monto">{{ $soles($d->otrosCargos) }}</td>
+            <td class="col-monto">{{ $soles($d->total) }}</td>
         </tr>
     </tbody>
 </table>
 
-@if ($pago->partes->count() > 1)
-    <table class="conceptos">
-        <thead>
-            <tr><th colspan="2">Partes del pago</th></tr>
-        </thead>
-        <tbody>
-            @foreach ($pago->partes as $parte)
-                <tr>
-                    <td>{{ $parte->metodo->label() }}</td>
-                    <td class="col-monto">S/ {{ number_format((float) $parte->monto, 2) }}</td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
-@endif
-
-<div class="observacion">
-    <p class="etiqueta">Observación</p>
-    <div class="caja-texto">{{ $pago->observacion ?: '—' }}</div>
-</div>
-
-<table class="pie">
+<table class="resumen">
     <tr>
-        <td>
-            <p class="etiqueta">Cuota</p>
-            @if ($pago->cuota)
-                N.° {{ $pago->cuota->numero }} de {{ $pago->cuota->planPago->numero_cuotas }}
-                ({{ $pago->cuota->saldoPendiente() <= 0.0 ? 'Completo' : 'Parcial' }})
-                @if ($pago->cuota->saldoPendiente() > 0.0)
-                    <br>Saldo: S/ {{ number_format($pago->cuota->saldoPendiente(), 2) }}
-                @endif
-            @else
-                —
-            @endif
+        <td class="son-celda">
+            <p class="son">SON: {{ $d->montoEnLetras }}</p>
         </td>
-        <td>
-            <p class="etiqueta">Ciclo</p>
-            {{ $pago->cuota?->planPago?->matricula?->ciclo?->nombre ?? '—' }}
-        </td>
-        <td>
-            <p class="etiqueta">Medio de pago</p>
-            {{ $pago->metodo->label() }}
+        <td class="totales-celda">
+            <table class="totales">
+                <tr><td>Valor de venta</td><td class="importe">S/ {{ $soles($d->precioUnitario) }}</td></tr>
+                <tr><td>Descuento</td><td class="importe">- S/ {{ $soles($d->descuento) }}</td></tr>
+                <tr><td>Subtotal</td><td class="importe">S/ {{ $soles($d->precioUnitario - $d->descuento) }}</td></tr>
+                <tr><td>Otros cargos</td><td class="importe">+ S/ {{ $soles($d->otrosCargos) }}</td></tr>
+                <tr class="total"><td>Total a pagar</td><td class="importe">S/ {{ $soles($d->total) }}</td></tr>
+            </table>
         </td>
     </tr>
 </table>
 
-<p class="codigo">{{ $serie->titulo() }} N.° {{ $serie->numeroCompleto($recibo->numero_recibo) }} · emitido el {{ $recibo->emitido_en->format('d/m/Y H:i') }}</p>
+<div class="adicional">
+    <p class="adicional-titulo">Información adicional</p>
+    <table class="adicional-tabla">
+        <tr>
+            <td class="etiqueta">Cuota</td>
+            <td>
+                @if ($d->cuota)
+                    N.° {{ $d->cuota }} ({{ $d->saldoCuota ? 'Parcial' : 'Completo' }})
+                    @if ($d->saldoCuota)
+                        — Saldo: S/ {{ $soles($d->saldoCuota) }}
+                    @endif
+                @else
+                    —
+                @endif
+            </td>
+        </tr>
+        <tr><td class="etiqueta">Origen</td><td>{{ $d->origen ?? '—' }}</td></tr>
+        <tr>
+            <td class="etiqueta">Método de pago</td>
+            <td>
+                {{ $d->metodoPago }}
+                @foreach ($d->partes as $parte)
+                    <br>· {{ $parte['metodo'] }}: S/ {{ $soles($parte['monto']) }}
+                @endforeach
+            </td>
+        </tr>
+        <tr><td class="etiqueta">Nro. operación</td><td>{{ $d->numeroOperacion ?? '—' }}</td></tr>
+        <tr><td class="etiqueta">Observación</td><td>{{ $d->observacion ?? '—' }}</td></tr>
+        <tr><td class="etiqueta">Atendido por</td><td>{{ $d->atendidoPor }}</td></tr>
+    </table>
+</div>
+
+<p class="gracias">Gracias por su pago</p>
+
+<p class="codigo">Boleta N.° {{ $serie->numeroCompleto($recibo->numero_recibo) }} · emitido el {{ $d->emitidoEn->format('d/m/Y H:i') }}</p>
