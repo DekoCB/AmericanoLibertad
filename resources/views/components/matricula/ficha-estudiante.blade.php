@@ -172,7 +172,16 @@
                 </div>
             @endcan
         @else
-            <p class="mt-1 text-xs text-ink-faint">Este estudiante no tiene una cuenta de acceso vinculada.</p>
+            <p class="mt-1 text-xs text-ink-faint">Este estudiante no tiene una cuenta de acceso vinculada. No puede iniciar sesión hasta que se le cree una.</p>
+            @can('matricula.editar')
+                <div class="mt-4">
+                    <button
+                        type="button"
+                        x-on:click="$store.confirm.preguntar('¿Crear la cuenta de acceso de {{ $estudiante->nombreCompleto() }}? Su contraseña inicial será su DNI ({{ $estudiante->dni }}).', () => $wire.crearCuentaAcceso())"
+                        class="text-xs font-medium text-accent hover:underline"
+                    >Crear cuenta de acceso</button>
+                </div>
+            @endcan
         @endif
     </div>
 

@@ -247,6 +247,23 @@ new class extends Component
         $service->restablecerContrasenaAlDni($estudiante->user);
     }
 
+    public function crearCuentaAcceso(MatriculaService $service): void
+    {
+        Gate::authorize('matricula.editar');
+
+        if ($this->estudianteId === null) {
+            return;
+        }
+
+        $estudiante = Estudiante::query()->with('user')->findOrFail($this->estudianteId);
+
+        if ($estudiante->user !== null) {
+            return;
+        }
+
+        $service->crearCuentaAcceso($estudiante);
+    }
+
     public function editarFechaFinEstudio(int $matriculaId): void
     {
         Gate::authorize('matricula.editar');

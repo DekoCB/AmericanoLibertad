@@ -1036,6 +1036,93 @@ class MatriculaPermisosTest extends TestCase
             ->assertHasNoErrors();
     }
 
+    public function test_crear_cuenta_de_acceso_para_un_estudiante_que_nunca_tuvo_una(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $estudiante = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667730']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('crearCuentaAcceso')
+            ->assertHasNoErrors();
+
+        $estudiante->refresh();
+        $this->assertNotNull($estudiante->user_id);
+        $this->assertSame('55667730@iesamericalibertad.com', $estudiante->user->email);
+        $this->assertTrue(Hash::check('55667730', $estudiante->user->password));
+        $this->assertTrue($estudiante->user->hasRole(RolEnum::ESTUDIANTE->value));
+    }
+
+    public function test_crear_cuenta_de_acceso_desde_el_modal_de_ficha(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $estudiante = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667731']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.ficha-modal')
+            ->call('abrir', $estudiante->id)
+            ->call('crearCuentaAcceso')
+            ->assertHasNoErrors();
+
+        $this->assertNotNull($estudiante->fresh()->user_id);
+    }
+
+    public function test_crear_cuenta_de_acceso_no_duplica_si_ya_existe_una_cuenta_con_el_mismo_dni(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaExistente = User::factory()->create(['dni' => '55667732']);
+        $estudiante = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667732']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('crearCuentaAcceso')
+            ->assertHasNoErrors();
+
+        $this->assertSame($cuentaExistente->id, $estudiante->fresh()->user_id);
+    }
+
+    public function test_crear_cuenta_de_acceso_no_hace_nada_si_el_estudiante_ya_tiene_una(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => '55667733']);
+        $estudiante = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => '55667733']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('crearCuentaAcceso')
+            ->assertHasNoErrors();
+
+        $this->assertSame($cuentaEstudiante->id, $estudiante->fresh()->user_id);
+    }
+
+    public function test_no_se_puede_crear_cuenta_de_acceso_sin_el_permiso_de_editar_matricula(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $estudiante = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667734']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('crearCuentaAcceso')
+            ->assertForbidden();
+
+        $this->assertNull($estudiante->fresh()->user_id);
+    }
+
     public function test_no_se_puede_restablecer_contrasena_sin_el_permiso_de_editar_matricula(): void
     {
         $usuario = User::factory()->create();

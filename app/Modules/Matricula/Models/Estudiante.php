@@ -22,6 +22,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property int $id
+ * @property int|null $user_id
  * @property string $dni
  * @property string $nombres
  * @property string $apellidos

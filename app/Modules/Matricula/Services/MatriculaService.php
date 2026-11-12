@@ -108,6 +108,47 @@ class MatriculaService
         });
     }
 
+    /**
+     * Crea (o vincula, si ya existe una con el mismo DNI) la cuenta de
+     * acceso de un estudiante que nunca llegó a tener una -- el caso típico
+     * es un estudiante registrado antes de que registrarEstudiante()
+     * empezara a crearla automáticamente al matricular. Misma convención
+     * que ahí: correo {dni}@iesamericalibertad.com y contraseña inicial
+     * igual al DNI.
+     */
+    public function crearCuentaAcceso(Estudiante $estudiante): Estudiante
+    {
+        if ($estudiante->user_id !== null) {
+            return $estudiante;
+        }
+
+        return DB::transaction(function () use ($estudiante) {
+            $dni = new Dni($estudiante->dni);
+            $email = $dni->correoInstitucional();
+
+            $usuario = User::query()->where('dni', $dni->valor())->first();
+
+            if ($usuario) {
+                if (! $usuario->hasRole(RolEnum::ESTUDIANTE->value)) {
+                    $usuario->assignRole(RolEnum::ESTUDIANTE->value);
+                }
+            } else {
+                $usuario = $this->usuarios->crear(new CrearUsuarioData(
+                    name: $estudiante->nombreCompleto(),
+                    email: $email,
+                    dni: $dni,
+                    phone: null,
+                    password: $dni->valor(),
+                    rol: RolEnum::ESTUDIANTE,
+                ));
+            }
+
+            $estudiante->update(['user_id' => $usuario->id, 'email' => $email]);
+
+            return $estudiante->fresh();
+        });
+    }
+
     public function registrarApoderado(Estudiante $estudiante, RegistrarApoderadoData $data): Apoderado
     {
         if (! $estudiante->es_menor_edad) {

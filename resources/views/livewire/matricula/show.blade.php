@@ -208,6 +208,19 @@ new #[Layout('layouts.app')] class extends Component
         session()->flash('status', 'Contraseña restablecida al DNI del estudiante.');
     }
 
+    public function crearCuentaAcceso(MatriculaService $service): void
+    {
+        Gate::authorize('matricula.editar');
+
+        if ($this->estudiante->user !== null) {
+            return;
+        }
+
+        $service->crearCuentaAcceso($this->estudiante);
+
+        session()->flash('status', 'Cuenta de acceso creada. La contraseña inicial es el DNI del estudiante.');
+    }
+
     public function editarFechaFinEstudio(int $matriculaId): void
     {
         Gate::authorize('matricula.editar');
