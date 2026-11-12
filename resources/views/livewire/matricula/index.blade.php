@@ -17,7 +17,12 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $estadoFiltro = '';
 
+    public bool $soloSinCuenta = false;
+
     public bool $mostrarWizard = false;
+
+    /** @var array<int, int> */
+    public array $seleccionados = [];
 
     public function mount(): void
     {
@@ -48,9 +53,42 @@ new #[Layout('layouts.app')] class extends Component
         $this->resetPage();
     }
 
+    public function updatingSoloSinCuenta(): void
+    {
+        $this->resetPage();
+        $this->seleccionados = [];
+    }
+
+    public function seleccionarVisiblesSinCuenta(MatriculaService $service): void
+    {
+        $visibles = $service->listarEstudiantes($this->termino ?: null, $this->estadoFiltro ?: null, soloSinCuenta: true)
+            ->pluck('id')
+            ->all();
+
+        $this->seleccionados = array_values(array_unique([...$this->seleccionados, ...$visibles]));
+    }
+
+    public function deseleccionarTodos(): void
+    {
+        $this->seleccionados = [];
+    }
+
+    public function otorgarAccesoEnMasa(MatriculaService $service): void
+    {
+        Gate::authorize('matricula.editar');
+
+        $creadas = $service->crearCuentasDeAccesoEnMasa($this->seleccionados);
+
+        $this->seleccionados = [];
+
+        session()->flash('status', $creadas > 0
+            ? "Se crearon {$creadas} cuentas de acceso."
+            : 'Los estudiantes seleccionados ya tenían cuenta de acceso.');
+    }
+
     public function with(MatriculaService $service): array
     {
-        $estudiantes = $service->listarEstudiantes($this->termino ?: null, $this->estadoFiltro ?: null);
+        $estudiantes = $service->listarEstudiantes($this->termino ?: null, $this->estadoFiltro ?: null, soloSinCuenta: $this->soloSinCuenta);
 
         return [
             'estudiantes' => $estudiantes,
@@ -118,9 +156,48 @@ new #[Layout('layouts.app')] class extends Component
         />
     </div>
 
+    @can('matricula.editar')
+        <label class="mb-4 flex items-center gap-2 text-sm text-ink-dim">
+            <input type="checkbox" wire:model.live="soloSinCuenta" class="rounded border-border text-accent focus:ring-accent">
+            Mostrar solo estudiantes sin cuenta de acceso
+        </label>
+
+        @if ($soloSinCuenta)
+            <div class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-2 p-3">
+                <button type="button" wire:click="seleccionarVisiblesSinCuenta" class="text-xs font-medium text-accent hover:underline">
+                    Seleccionar los {{ $estudiantes->count() }} de esta página
+                </button>
+
+                @if (count($seleccionados) > 0)
+                    <button type="button" wire:click="deseleccionarTodos" class="text-xs font-medium text-ink-faint hover:underline">
+                        Quitar selección ({{ count($seleccionados) }})
+                    </button>
+
+                    <button
+                        type="button"
+                        x-data
+                        x-on:click="$store.confirm.preguntar('¿Crear la cuenta de acceso de {{ count($seleccionados) }} estudiante(s)? La contraseña inicial de cada uno será su DNI.', () => $wire.otorgarAccesoEnMasa())"
+                        class="ml-auto inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
+                    >Otorgar acceso a {{ count($seleccionados) }} seleccionado(s)</button>
+                @endif
+            </div>
+        @endif
+    @endcan
+
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         @forelse ($estudiantes as $estudiante)
             <div wire:key="estudiante-{{ $estudiante->id }}" class="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition hover:shadow-md">
+                @can('matricula.editar')
+                    @if ($soloSinCuenta)
+                        <input
+                            type="checkbox"
+                            wire:model.live="seleccionados"
+                            value="{{ $estudiante->id }}"
+                            class="absolute right-3 top-3 h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                        >
+                    @endif
+                @endcan
+
                 <span @class([
                     'absolute left-3 top-3 rounded-full px-2 py-0.5 text-xs font-medium',
                     'bg-ok/10 text-ok' => $estudiante->estado->value === 'activo',

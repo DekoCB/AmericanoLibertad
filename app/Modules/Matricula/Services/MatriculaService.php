@@ -47,9 +47,9 @@ class MatriculaService
         private readonly UserManagementService $usuarios,
     ) {}
 
-    public function listarEstudiantes(?string $termino, ?string $estado, int $perPage = 15): LengthAwarePaginator
+    public function listarEstudiantes(?string $termino, ?string $estado, int $perPage = 15, bool $soloSinCuenta = false): LengthAwarePaginator
     {
-        return $this->estudiantes->buscar($termino, $estado, $perPage);
+        return $this->estudiantes->buscar($termino, $estado, $perPage, $soloSinCuenta);
     }
 
     public function dniDisponible(string $dni, ?int $exceptoId = null): bool
@@ -147,6 +147,27 @@ class MatriculaService
 
             return $estudiante->fresh();
         });
+    }
+
+    /**
+     * Crea en bloque la cuenta de acceso de varios estudiantes a la vez (ver
+     * crearCuentaAcceso()) -- para no tener que hacerlo uno por uno desde el
+     * listado cuando hay varios estudiantes antiguos sin cuenta. Ignora en
+     * silencio cualquier id que ya tenga cuenta o no exista; devuelve
+     * cuántas cuentas se crearon de verdad.
+     */
+    public function crearCuentasDeAccesoEnMasa(array $estudianteIds): int
+    {
+        $estudiantes = Estudiante::query()
+            ->whereIn('id', $estudianteIds)
+            ->whereNull('user_id')
+            ->get();
+
+        foreach ($estudiantes as $estudiante) {
+            $this->crearCuentaAcceso($estudiante);
+        }
+
+        return $estudiantes->count();
     }
 
     public function registrarApoderado(Estudiante $estudiante, RegistrarApoderadoData $data): Apoderado

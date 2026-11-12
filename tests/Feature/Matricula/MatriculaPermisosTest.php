@@ -1497,4 +1497,64 @@ class MatriculaPermisosTest extends TestCase
             ->call('mostrarFormularioDocumento', TipoDocumentoEnum::CERTIFICADO_ESTUDIOS->value)
             ->assertForbidden();
     }
+
+    public function test_el_listado_filtra_solo_estudiantes_sin_cuenta_de_acceso(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => '55667740']);
+        $conCuenta = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => '55667740']);
+        $sinCuenta = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667741']);
+
+        $this->actingAs($usuario);
+
+        $estudiantes = Volt::test('matricula.index')
+            ->set('soloSinCuenta', true)
+            ->viewData('estudiantes');
+
+        $ids = collect($estudiantes->items())->pluck('id');
+        $this->assertTrue($ids->contains($sinCuenta->id));
+        $this->assertFalse($ids->contains($conCuenta->id));
+    }
+
+    public function test_otorgar_acceso_en_masa_crea_cuentas_solo_a_los_seleccionados_sin_cuenta(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $sinCuenta1 = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667742']);
+        $sinCuenta2 = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667743']);
+        $cuentaExistente = User::factory()->create(['dni' => '55667744']);
+        $conCuenta = Estudiante::factory()->create(['user_id' => $cuentaExistente->id, 'dni' => '55667744']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.index')
+            ->set('seleccionados', [$sinCuenta1->id, $sinCuenta2->id, $conCuenta->id])
+            ->call('otorgarAccesoEnMasa')
+            ->assertHasNoErrors()
+            ->assertSet('seleccionados', []);
+
+        $this->assertNotNull($sinCuenta1->fresh()->user_id);
+        $this->assertNotNull($sinCuenta2->fresh()->user_id);
+        $this->assertSame($cuentaExistente->id, $conCuenta->fresh()->user_id);
+    }
+
+    public function test_no_se_puede_otorgar_acceso_en_masa_sin_el_permiso_de_editar_matricula(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $sinCuenta = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667745']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.index')
+            ->set('seleccionados', [$sinCuenta->id])
+            ->call('otorgarAccesoEnMasa')
+            ->assertForbidden();
+
+        $this->assertNull($sinCuenta->fresh()->user_id);
+    }
 }

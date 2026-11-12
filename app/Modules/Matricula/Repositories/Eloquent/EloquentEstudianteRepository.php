@@ -23,7 +23,7 @@ class EloquentEstudianteRepository extends BaseRepository implements EstudianteR
         return Estudiante::query()->with(['carreraActual', 'media', 'user.media']);
     }
 
-    public function buscar(?string $termino, ?string $estado, int $perPage = 15): LengthAwarePaginator
+    public function buscar(?string $termino, ?string $estado, int $perPage = 15, bool $soloSinCuenta = false): LengthAwarePaginator
     {
         return $this->query()
             ->when($termino, fn ($query) => $query->where(function ($query) use ($termino) {
@@ -32,6 +32,7 @@ class EloquentEstudianteRepository extends BaseRepository implements EstudianteR
                     ->orWhere('dni', 'like', "%{$termino}%");
             }))
             ->when($estado, fn ($query) => $query->where('estado', $estado))
+            ->when($soloSinCuenta, fn ($query) => $query->whereNull('user_id'))
             ->latest('id')
             ->paginate($perPage)
             ->withQueryString();
