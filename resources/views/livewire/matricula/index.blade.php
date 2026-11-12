@@ -185,7 +185,7 @@ new #[Layout('layouts.app')] class extends Component
                     <button
                         type="button"
                         x-data
-                        x-on:click="$store.confirm.preguntar('¿Crear la cuenta de acceso de {{ count($seleccionados) }} estudiante(s)? La contraseña inicial de cada uno será su DNI.', () => $wire.otorgarAccesoEnMasa())"
+                        x-on:click="$store.confirm.preguntar('¿Crear la cuenta de acceso de {{ count($seleccionados) }} estudiante(s)? La contraseña inicial de cada uno será su DNI, en minúsculas.', () => $wire.otorgarAccesoEnMasa())"
                         class="ml-auto inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
                     >Otorgar acceso a {{ count($seleccionados) }} seleccionado(s)</button>
                 @endif

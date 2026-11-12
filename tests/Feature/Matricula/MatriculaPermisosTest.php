@@ -1056,6 +1056,89 @@ class MatriculaPermisosTest extends TestCase
         $this->assertTrue($estudiante->user->hasRole(RolEnum::ESTUDIANTE->value));
     }
 
+    public function test_crear_cuenta_de_acceso_con_un_dni_alfanumerico_pone_la_contrasena_en_minusculas(): void
+    {
+        // El dni de un Estudiante siempre queda en MAYÚSCULAS (normalizado
+        // por Dni::valor()), pero el correo institucional siempre en
+        // minúsculas -- si la contraseña inicial quedara en mayúsculas, no
+        // calzaría con lo que el estudiante intuitivamente escribe (lo
+        // mismo que ve en su usuario). Ver Dni::contrasenaInicial().
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $estudiante = Estudiante::factory()->create(['user_id' => null, 'dni' => 'PEND0140']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('crearCuentaAcceso')
+            ->assertHasNoErrors();
+
+        $estudiante->refresh();
+        $this->assertSame('pend0140@iesamericalibertad.com', $estudiante->user->email);
+        $this->assertTrue(Hash::check('pend0140', $estudiante->user->password));
+        $this->assertFalse(Hash::check('PEND0140', $estudiante->user->password));
+    }
+
+    public function test_restablecer_contrasena_la_deja_en_minusculas_para_un_dni_alfanumerico(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => 'PEND0141', 'password' => Hash::make('otra-contrasena')]);
+        $estudiante = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => 'PEND0141']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('restablecerContrasena')
+            ->assertHasNoErrors();
+
+        $this->assertTrue(Hash::check('pend0141', $cuentaEstudiante->fresh()->password));
+    }
+
+    public function test_la_ficha_muestra_la_contrasena_actual_a_quien_tiene_el_permiso_si_sigue_siendo_la_inicial(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => '55667750', 'password' => Hash::make('55667750')]);
+        $estudiante = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => '55667750']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->assertViewHas('contrasenaActual', '55667750');
+    }
+
+    public function test_la_ficha_no_muestra_la_contrasena_si_el_estudiante_ya_la_cambio(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => '55667751', 'password' => Hash::make('otra-contrasena-distinta')]);
+        $estudiante = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => '55667751']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->assertViewHas('contrasenaActual', null);
+    }
+
+    public function test_la_ficha_no_muestra_la_contrasena_sin_el_permiso_de_ver_contrasena(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::ADMINISTRATIVO->value);
+
+        $cuentaEstudiante = User::factory()->create(['dni' => '55667752', 'password' => Hash::make('55667752')]);
+        $estudiante = Estudiante::factory()->create(['user_id' => $cuentaEstudiante->id, 'dni' => '55667752']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->assertViewHas('contrasenaActual', null);
+    }
+
     public function test_crear_cuenta_de_acceso_desde_el_modal_de_ficha(): void
     {
         $usuario = User::factory()->create();

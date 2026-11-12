@@ -1,5 +1,6 @@
 @props([
     'estudiante',
+    'contrasenaActual' => null,
     'editandoDatosPersonales' => false,
     'dniNuevo' => '',
     'nombresNuevo' => '',
@@ -161,12 +162,22 @@
         <h2 class="text-sm font-semibold text-ink">Acceso al sistema</h2>
         @if ($estudiante->user)
             <p class="mt-1 text-xs text-ink-faint">Correo de inicio de sesión: <span class="text-ink">{{ $estudiante->user->email }}</span></p>
-            <p class="mt-1 text-xs text-ink-faint">La contraseña nunca se muestra aquí ni en ningún otro lugar del sistema (queda cifrada). Solo se puede restablecer.</p>
+            @if ($contrasenaActual !== null)
+                <div class="mt-1 flex items-center gap-2 text-xs text-ink-faint" x-data="{ visible: false }">
+                    <span>Contraseña actual:</span>
+                    <span class="font-mono text-ink" x-show="visible">{{ $contrasenaActual }}</span>
+                    <span class="font-mono text-ink" x-show="!visible">••••••••</span>
+                    <button type="button" x-on:click="visible = !visible" class="text-accent hover:underline" x-text="visible ? 'Ocultar' : 'Mostrar'"></button>
+                </div>
+                <p class="mt-1 text-xs text-ink-faint">Es la inicial (su DNI); si el estudiante la cambió, ya no se puede ver aquí.</p>
+            @else
+                <p class="mt-1 text-xs text-ink-faint">La contraseña no se puede ver aquí: ya no es la inicial, o tu rol no tiene permiso para verla (queda cifrada, nunca se guarda en texto plano). Solo se puede restablecer.</p>
+            @endif
             @can('matricula.editar')
                 <div class="mt-4">
                     <button
                         type="button"
-                        x-on:click="$store.confirm.preguntar('¿Restablecer la contraseña de {{ $estudiante->nombreCompleto() }} a su DNI ({{ $estudiante->dni }})? Esto cerrará cualquier sesión que tenga abierta.', () => $wire.restablecerContrasena(), { peligro: true, etiquetaConfirmar: 'Restablecer' })"
+                        x-on:click="$store.confirm.preguntar('¿Restablecer la contraseña de {{ $estudiante->nombreCompleto() }} a «{{ strtolower($estudiante->dni) }}» (su DNI, en minúsculas)? Esto cerrará cualquier sesión que tenga abierta.', () => $wire.restablecerContrasena(), { peligro: true, etiquetaConfirmar: 'Restablecer' })"
                         class="text-xs font-medium text-accent hover:underline"
                     >Restablecer contraseña al DNI</button>
                 </div>
@@ -177,7 +188,7 @@
                 <div class="mt-4">
                     <button
                         type="button"
-                        x-on:click="$store.confirm.preguntar('¿Crear la cuenta de acceso de {{ $estudiante->nombreCompleto() }}? Su contraseña inicial será su DNI ({{ $estudiante->dni }}).', () => $wire.crearCuentaAcceso())"
+                        x-on:click="$store.confirm.preguntar('¿Crear la cuenta de acceso de {{ $estudiante->nombreCompleto() }}? Su contraseña inicial será «{{ strtolower($estudiante->dni) }}» (su DNI, en minúsculas).', () => $wire.crearCuentaAcceso())"
                         class="text-xs font-medium text-accent hover:underline"
                     >Crear cuenta de acceso</button>
                     <x-input-error :messages="$errors->get('dni')" class="mt-1" />

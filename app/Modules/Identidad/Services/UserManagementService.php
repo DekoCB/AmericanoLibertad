@@ -85,7 +85,11 @@ class UserManagementService
      */
     public function restablecerContrasenaAlDni(User $usuario): void
     {
-        $usuario->update(['password' => Hash::make($usuario->dni)]);
+        // En minúsculas, igual que correoInstitucional() -- ver
+        // Dni::contrasenaInicial(). El dni ya guardado en $usuario->dni no
+        // pasa por el value object Dni aquí (puede venir de código legado
+        // que lo guardó en mayúsculas), así que se normaliza directo.
+        $usuario->update(['password' => Hash::make(strtolower($usuario->dni))]);
 
         $this->sesiones->revocarTodas($usuario);
     }

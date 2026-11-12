@@ -57,6 +57,21 @@ final readonly class Dni implements Stringable
         return strtolower($this->valor).'@iesamericalibertad.com';
     }
 
+    /**
+     * Contraseña inicial autoasignada al crear o restablecer una cuenta:
+     * el DNI en minúsculas, igual que correoInstitucional() -- así el
+     * usuario y la contraseña se escriben con la misma letra, en vez de
+     * que la contraseña real quede en MAYÚSCULAS (como normaliza valor())
+     * mientras el estudiante intuitivamente escribe lo mismo que ve en su
+     * usuario. Solo importa para un DNI alfanumérico (carné de
+     * extranjería, código provisional); un DNI peruano de 8 dígitos no
+     * tiene mayúsculas que normalizar.
+     */
+    public function contrasenaInicial(): string
+    {
+        return strtolower($this->valor);
+    }
+
     public function __toString(): string
     {
         return $this->valor;

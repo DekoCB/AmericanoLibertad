@@ -19,6 +19,7 @@ use App\Modules\Pagos\Services\PlanPagoService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -538,7 +539,27 @@ new #[Layout('layouts.app')] class extends Component
                 ? CargoAdicional::query()->where('estudiante_id', $this->estudiante->id)->get()
                 : collect(),
             'tiposDocumento' => $this->tiposDocumento(),
+            'contrasenaActual' => $this->contrasenaActual(),
         ];
+    }
+
+    /**
+     * La contraseña actual del estudiante, solo si: (1) quien mira tiene
+     * el permiso matricula.ver_contrasena, y (2) todavía es la inicial
+     * (DNI en minúsculas, ver Dni::contrasenaInicial()) -- nunca se guarda
+     * en texto plano, así que si el estudiante ya la cambió no hay forma
+     * de saber cuál es ahora; en ese caso se devuelve null y la ficha solo
+     * ofrece restablecerla.
+     */
+    private function contrasenaActual(): ?string
+    {
+        if ($this->estudiante->user === null || ! Gate::allows('matricula.ver_contrasena')) {
+            return null;
+        }
+
+        $candidata = strtolower($this->estudiante->dni);
+
+        return Hash::check($candidata, $this->estudiante->user->password) ? $candidata : null;
     }
 
     /**
@@ -582,6 +603,7 @@ new #[Layout('layouts.app')] class extends Component
 
     <x-matricula.ficha-estudiante
         :estudiante="$estudiante"
+        :contrasena-actual="$contrasenaActual"
         :editando-datos-personales="$editandoDatosPersonales"
         :dni-nuevo="$dniNuevo"
         :nombres-nuevo="$nombresNuevo"

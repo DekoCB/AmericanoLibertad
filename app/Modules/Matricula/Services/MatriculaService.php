@@ -86,7 +86,7 @@ class MatriculaService
                     email: $email,
                     dni: $data->dni,
                     phone: $data->celular,
-                    password: $data->dni->valor(),
+                    password: $data->dni->contrasenaInicial(),
                     rol: RolEnum::ESTUDIANTE,
                 ));
             }
@@ -149,7 +149,7 @@ class MatriculaService
                     email: $email,
                     dni: $dni,
                     phone: null,
-                    password: $dni->valor(),
+                    password: $dni->contrasenaInicial(),
                     rol: RolEnum::ESTUDIANTE,
                 ));
             }
