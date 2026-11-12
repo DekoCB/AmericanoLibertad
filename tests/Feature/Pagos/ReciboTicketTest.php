@@ -37,7 +37,7 @@ class ReciboTicketTest extends TestCase
             'pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL, 'anchoMm' => 80, 'altoMm' => 150,
         ])->render();
 
-        $this->assertStringContainsString($pago->estudiante->nombreCompleto(), $html);
+        $this->assertStringContainsString(mb_strtoupper("{$pago->estudiante->apellidos} {$pago->estudiante->nombres}"), $html);
         $this->assertStringContainsString($pago->estudiante->dni, $html);
         $this->assertStringContainsString(number_format((float) $pago->monto, 2), $html);
         $this->assertStringNotContainsString('Día', $html);
@@ -54,7 +54,7 @@ class ReciboTicketTest extends TestCase
             'pago' => $pago, 'recibo' => $recibo, 'serie' => SerieReciboEnum::ORIGINAL, 'anchoMm' => 58, 'altoMm' => 150,
         ])->render();
 
-        $this->assertStringContainsString($pago->estudiante->nombreCompleto(), $html);
+        $this->assertStringContainsString(mb_strtoupper("{$pago->estudiante->apellidos} {$pago->estudiante->nombres}"), $html);
         $this->assertStringContainsString($pago->estudiante->dni, $html);
         $this->assertStringNotContainsString('Día', $html);
     }
