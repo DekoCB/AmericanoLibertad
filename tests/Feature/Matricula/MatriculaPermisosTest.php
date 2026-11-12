@@ -1123,6 +1123,45 @@ class MatriculaPermisosTest extends TestCase
         $this->assertNull($estudiante->fresh()->user_id);
     }
 
+    public function test_crear_cuenta_de_acceso_con_un_dni_corrupto_falla_con_un_mensaje_claro(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        // En condiciones normales el dni de un Estudiante siempre es válido
+        // (columna obligatoria y única, validada por Dni en todo punto de
+        // entrada) -- este caso solo cubre un registro corrupto que se haya
+        // colado de todos modos (p. ej. de una migración antigua).
+        $estudiante = Estudiante::factory()->create(['user_id' => null, 'dni' => 'x']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.show', ['estudiante' => $estudiante])
+            ->call('crearCuentaAcceso')
+            ->assertHasErrors('dni');
+
+        $this->assertNull($estudiante->fresh()->user_id);
+    }
+
+    public function test_otorgar_acceso_en_masa_sigue_con_el_resto_si_uno_tiene_dni_corrupto(): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(RolEnum::COORDINADOR->value);
+
+        $dniInvalido = Estudiante::factory()->create(['user_id' => null, 'dni' => 'x']);
+        $dniValido = Estudiante::factory()->create(['user_id' => null, 'dni' => '55667735']);
+
+        $this->actingAs($usuario);
+
+        Volt::test('matricula.index')
+            ->set('seleccionados', [$dniInvalido->id, $dniValido->id])
+            ->call('otorgarAccesoEnMasa')
+            ->assertHasNoErrors();
+
+        $this->assertNull($dniInvalido->fresh()->user_id);
+        $this->assertNotNull($dniValido->fresh()->user_id);
+    }
+
     public function test_no_se_puede_restablecer_contrasena_sin_el_permiso_de_editar_matricula(): void
     {
         $usuario = User::factory()->create();

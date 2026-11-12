@@ -115,6 +115,12 @@ class MatriculaService
      * empezara a crearla automáticamente al matricular. Misma convención
      * que ahí: correo {dni}@iesamericalibertad.com y contraseña inicial
      * igual al DNI.
+     *
+     * El dni de un Estudiante siempre debería ser válido (la columna es
+     * obligatoria y única, y todo punto de entrada lo valida con Dni antes
+     * de guardar) -- pero si un registro corrupto se coló de todos modos
+     * (p. ej. de una migración antigua), se rechaza aquí con un mensaje
+     * claro en vez de un error fatal sin explicación.
      */
     public function crearCuentaAcceso(Estudiante $estudiante): Estudiante
     {
@@ -122,8 +128,13 @@ class MatriculaService
             return $estudiante;
         }
 
-        return DB::transaction(function () use ($estudiante) {
+        try {
             $dni = new Dni($estudiante->dni);
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['dni' => $e->getMessage()]);
+        }
+
+        return DB::transaction(function () use ($estudiante, $dni) {
             $email = $dni->correoInstitucional();
 
             $usuario = User::query()->where('dni', $dni->valor())->first();
@@ -153,21 +164,36 @@ class MatriculaService
      * Crea en bloque la cuenta de acceso de varios estudiantes a la vez (ver
      * crearCuentaAcceso()) -- para no tener que hacerlo uno por uno desde el
      * listado cuando hay varios estudiantes antiguos sin cuenta. Ignora en
-     * silencio cualquier id que ya tenga cuenta o no exista; devuelve
-     * cuántas cuentas se crearon de verdad.
+     * silencio cualquier id que ya tenga cuenta o no exista. Cada estudiante
+     * se procesa de forma independiente: si uno falla (p. ej. un DNI
+     * corrupto de una migración antigua, que normalmente no debería poder
+     * existir pero no cuesta nada cubrir), el resto del lote sigue
+     * procesándose igual -- en vez de abortar todo el lote por un solo dato
+     * malo, que dejaría al resto sin cuenta sin ningún aviso claro.
+     *
+     * @param  array<int, int>  $estudianteIds
+     * @return array{creadas: int, fallidas: list<array{estudiante: Estudiante, motivo: string}>}
      */
-    public function crearCuentasDeAccesoEnMasa(array $estudianteIds): int
+    public function crearCuentasDeAccesoEnMasa(array $estudianteIds): array
     {
         $estudiantes = Estudiante::query()
             ->whereIn('id', $estudianteIds)
             ->whereNull('user_id')
             ->get();
 
+        $creadas = 0;
+        $fallidas = [];
+
         foreach ($estudiantes as $estudiante) {
-            $this->crearCuentaAcceso($estudiante);
+            try {
+                $this->crearCuentaAcceso($estudiante);
+                $creadas++;
+            } catch (ValidationException $e) {
+                $fallidas[] = ['estudiante' => $estudiante, 'motivo' => $e->errors()['dni'][0] ?? $e->getMessage()];
+            }
         }
 
-        return $estudiantes->count();
+        return ['creadas' => $creadas, 'fallidas' => $fallidas];
     }
 
     public function registrarApoderado(Estudiante $estudiante, RegistrarApoderadoData $data): Apoderado

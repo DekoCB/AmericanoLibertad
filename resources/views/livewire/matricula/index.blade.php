@@ -77,13 +77,22 @@ new #[Layout('layouts.app')] class extends Component
     {
         Gate::authorize('matricula.editar');
 
-        $creadas = $service->crearCuentasDeAccesoEnMasa($this->seleccionados);
+        $resultado = $service->crearCuentasDeAccesoEnMasa($this->seleccionados);
 
         $this->seleccionados = [];
 
-        session()->flash('status', $creadas > 0
-            ? "Se crearon {$creadas} cuentas de acceso."
-            : 'Los estudiantes seleccionados ya tenían cuenta de acceso.');
+        $mensaje = $resultado['creadas'] > 0
+            ? "Se crearon {$resultado['creadas']} cuentas de acceso."
+            : 'Los estudiantes seleccionados ya tenían cuenta de acceso.';
+
+        if ($resultado['fallidas'] !== []) {
+            $detalle = collect($resultado['fallidas'])
+                ->map(fn ($f) => "{$f['estudiante']->nombreCompleto()} (DNI {$f['estudiante']->dni}): {$f['motivo']}")
+                ->implode(' · ');
+            $mensaje .= ' No se pudo crear la cuenta de: '.$detalle;
+        }
+
+        session()->flash('status', $mensaje);
     }
 
     public function with(MatriculaService $service): array

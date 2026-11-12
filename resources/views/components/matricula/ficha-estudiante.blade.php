@@ -180,6 +180,7 @@
                         x-on:click="$store.confirm.preguntar('¿Crear la cuenta de acceso de {{ $estudiante->nombreCompleto() }}? Su contraseña inicial será su DNI ({{ $estudiante->dni }}).', () => $wire.crearCuentaAcceso())"
                         class="text-xs font-medium text-accent hover:underline"
                     >Crear cuenta de acceso</button>
+                    <x-input-error :messages="$errors->get('dni')" class="mt-1" />
                 </div>
             @endcan
         @endif
