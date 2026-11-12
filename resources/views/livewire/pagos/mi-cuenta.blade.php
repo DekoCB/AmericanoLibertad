@@ -2,6 +2,7 @@
 
 use App\Modules\Matricula\Models\Matricula;
 use App\Modules\Pagos\Enums\MetodoPagoEnum;
+use App\Modules\Pagos\Enums\OrigenPagoEnum;
 use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\ConceptoPago;
 use App\Modules\Pagos\Models\Cuota;
@@ -37,6 +38,21 @@ new #[Layout('layouts.app')] class extends Component
     /** @var array<int, string> */
     public array $montoPorCargo = [];
 
+    // Origen y N.° de operación de cada pago enviado (se imprimen en la
+    // boleta). Las opciones de origen dependen del método elegido en la
+    // misma fila -- ver OrigenPagoEnum::reglas().
+    /** @var array<int, string> */
+    public array $origenPorCuota = [];
+
+    /** @var array<int, string> */
+    public array $operacionPorCuota = [];
+
+    /** @var array<int, string> */
+    public array $origenPorCargo = [];
+
+    /** @var array<int, string> */
+    public array $operacionPorCargo = [];
+
     public function mount(): void
     {
         $user = Auth::user();
@@ -47,6 +63,35 @@ new #[Layout('layouts.app')] class extends Component
         );
     }
 
+    /**
+     * Al cambiar el método de una fila se ajusta su origen: si el elegido
+     * deja de ser válido se limpia, y si solo hay una opción (efectivo →
+     * ventanilla) se selecciona sola.
+     */
+    public function updatedMetodoPorCuota(mixed $valor, int|string $cuotaId): void
+    {
+        $this->origenPorCuota[(int) $cuotaId] = $this->origenAjustado($valor, $this->origenPorCuota[(int) $cuotaId] ?? '');
+    }
+
+    public function updatedMetodoPorCargo(mixed $valor, int|string $cargoId): void
+    {
+        $this->origenPorCargo[(int) $cargoId] = $this->origenAjustado($valor, $this->origenPorCargo[(int) $cargoId] ?? '');
+    }
+
+    private function origenAjustado(mixed $metodo, string $origenActual): string
+    {
+        $valores = array_map(
+            fn (OrigenPagoEnum $o) => $o->value,
+            OrigenPagoEnum::disponiblesPara(OrigenPagoEnum::metodosDesde([$metodo])),
+        );
+
+        if (in_array($origenActual, $valores, true)) {
+            return $origenActual;
+        }
+
+        return count($valores) === 1 ? $valores[0] : '';
+    }
+
     public function subirComprobante(int $cuotaId, PagoService $service): void
     {
         $estudiante = Auth::user()->estudiante;
@@ -54,6 +99,8 @@ new #[Layout('layouts.app')] class extends Component
 
         $cuota = Cuota::query()->with('planPago.matricula')->findOrFail($cuotaId);
         abort_unless($cuota->planPago->matricula?->estudiante_id === $estudiante->id, 403);
+
+        $this->updatedMetodoPorCuota($this->metodoPorCuota[$cuotaId] ?? null, (string) $cuotaId);
 
         $this->validate([
             "metodoPorCuota.{$cuotaId}" => 'required|string|in:'.implode(',', array_column(MetodoPagoEnum::seleccionables(), 'value')),
@@ -63,6 +110,13 @@ new #[Layout('layouts.app')] class extends Component
             // declara cuánto pagó, sin cruce contra el comprobante, así que
             // no debe poder registrar más de lo que efectivamente debe.
             "montoPorCuota.{$cuotaId}" => "required|numeric|min:0.01|max:{$cuota->saldoPendiente()}",
+        ] + OrigenPagoEnum::reglas(
+            OrigenPagoEnum::metodosDesde([$this->metodoPorCuota[$cuotaId] ?? null]),
+            "origenPorCuota.{$cuotaId}",
+            "operacionPorCuota.{$cuotaId}",
+        ), [], [
+            "origenPorCuota.{$cuotaId}" => 'origen',
+            "operacionPorCuota.{$cuotaId}" => 'N.° de operación',
         ]);
 
         $concepto = ConceptoPago::query()->where('tipo', 'mensualidad')->first()
@@ -75,9 +129,11 @@ new #[Layout('layouts.app')] class extends Component
             $cuota,
             $this->comprobantePorCuota[$cuotaId],
             null,
+            origen: OrigenPagoEnum::from($this->origenPorCuota[$cuotaId]),
+            numeroOperacion: $this->operacionPorCuota[$cuotaId] ?? null,
         );
 
-        unset($this->metodoPorCuota[$cuotaId], $this->comprobantePorCuota[$cuotaId], $this->montoPorCuota[$cuotaId]);
+        unset($this->metodoPorCuota[$cuotaId], $this->comprobantePorCuota[$cuotaId], $this->montoPorCuota[$cuotaId], $this->origenPorCuota[$cuotaId], $this->operacionPorCuota[$cuotaId]);
         session()->flash('status', 'Comprobante enviado. Quedará pendiente de aprobación de Tesorería.');
     }
 
@@ -89,10 +145,19 @@ new #[Layout('layouts.app')] class extends Component
         $cargo = CargoAdicional::query()->findOrFail($cargoAdicionalId);
         abort_unless($cargo->estudiante_id === $estudiante->id, 403);
 
+        $this->updatedMetodoPorCargo($this->metodoPorCargo[$cargoAdicionalId] ?? null, (string) $cargoAdicionalId);
+
         $this->validate([
             "metodoPorCargo.{$cargoAdicionalId}" => 'required|string|in:'.implode(',', array_column(MetodoPagoEnum::seleccionables(), 'value')),
             "comprobantePorCargo.{$cargoAdicionalId}" => 'required|file|max:5120',
             "montoPorCargo.{$cargoAdicionalId}" => "required|numeric|min:0.01|max:{$cargo->saldoPendiente()}",
+        ] + OrigenPagoEnum::reglas(
+            OrigenPagoEnum::metodosDesde([$this->metodoPorCargo[$cargoAdicionalId] ?? null]),
+            "origenPorCargo.{$cargoAdicionalId}",
+            "operacionPorCargo.{$cargoAdicionalId}",
+        ), [], [
+            "origenPorCargo.{$cargoAdicionalId}" => 'origen',
+            "operacionPorCargo.{$cargoAdicionalId}" => 'N.° de operación',
         ]);
 
         $concepto = ConceptoPago::query()->where('tipo', 'otro')->first()
@@ -106,9 +171,11 @@ new #[Layout('layouts.app')] class extends Component
             $this->comprobantePorCargo[$cargoAdicionalId],
             null,
             cargoAdicional: $cargo,
+            origen: OrigenPagoEnum::from($this->origenPorCargo[$cargoAdicionalId]),
+            numeroOperacion: $this->operacionPorCargo[$cargoAdicionalId] ?? null,
         );
 
-        unset($this->metodoPorCargo[$cargoAdicionalId], $this->comprobantePorCargo[$cargoAdicionalId], $this->montoPorCargo[$cargoAdicionalId]);
+        unset($this->metodoPorCargo[$cargoAdicionalId], $this->comprobantePorCargo[$cargoAdicionalId], $this->montoPorCargo[$cargoAdicionalId], $this->origenPorCargo[$cargoAdicionalId], $this->operacionPorCargo[$cargoAdicionalId]);
         session()->flash('status', 'Comprobante enviado. Quedará pendiente de aprobación de Tesorería.');
     }
 
@@ -223,17 +290,40 @@ new #[Layout('layouts.app')] class extends Component
                                         >
                                     </div>
                                     <x-select-input
-                                        wire:model="metodoPorCuota.{{ $cuota->id }}"
+                                        wire:model.live="metodoPorCuota.{{ $cuota->id }}"
                                         placeholder="Método…"
                                         class="text-xs"
                                         :options="collect(\App\Modules\Pagos\Enums\MetodoPagoEnum::seleccionables())->mapWithKeys(fn ($metodoOpcion) => [$metodoOpcion->value => $metodoOpcion->label()])"
                                     />
+                                    @php
+                                        $origenesCuota = \App\Modules\Pagos\Enums\OrigenPagoEnum::disponiblesPara(\App\Modules\Pagos\Enums\OrigenPagoEnum::metodosDesde([$metodoPorCuota[$cuota->id] ?? null]));
+                                    @endphp
+                                    @if ($origenesCuota !== [])
+                                        <x-select-input
+                                            wire:model="origenPorCuota.{{ $cuota->id }}"
+                                            wire:key="origen-cuota-{{ $cuota->id }}-{{ $metodoPorCuota[$cuota->id] ?? '' }}"
+                                            placeholder="Origen…"
+                                            class="text-xs"
+                                            :options="collect($origenesCuota)->mapWithKeys(fn ($origenOpcion) => [$origenOpcion->value => $origenOpcion->label()])"
+                                        />
+                                    @endif
+                                    @if (\App\Modules\Pagos\Enums\OrigenPagoEnum::requiereNumeroOperacion(\App\Modules\Pagos\Enums\OrigenPagoEnum::metodosDesde([$metodoPorCuota[$cuota->id] ?? null])))
+                                        <input
+                                            wire:model="operacionPorCuota.{{ $cuota->id }}"
+                                            type="text"
+                                            maxlength="50"
+                                            class="w-32 rounded-md border-border text-xs"
+                                            placeholder="N.° de operación"
+                                        >
+                                    @endif
                                     <input wire:model="comprobantePorCuota.{{ $cuota->id }}" type="file" class="text-xs text-ink-dim file:mr-2 file:rounded-md file:border-0 file:bg-surface-2 file:px-2 file:py-1 file:text-xs file:text-ink">
                                     <button type="submit" class="text-xs font-medium text-accent hover:underline">Enviar comprobante</button>
                                 </form>
                                 <p class="mt-1 text-xs text-ink-faint">Si pagaste menos de la cuota completa, cambia el monto por lo que realmente pagaste.</p>
                                 <x-input-error :messages="$errors->get('montoPorCuota.'.$cuota->id)" class="mt-1" />
                                 <x-input-error :messages="$errors->get('metodoPorCuota.'.$cuota->id)" class="mt-1" />
+                                <x-input-error :messages="$errors->get('origenPorCuota.'.$cuota->id)" class="mt-1" />
+                                <x-input-error :messages="$errors->get('operacionPorCuota.'.$cuota->id)" class="mt-1" />
                                 <x-input-error :messages="$errors->get('comprobantePorCuota.'.$cuota->id)" class="mt-1" />
                             @endif
                         </div>
@@ -269,17 +359,40 @@ new #[Layout('layouts.app')] class extends Component
                                 >
                             </div>
                             <x-select-input
-                                wire:model="metodoPorCargo.{{ $cargo->id }}"
+                                wire:model.live="metodoPorCargo.{{ $cargo->id }}"
                                 placeholder="Método…"
                                 class="text-xs"
                                 :options="collect(\App\Modules\Pagos\Enums\MetodoPagoEnum::seleccionables())->mapWithKeys(fn ($metodoOpcion) => [$metodoOpcion->value => $metodoOpcion->label()])"
                             />
+                            @php
+                                $origenesCargo = \App\Modules\Pagos\Enums\OrigenPagoEnum::disponiblesPara(\App\Modules\Pagos\Enums\OrigenPagoEnum::metodosDesde([$metodoPorCargo[$cargo->id] ?? null]));
+                            @endphp
+                            @if ($origenesCargo !== [])
+                                <x-select-input
+                                    wire:model="origenPorCargo.{{ $cargo->id }}"
+                                    wire:key="origen-cargo-{{ $cargo->id }}-{{ $metodoPorCargo[$cargo->id] ?? '' }}"
+                                    placeholder="Origen…"
+                                    class="text-xs"
+                                    :options="collect($origenesCargo)->mapWithKeys(fn ($origenOpcion) => [$origenOpcion->value => $origenOpcion->label()])"
+                                />
+                            @endif
+                            @if (\App\Modules\Pagos\Enums\OrigenPagoEnum::requiereNumeroOperacion(\App\Modules\Pagos\Enums\OrigenPagoEnum::metodosDesde([$metodoPorCargo[$cargo->id] ?? null])))
+                                <input
+                                    wire:model="operacionPorCargo.{{ $cargo->id }}"
+                                    type="text"
+                                    maxlength="50"
+                                    class="w-32 rounded-md border-border text-xs"
+                                    placeholder="N.° de operación"
+                                >
+                            @endif
                             <input wire:model="comprobantePorCargo.{{ $cargo->id }}" type="file" class="text-xs text-ink-dim file:mr-2 file:rounded-md file:border-0 file:bg-surface-2 file:px-2 file:py-1 file:text-xs file:text-ink">
                             <button type="submit" class="text-xs font-medium text-accent hover:underline">Enviar comprobante</button>
                         </form>
                         <p class="mt-1 text-xs text-ink-faint">Si pagaste menos del monto completo, cambia el monto por lo que realmente pagaste.</p>
                         <x-input-error :messages="$errors->get('montoPorCargo.'.$cargo->id)" class="mt-1" />
                         <x-input-error :messages="$errors->get('metodoPorCargo.'.$cargo->id)" class="mt-1" />
+                        <x-input-error :messages="$errors->get('origenPorCargo.'.$cargo->id)" class="mt-1" />
+                        <x-input-error :messages="$errors->get('operacionPorCargo.'.$cargo->id)" class="mt-1" />
                         <x-input-error :messages="$errors->get('comprobantePorCargo.'.$cargo->id)" class="mt-1" />
                     </div>
                 @endforeach

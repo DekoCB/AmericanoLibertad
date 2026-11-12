@@ -8,6 +8,7 @@ use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Pagos\Enums\EstadoCuotaEnum;
 use App\Modules\Pagos\Enums\EstadoPagoEnum;
 use App\Modules\Pagos\Enums\MetodoPagoEnum;
+use App\Modules\Pagos\Enums\OrigenPagoEnum;
 use App\Modules\Pagos\Enums\SerieReciboEnum;
 use App\Modules\Pagos\Models\CargoAdicional;
 use App\Modules\Pagos\Models\ConceptoPago;
@@ -46,6 +47,8 @@ class PagoService
         ?string $detalle = null,
         ?string $observacion = null,
         ?CargoAdicional $cargoAdicional = null,
+        ?OrigenPagoEnum $origen = null,
+        ?string $numeroOperacion = null,
     ): Pago {
         if ($partes === []) {
             throw new InvalidArgumentException('Un pago necesita al menos una parte (monto y método).');
@@ -67,7 +70,16 @@ class PagoService
         $metodosUnicos = collect($partes)->pluck('metodo')->unique();
         $metodo = $metodosUnicos->count() === 1 ? $metodosUnicos->first() : MetodoPagoEnum::MIXTO->value;
 
-        return DB::transaction(function () use ($estudiante, $concepto, $detalle, $observacion, $cuota, $cargoAdicional, $montoTotal, $metodo, $registradoPor, $comprobante, $partes) {
+        // Los formularios exigen origen y N.° de operación según el método
+        // (ver OrigenPagoEnum::reglas()); aquí solo se completa el caso
+        // obvio: un pago todo en efectivo siempre es de ventanilla.
+        $metodosPartes = OrigenPagoEnum::metodosDesde($metodosUnicos);
+        if ($origen === null && ! OrigenPagoEnum::requiereNumeroOperacion($metodosPartes) && $metodosPartes !== []) {
+            $origen = OrigenPagoEnum::VENTANILLA;
+        }
+        $numeroOperacion = filled($numeroOperacion) ? trim($numeroOperacion) : null;
+
+        return DB::transaction(function () use ($estudiante, $concepto, $detalle, $observacion, $cuota, $cargoAdicional, $montoTotal, $metodo, $registradoPor, $comprobante, $partes, $origen, $numeroOperacion) {
             /** @var Pago $pago */
             $pago = Pago::query()->create([
                 'estudiante_id' => $estudiante->id,
@@ -78,6 +90,8 @@ class PagoService
                 'cargo_adicional_id' => $cargoAdicional?->id,
                 'monto' => $montoTotal,
                 'metodo' => $metodo,
+                'origen' => $origen,
+                'numero_operacion' => $numeroOperacion,
                 'estado' => EstadoPagoEnum::PENDIENTE,
                 'registrado_por' => $registradoPor,
                 'fecha_pago' => now(),

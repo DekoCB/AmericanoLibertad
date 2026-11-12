@@ -10,6 +10,7 @@ use App\Modules\Matricula\Models\Estudiante;
 use App\Modules\Pagos\Database\Factories\PagoFactory;
 use App\Modules\Pagos\Enums\EstadoPagoEnum;
 use App\Modules\Pagos\Enums\MetodoPagoEnum;
+use App\Modules\Pagos\Enums\OrigenPagoEnum;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int|null $cargo_adicional_id
  * @property float $monto
  * @property MetodoPagoEnum $metodo
+ * @property OrigenPagoEnum|null $origen
+ * @property string|null $numero_operacion
  * @property EstadoPagoEnum $estado
  * @property Carbon $fecha_pago
  * @property Carbon|null $fecha_aprobacion
@@ -56,6 +59,8 @@ class Pago extends Model implements HasMedia
         'cargo_adicional_id',
         'monto',
         'metodo',
+        'origen',
+        'numero_operacion',
         'estado',
         'registrado_por',
         'aprobado_por',
@@ -69,6 +74,7 @@ class Pago extends Model implements HasMedia
         return [
             'monto' => 'decimal:2',
             'metodo' => MetodoPagoEnum::class,
+            'origen' => OrigenPagoEnum::class,
             'estado' => EstadoPagoEnum::class,
             'fecha_pago' => 'date',
             'fecha_aprobacion' => 'datetime',

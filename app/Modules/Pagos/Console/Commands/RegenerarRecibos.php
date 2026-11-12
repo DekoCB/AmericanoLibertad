@@ -22,7 +22,7 @@ class RegenerarRecibos extends Command
     public function handle(): int
     {
         $recibos = Recibo::query()
-            ->with(['pago.estudiante', 'pago.concepto', 'pago.partes', 'pago.cuota.planPago.matricula.ciclo'])
+            ->with(['pago.estudiante', 'pago.concepto', 'pago.partes', 'pago.cuota.planPago.matricula.ciclo', 'pago.cuota.planPago.matricula.carrera', 'pago.estudiante.carreraActual', 'pago.cargoAdicional', 'pago.aprobadoPor', 'pago.registradoPor'])
             ->orderBy('id')
             ->get();
 

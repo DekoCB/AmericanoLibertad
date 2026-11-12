@@ -49,6 +49,8 @@ class PagosSerieObservacionCuotaTest extends TestCase
             ->set('conceptoId', (string) $concepto->id)
             ->set('partes.0.monto', '80')
             ->set('partes.0.metodo', 'yape')
+            ->set('origen', 'pago_qr')
+            ->set('numeroOperacion', '16221931')
             ->call('registrarPago')
             ->assertHasNoErrors();
 
@@ -95,6 +97,8 @@ class PagosSerieObservacionCuotaTest extends TestCase
             ->set('conceptoId', (string) $concepto->id)
             ->set('partes.0.monto', '80')
             ->set('partes.0.metodo', 'yape')
+            ->set('origen', 'pago_qr')
+            ->set('numeroOperacion', '16221931')
             ->call('registrarPago');
 
         $pago = Pago::query()->where('estudiante_id', $matricula->estudiante_id)->firstOrFail();
@@ -127,6 +131,8 @@ class PagosSerieObservacionCuotaTest extends TestCase
             ->set('conceptoId', (string) $concepto->id)
             ->set('partes.0.monto', '30')
             ->set('partes.0.metodo', 'yape')
+            ->set('origen', 'pago_qr')
+            ->set('numeroOperacion', '16221931')
             ->call('registrarPago');
 
         $pago = Pago::query()->where('estudiante_id', $matricula->estudiante_id)->firstOrFail();

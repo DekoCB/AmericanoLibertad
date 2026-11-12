@@ -7,6 +7,7 @@ namespace App\Modules\Pagos\Services;
 use App\Modules\Pagos\Enums\SerieReciboEnum;
 use App\Modules\Pagos\Models\Pago;
 use App\Modules\Pagos\Models\Recibo;
+use App\Modules\Pagos\Support\DetalleRecibo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\UniqueConstraintViolationException;
 
@@ -51,12 +52,14 @@ class ReciboService
     public function renderizarTicket(Recibo $recibo, int $anchoMm): string
     {
         $pago = $recibo->pago;
-        $altoMm = $this->alturaTicketMm($pago, $anchoMm);
+        $detalle = DetalleRecibo::desde($pago, $recibo);
+        $altoMm = $this->alturaTicketMm($pago, $anchoMm, $detalle);
 
         $pdf = Pdf::loadView('pdf.recibo-ticket', [
             'pago' => $pago,
             'recibo' => $recibo,
             'serie' => $recibo->serie,
+            'detalle' => $detalle,
             'anchoMm' => $anchoMm,
             'altoMm' => $altoMm,
         ]);
@@ -66,58 +69,72 @@ class ReciboService
 
     /**
      * Estima cuántos milímetros de alto necesita el ticket, contando líneas
-     * de texto por sección (las fijas de la plantilla + las que se ajustan
-     * según el ancho para el nombre del alumno, el concepto y la
-     * observación, que son los únicos campos de largo variable).
+     * de texto por bloque (las fijas de la plantilla + las que se ajustan
+     * según el ancho para los campos de largo variable: razón social,
+     * cliente, aula, descripción del concepto, monto en letras y
+     * observación).
      */
-    public function alturaTicketMm(Pago $pago, int $anchoMm): float
+    public function alturaTicketMm(Pago $pago, int $anchoMm, ?DetalleRecibo $detalle = null): float
     {
         // Generoso a propósito: una primera versión más ajustada subestimó
-        // el alto real (los márgenes/padding de cada ".seccion" y cada
-        // "hr" pesan más de lo que parece a simple vista) y el contenido
-        // se desbordó a una segunda página -- mucho peor para imprimir en
-        // una ticketera que dejar de más un poco de espacio en blanco.
-        $altoLineaMm = $anchoMm <= 58 ? 3.6 : 4.0;
-        $anchoUtilMm = $anchoMm - 6; // 3mm de margen a cada lado
-        $caracteresPorLinea = max(10, (int) floor($anchoUtilMm / ($anchoMm <= 58 ? 1.15 : 1.25)));
+        // el alto real y el contenido se desbordó a una segunda página --
+        // mucho peor para imprimir en una ticketera que dejar de más un poco
+        // de espacio en blanco.
+        $angosto = $anchoMm <= 58;
+        $detalle ??= DetalleRecibo::desde($pago, $pago->recibo ?? new Recibo(['emitido_en' => now()]));
 
-        $lineasDeTexto = fn (string $texto): int => max(1, (int) ceil(mb_strlen($texto) / $caracteresPorLinea));
+        $altoLineaMm = $angosto ? 3.0 : 3.4;
+        $caracteresPorLinea = $angosto ? 34 : 42;
+        $caracteresValor = (int) floor($caracteresPorLinea * 0.64); // columna de valor en CLIENTE/AULA/...
+        $caracteresDescripcion = $angosto ? 13 : 18;                 // columna DESCRIPCIÓN de la tabla
+
+        $lineasDe = fn (string $texto, int $porLinea): int => max(1, (int) ceil(mb_strlen($texto) / $porLinea));
 
         $lineas = 0;
-        $secciones = 0; // cada <div class="seccion"> suma su propio margen arriba/abajo
 
-        $lineas += 2; // nombre del instituto + subtítulo
-        $lineas += 2; // título del recibo + N.°
-        $lineas += 3; // fecha emisión, fecha de pago, DNI
-        $lineas += $lineasDeTexto($pago->estudiante?->nombreCompleto() ?? '—');
+        // Encabezado institucional
+        $lineas += $lineasDe($detalle->razonSocial, $caracteresPorLinea);
+        $lineas += $detalle->ruc !== '' ? 1 : 0;
+        $lineas += $lineasDe($detalle->direccionInstitucion, $caracteresPorLinea);
+        $lineas += $detalle->telefonoInstitucion !== '' ? 1 : 0;
 
-        $secciones++; // "Concepto" siempre está
-        $lineas += 1; // título "Concepto"
-        $lineas += $lineasDeTexto($pago->concepto->nombre.($pago->detalle ? ' — '.$pago->detalle : ''));
+        $lineas += 3; // título + número del comprobante (fuente más grande)
 
-        if ($pago->partes->count() > 1) {
-            $secciones++;
-            $lineas += 1 + $pago->partes->count(); // título "Partes del pago" + una línea por parte
-        }
+        // Fechas
+        $lineas += 3 + ($detalle->fechaVencimiento ? 1 : 0);
 
-        $lineas += 1; // total
-        $lineas += 3; // cuota, ciclo, medio de pago
+        // Cliente
+        $lineas += $lineasDe($detalle->cliente, $caracteresValor);
+        $lineas += 1; // DNI
+        $lineas += $lineasDe($detalle->direccionCliente, $caracteresValor);
+        $lineas += $lineasDe($detalle->aula, $caracteresValor);
 
-        if ($pago->observacion) {
-            $secciones++;
-            $lineas += 1; // título "Observación"
-            $lineas += $lineasDeTexto($pago->observacion);
-        }
+        // Tabla de ítems
+        $lineas += 1; // encabezado
+        $lineas += $lineasDe($detalle->descripcion, $caracteresDescripcion);
 
-        $lineas += 2; // pie (serie/N.° + emitido el)
+        // Totales + monto en letras
+        $lineas += 5;
+        $lineas += $lineasDe('SON: '.$detalle->montoEnLetras, $caracteresPorLinea);
 
-        $altoLogoMm = $anchoMm <= 58 ? 28.0 : 38.0;
-        $altoReglasMm = 3 * 4.5; // 3 separadores punteados (margen 2mm arriba/abajo + borde)
-        $altoSeccionesMm = $secciones * 5.0; // margen + borde del título de cada ".seccion"
+        // Información adicional
+        $lineas += 1; // título
+        $lineas += $detalle->cuota ? 1 : 0;
+        $lineas += $detalle->origen ? 1 : 0;
+        $lineas += 1 + count($detalle->partes); // método de pago (+ una línea por parte)
+        $lineas += $detalle->numeroOperacion ? 1 : 0;
+        $lineas += $detalle->observacion ? $lineasDe('Observación: '.$detalle->observacion, $caracteresPorLinea) : 0;
+        $lineas += $lineasDe('Atendido por: '.$detalle->atendidoPor, $caracteresPorLinea);
 
-        $altoContenidoMm = $altoLogoMm + $altoReglasMm + $altoSeccionesMm + ($lineas * $altoLineaMm);
+        $lineas += 1; // "Gracias por su pago"
 
-        return $altoContenidoMm + 8 + 20; // márgenes de página (4mm arriba/abajo) + margen de seguridad
+        $altoLogoMm = $angosto ? 22.0 : 28.0;
+        $altoReglasMm = 5 * 3.5;  // 5 separadores (margen 1.5mm arriba/abajo + borde)
+        $altoBloquesMm = 10.0;    // márgenes de tablas, "SON", info adicional y "Gracias"
+
+        $altoContenidoMm = $altoLogoMm + $altoReglasMm + $altoBloquesMm + ($lineas * $altoLineaMm);
+
+        return $altoContenidoMm + 8 + 12; // márgenes de página (4mm arriba/abajo) + margen de seguridad
     }
 
     /**
