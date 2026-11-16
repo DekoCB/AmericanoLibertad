@@ -3,6 +3,9 @@
 namespace Tests\Feature\AulaVirtual;
 
 use App\Models\User;
+use App\Modules\Academico\Models\Aula;
+use App\Modules\Academico\Models\Ciclo;
+use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\AulaVirtual\Enums\TipoClaseGrabadaEnum;
 use App\Modules\AulaVirtual\Models\CursoVirtual;
@@ -559,5 +562,62 @@ class AulaVirtualPermisosTest extends TestCase
             ->assertOk()
             ->assertSee('Todos los cursos virtuales activos.')
             ->assertDontSee('Todavía no tienes cursos con aula virtual activada.');
+    }
+
+    public function test_un_coordinador_puede_anadir_un_curso_al_aula_virtual_desde_el_listado(): void
+    {
+        $coordinador = User::factory()->create();
+        $coordinador->assignRole(RolEnum::COORDINADOR->value);
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
+        $aula = Aula::factory()->create(['activa' => true]);
+        $ciclo = Ciclo::factory()->create();
+
+        $cursoConHorario = $this->cursoDelDocente($docente);
+        $cursoFaltante = Curso::factory()->create([
+            'carrera_id' => $cursoConHorario->horario->carrera_id,
+            'ciclo_curricular' => $cursoConHorario->horario->ciclo_curricular,
+            'activo' => true,
+        ]);
+        $cursoConHorario->horario->update(['ciclo_id' => $ciclo->id]);
+
+        $this->actingAs($coordinador);
+
+        $componente = Volt::test('aula-virtual.index')
+            ->call('seleccionarGrupo', $ciclo->id)
+            ->call('seleccionarCarrera', $cursoConHorario->horario->carrera_id)
+            ->call('seleccionarCicloCurricular', $cursoConHorario->horario->ciclo_curricular);
+
+        $componente->assertViewHas('cursosFaltantes', fn ($cursos) => $cursos->contains('id', $cursoFaltante->id));
+
+        $componente
+            ->call('abrirModalCurso')
+            ->set('cursoIdNuevo', $cursoFaltante->id)
+            ->set('docenteIdNuevo', $docente->id)
+            ->set('aulaIdNuevo', $aula->id)
+            ->set('diasSeleccionadosNuevo', ['lunes'])
+            ->set('horaInicioHoraPorDia.lunes', '18')
+            ->set('horaInicioMinutoPorDia.lunes', '00')
+            ->set('horaFinHoraPorDia.lunes', '20')
+            ->set('horaFinMinutoPorDia.lunes', '00')
+            ->call('guardarCurso')
+            ->assertHasNoErrors()
+            ->assertSet('mostrarModalCurso', false);
+
+        $this->assertDatabaseHas('horarios', ['curso_id' => $cursoFaltante->id, 'docente_id' => $docente->id]);
+        $nuevoHorario = Horario::query()->where('curso_id', $cursoFaltante->id)->firstOrFail();
+        $this->assertDatabaseHas('aula_virtual_cursos', ['horario_id' => $nuevoHorario->id, 'activo' => true]);
+    }
+
+    public function test_un_docente_no_puede_anadir_cursos_al_aula_virtual(): void
+    {
+        $docente = User::factory()->create();
+        $docente->assignRole(RolEnum::DOCENTE->value);
+
+        $this->actingAs($docente);
+
+        Volt::test('aula-virtual.index')
+            ->call('abrirModalCurso')
+            ->assertForbidden();
     }
 }
