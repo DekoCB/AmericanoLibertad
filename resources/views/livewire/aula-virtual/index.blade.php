@@ -51,6 +51,7 @@ new #[Layout('layouts.app')] class extends Component
             $user->hasAnyPermission(['aula_virtual.ver', 'aula_virtual.gestionar_propio', 'aula_virtual.ver_propio']),
             403,
         );
+
     }
 
     /**
@@ -378,10 +379,25 @@ new #[Layout('layouts.app')] class extends Component
                 </p>
             @endforelse
         </div>
-    @endif
 
-    <div
-        x-show="$wire.mostrarModalCurso"
+        {{--
+            El modal (y sus tres selects) vive deliberadamente DENTRO de
+            este @else, no después del @endif: si se renderizara siempre
+            (oculto nada más por x-show), Alpine inicializaría su x-data la
+            PRIMERA vez que el DOM lo procesa -- en los pasos anteriores del
+            desglose (ciclo/carrera), donde $cursosFaltantes todavía está
+            vacío -- y nunca vuelve a leer los datos reales que llegan
+            después: Alpine solo evalúa x-data una vez por elemento: aunque
+            Livewire actualice el atributo x-data en el HTML con las
+            opciones correctas en renders posteriores, el estado interno ya
+            inicializado de Alpine (su "opciones" reactivo) se queda
+            congelado con el arreglo vacío original, y el <select> de Curso
+            queda inservible (no se puede elegir nada) aunque se vea bien.
+            Que el modal nazca aquí garantiza que su primera inicialización
+            ya ocurra con $cursosFaltantes ya resuelto.
+        --}}
+        <div
+            x-show="$wire.mostrarModalCurso"
         x-cloak
         class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
         wire:click.self="$set('mostrarModalCurso', false)"
@@ -498,4 +514,5 @@ new #[Layout('layouts.app')] class extends Component
             </form>
         </div>
     </div>
+    @endif
 </div>
