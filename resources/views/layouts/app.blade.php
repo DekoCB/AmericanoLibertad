@@ -92,5 +92,6 @@
         </div>
 
         <x-confirm-dialog />
+        <x-sesion-expirada-banner />
     </body>
 </html>

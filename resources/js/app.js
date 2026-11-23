@@ -45,6 +45,23 @@ function aplicarColoresDeTema(config) {
 
 document.addEventListener('alpine:init', () => {
     /**
+     * Cuando una petición de Livewire falla (sesión vencida -- 419/401--,
+     * o un error del servidor), por defecto no pasa nada visible: los
+     * x-select-input de la app llaman a $wire.set() directo desde Alpine
+     * sin manejar el rechazo de esa promesa, así que un clic en cualquier
+     * selector "deja de responder" sin ninguna pista de por qué (justo lo
+     * que reportaron en Pagos con el selector de Origen). Este aviso
+     * global cubre cualquier pantalla, no solo esa.
+     */
+    Alpine.store('sesionExpirada', {
+        open: false,
+
+        mostrar() {
+            this.open = true;
+        },
+    });
+
+    /**
      * Reemplaza el confirm() nativo del navegador (wire:confirm) por un
      * diálogo propio (ver x-confirm-dialog): un solo store global en vez de
      * un modal por cada botón, porque la pregunta/acción cambian en cada
@@ -221,5 +238,24 @@ document.addEventListener('alpine:init', () => {
         );
 
         observadorReveal.observe(el);
+    });
+});
+
+/**
+ * 419 = el token de sesión venció (pestaña abierta mucho rato sin recargar);
+ * 0 = la petición nunca llegó a responder (conexión caída). En ambos casos
+ * Livewire por defecto no deja ningún rastro visible -- ver el store
+ * 'sesionExpirada' de arriba. preventDefault() reemplaza el manejo nativo
+ * de Livewire por este aviso propio, más claro para quien no sabe qué es
+ * un token CSRF.
+ */
+document.addEventListener('livewire:init', () => {
+    Livewire.hook('request', ({ fail }) => {
+        fail(({ status, preventDefault }) => {
+            if (status === 419 || status === 0) {
+                preventDefault();
+                Alpine.store('sesionExpirada').mostrar();
+            }
+        });
     });
 });
