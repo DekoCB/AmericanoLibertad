@@ -6,6 +6,7 @@ namespace App\Modules\Academico\Services;
 
 use App\Models\Carrera;
 use App\Modules\Academico\Models\Curso;
+use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Repositories\Contracts\CursoRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -33,7 +34,26 @@ class CursoService
      */
     public function actualizar(Curso $curso, array $datos): Curso
     {
-        return $this->cursos->update($curso, $datos);
+        $cambioCarreraOCiclo = $datos['carrera_id'] !== $curso->carrera_id
+            || $datos['ciclo_curricular'] !== $curso->ciclo_curricular;
+
+        $curso = $this->cursos->update($curso, $datos);
+
+        // Horario::booted() copia carrera_id/ciclo_curricular del curso solo
+        // al CREARSE un horario (ver su comentario) -- si el curso cambia de
+        // carrera o ciclo después, sus horarios ya creados se quedan con el
+        // valor viejo, lo que rompe el emparejamiento con las matrículas
+        // (Matricula::scopeDelHorario()) y la agrupación en Aula Virtual.
+        // Se replican aquí los mismos dos campos a todos sus horarios para
+        // que sigan representando el mismo curso real.
+        if ($cambioCarreraOCiclo) {
+            Horario::query()->where('curso_id', $curso->id)->update([
+                'carrera_id' => $curso->carrera_id,
+                'ciclo_curricular' => $curso->ciclo_curricular,
+            ]);
+        }
+
+        return $curso;
     }
 
     public function codigoDisponible(string $codigo, ?int $exceptoId = null): bool

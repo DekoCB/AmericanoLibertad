@@ -5,6 +5,7 @@ namespace Tests\Feature\Academico;
 use App\Models\Carrera;
 use App\Models\User;
 use App\Modules\Academico\Models\Curso;
+use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Services\CursoService;
 use App\Modules\Identidad\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Shared\Enums\RolEnum;
@@ -105,5 +106,54 @@ class CursoCodigoTest extends TestCase
             'codigo' => 'ENF-I-01',
             'carrera_id' => $otraCarrera->id,
         ]);
+    }
+
+    public function test_editar_la_carrera_o_el_ciclo_de_un_curso_actualiza_tambien_sus_horarios_ya_creados(): void
+    {
+        // Horario::booted() copia carrera_id/ciclo_curricular del curso solo
+        // al crearse -- si después se reasigna el curso a otra carrera o
+        // ciclo (p. ej. para corregir un error de carga), sus horarios ya
+        // creados deben seguir representando el mismo curso real, o dejan
+        // de coincidir con las matrículas de los estudiantes (ver
+        // Matricula::scopeDelHorario()) y desaparecen de Aula Virtual.
+        $carreraOriginal = Carrera::factory()->create();
+        $otraCarrera = Carrera::factory()->create();
+        $curso = Curso::factory()->create(['carrera_id' => $carreraOriginal->id, 'ciclo_curricular' => 3]);
+        $horario = Horario::factory()->create(['curso_id' => $curso->id]);
+
+        $this->assertSame($carreraOriginal->id, $horario->fresh()->carrera_id);
+        $this->assertSame(3, $horario->fresh()->ciclo_curricular);
+
+        $this->service()->actualizar($curso, [
+            'nombre' => $curso->nombre,
+            'codigo' => $curso->codigo,
+            'carrera_id' => $otraCarrera->id,
+            'ciclo_curricular' => 2,
+            'horas' => $curso->horas,
+            'activo' => true,
+        ]);
+
+        $horario->refresh();
+        $this->assertSame($otraCarrera->id, $horario->carrera_id);
+        $this->assertSame(2, $horario->ciclo_curricular);
+    }
+
+    public function test_editar_un_curso_sin_cambiar_carrera_ni_ciclo_no_altera_sus_horarios(): void
+    {
+        $carrera = Carrera::factory()->create();
+        $curso = Curso::factory()->create(['carrera_id' => $carrera->id, 'ciclo_curricular' => 2]);
+        $horario = Horario::factory()->create(['curso_id' => $curso->id]);
+        $actualizadoEn = $horario->fresh()->updated_at;
+
+        $this->service()->actualizar($curso, [
+            'nombre' => 'Nombre nuevo',
+            'codigo' => $curso->codigo,
+            'carrera_id' => $carrera->id,
+            'ciclo_curricular' => 2,
+            'horas' => $curso->horas,
+            'activo' => true,
+        ]);
+
+        $this->assertEquals($actualizadoEn, $horario->fresh()->updated_at);
     }
 }
