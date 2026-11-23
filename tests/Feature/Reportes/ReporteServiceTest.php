@@ -97,6 +97,54 @@ class ReporteServiceTest extends TestCase
         $this->assertCount(1, $reporte['filas']);
     }
 
+    public function test_reporte_de_secciones_sin_asignar_lista_solo_a_los_matriculados_sin_asignacion(): void
+    {
+        $curso = Curso::factory()->create();
+        $horarioA = Horario::factory()->create(['curso_id' => $curso->id]);
+        $horarioB = Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $horarioA->ciclo_id]);
+
+        $matriculaAsignada = Matricula::factory()->create(['carrera_id' => $horarioA->carrera_id, 'ciclo_curricular' => $horarioA->ciclo_curricular, 'ciclo_id' => $horarioA->ciclo_id]);
+        $matriculaAsignada->horarios()->attach($horarioA->id);
+
+        $matriculaSinAsignar = Matricula::factory()->create(['carrera_id' => $horarioA->carrera_id, 'ciclo_curricular' => $horarioA->ciclo_curricular, 'ciclo_id' => $horarioA->ciclo_id]);
+
+        $reporte = app(ReporteService::class)->seccionesSinAsignar(null, null, null, null);
+
+        $this->assertCount(1, $reporte['filas']);
+        $this->assertSame($matriculaSinAsignar->estudiante->dni, $reporte['filas'][0][1]);
+        $this->assertSame($curso->nombre, $reporte['filas'][0][4]);
+    }
+
+    public function test_reporte_de_secciones_sin_asignar_no_incluye_cursos_con_un_solo_horario(): void
+    {
+        $curso = Curso::factory()->create();
+        $horario = Horario::factory()->create(['curso_id' => $curso->id]);
+        Matricula::factory()->create(['carrera_id' => $horario->carrera_id, 'ciclo_curricular' => $horario->ciclo_curricular, 'ciclo_id' => $horario->ciclo_id]);
+
+        $reporte = app(ReporteService::class)->seccionesSinAsignar(null, null, null, null);
+
+        $this->assertCount(0, $reporte['filas']);
+    }
+
+    public function test_reporte_de_secciones_sin_asignar_filtra_por_ciclo_carrera_y_curso(): void
+    {
+        $curso = Curso::factory()->create();
+        $horarioA = Horario::factory()->create(['curso_id' => $curso->id]);
+        Horario::factory()->create(['curso_id' => $curso->id, 'ciclo_id' => $horarioA->ciclo_id]);
+        Matricula::factory()->create(['carrera_id' => $horarioA->carrera_id, 'ciclo_curricular' => $horarioA->ciclo_curricular, 'ciclo_id' => $horarioA->ciclo_id]);
+
+        // Otro grupo "paralelo" totalmente distinto, que no debe aparecer al filtrar por el curso de arriba.
+        $otroCurso = Curso::factory()->create();
+        $otroHorarioA = Horario::factory()->create(['curso_id' => $otroCurso->id]);
+        Horario::factory()->create(['curso_id' => $otroCurso->id, 'ciclo_id' => $otroHorarioA->ciclo_id]);
+        Matricula::factory()->create(['carrera_id' => $otroHorarioA->carrera_id, 'ciclo_curricular' => $otroHorarioA->ciclo_curricular, 'ciclo_id' => $otroHorarioA->ciclo_id]);
+
+        $reporte = app(ReporteService::class)->seccionesSinAsignar($horarioA->ciclo_id, $horarioA->carrera_id, $horarioA->ciclo_curricular, $curso->id);
+
+        $this->assertCount(1, $reporte['filas']);
+        $this->assertSame($curso->nombre, $reporte['filas'][0][4]);
+    }
+
     public function test_reporte_de_matricula_no_falla_si_el_estudiante_fue_eliminado(): void
     {
         $estudiante = Estudiante::factory()->create();

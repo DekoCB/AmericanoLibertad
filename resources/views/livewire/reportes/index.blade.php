@@ -30,6 +30,7 @@ new #[Layout('layouts.app')] class extends Component
         'certificados' => ['permiso' => 'reportes.certificados', 'label' => 'Certificados'],
         'operativo' => ['permiso' => 'reportes.operativos', 'label' => 'Operativo (asistencia)'],
         'propio' => ['permiso' => 'reportes.propios', 'label' => 'Mis evaluaciones'],
+        'secciones_sin_asignar' => ['permiso' => 'reportes.matricula', 'label' => 'Secciones sin asignar'],
     ];
 
     /**
@@ -193,6 +194,7 @@ new #[Layout('layouts.app')] class extends Component
             'certificados' => $reportes->certificados($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
             'operativo' => $reportes->operativo($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
             'propio' => $reportes->propio(Auth::user(), $cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
+            'secciones_sin_asignar' => $reportes->seccionesSinAsignar($cicloId, $carreraId, $cicloCurricular, $cursoId, $dia, $periodoId),
             default => ['columnas' => [], 'filas' => []],
         };
     }

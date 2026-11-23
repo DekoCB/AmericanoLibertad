@@ -60,6 +60,21 @@ class ReportesPermisosTest extends TestCase
             ->assertDontSee('Mis evaluaciones');
     }
 
+    public function test_coordinador_puede_elegir_el_reporte_de_secciones_sin_asignar(): void
+    {
+        $coordinador = User::factory()->create();
+        $coordinador->assignRole(RolEnum::COORDINADOR->value);
+
+        $this->actingAs($coordinador)
+            ->get(route('reportes.index'))
+            ->assertOk()
+            ->assertSee('Secciones sin asignar');
+
+        Volt::test('reportes.index')
+            ->set('tipo', 'secciones_sin_asignar')
+            ->assertSee('No hay datos para los filtros seleccionados.');
+    }
+
     public function test_docente_solo_ve_su_propio_tipo_de_reporte(): void
     {
         $docente = User::factory()->create();

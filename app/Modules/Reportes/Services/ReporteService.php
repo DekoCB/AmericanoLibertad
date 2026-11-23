@@ -6,6 +6,7 @@ namespace App\Modules\Reportes\Services;
 
 use App\Models\User;
 use App\Modules\Academico\Enums\DiaSemanaEnum;
+use App\Modules\Academico\Models\Curso;
 use App\Modules\Academico\Models\Horario;
 use App\Modules\Academico\Models\HorarioDia;
 use App\Modules\Asistencia\Models\Asistencia;
@@ -18,6 +19,7 @@ use App\Modules\Pagos\Models\Cuota;
 use App\Modules\Pagos\Models\Pago;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Constructor de reportes tabulares exportables. Cada método devuelve
@@ -268,6 +270,75 @@ class ReporteService
                 $evaluacion->fecha?->format('d/m/Y') ?? '—',
                 $evaluacion->estado->label(),
             ])->all(),
+        ];
+    }
+
+    /**
+     * Los horarios de un mismo curso+carrera+ciclo_curricular+ciclo quedan
+     * marcados "paralelos" en cuanto hay más de uno (ver
+     * Matricula::scopeDelHorario()): desde ese momento el emparejamiento
+     * automático de estudiante→horario deja de aplicar y cada matrícula
+     * necesita una asignación explícita en matricula_horario -- sin eso, el
+     * estudiante desaparece de ambas secciones sin ningún aviso visible
+     * salvo el texto "Sin asignar" dentro de su propia ficha. Este reporte
+     * junta a todos los que quedaron así en todo el instituto, para
+     * detectarlo sin depender de que alguien reclame primero.
+     *
+     * @return array{columnas: list<string>, filas: list<array<int, string|int|float>>}
+     */
+    public function seccionesSinAsignar(?int $cicloId, ?int $carreraId, ?int $cicloCurricular, ?int $cursoId, ?string $dia = null, ?int $periodoId = null): array
+    {
+        $grupos = Horario::query()
+            ->select('curso_id', 'carrera_id', 'ciclo_curricular', 'ciclo_id')
+            ->when($cicloId !== null, fn ($query) => $query->where('ciclo_id', $cicloId))
+            ->when($carreraId !== null, fn ($query) => $query->where('carrera_id', $carreraId))
+            ->when($cicloCurricular !== null, fn ($query) => $query->where('ciclo_curricular', $cicloCurricular))
+            ->when($cursoId !== null, fn ($query) => $query->where('curso_id', $cursoId))
+            ->groupBy('curso_id', 'carrera_id', 'ciclo_curricular', 'ciclo_id')
+            ->havingRaw('COUNT(*) > 1')
+            ->get();
+
+        $filas = [];
+
+        foreach ($grupos as $grupo) {
+            $horarioIds = Horario::query()
+                ->where('curso_id', $grupo->curso_id)
+                ->where('carrera_id', $grupo->carrera_id)
+                ->where('ciclo_curricular', $grupo->ciclo_curricular)
+                ->where('ciclo_id', $grupo->ciclo_id)
+                ->pluck('id');
+
+            $matriculaIdsAsignadas = DB::table('matricula_horario')
+                ->whereIn('horario_id', $horarioIds)
+                ->pluck('matricula_id');
+
+            $curso = Curso::find($grupo->curso_id);
+
+            $matriculasSinAsignar = Matricula::query()
+                ->where('carrera_id', $grupo->carrera_id)
+                ->where('ciclo_curricular', $grupo->ciclo_curricular)
+                ->where('ciclo_id', $grupo->ciclo_id)
+                ->where('estado', 'aprobada')
+                ->when($periodoId !== null, fn ($query) => $query->where('siagie_id', $periodoId))
+                ->whereNotIn('id', $matriculaIdsAsignadas)
+                ->with(['estudiante', 'carrera'])
+                ->get();
+
+            foreach ($matriculasSinAsignar as $matricula) {
+                $filas[] = [
+                    $matricula->estudiante?->nombreCompleto() ?? '—',
+                    $matricula->estudiante->dni ?? '—',
+                    $matricula->carrera->name,
+                    $curso?->cicloRomano() ?? (string) $grupo->ciclo_curricular,
+                    $curso->nombre ?? '—',
+                    $matricula->periodoCompleto() ?? '—',
+                ];
+            }
+        }
+
+        return [
+            'columnas' => ['Estudiante', 'DNI', 'Carrera', 'Ciclo', 'Curso', 'Periodo'],
+            'filas' => $filas,
         ];
     }
 
